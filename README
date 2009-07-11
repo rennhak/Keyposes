@@ -1,3 +1,33 @@
+Keypose Segmentation
+--------------------
+
+This project tries to extract "Keyposes" from Dance Motion Data based on VPM files via the MotionX
+project. (http://github.com/rennhak/MotionX)
+
+The idea of Keyposes is as follows:
+
+  A Dance consists of certain turning motions which define a dance. These turning motions are called
+  "Keyposes". In order to program a robot we need to extract these keyposes. Keyposes are basically
+  the essence of a dance.
 
 
-(C) 2009, Bjoern Rennhak, under an MIT licence. http://www.opensource.org/licenses/mit-license.php
+Subprojects:
+
+  Directory:    "src/BodyComponents"
+  Description:  "Body components w/ middle arms and projection from 3D->2D"
+  Keywords:     "Golden Section, Body components, vpm, projection, turning points"
+  Dependencies:  MotionX->plugins->VPM
+  FIXME:         Change to MotionX XYAML interface.
+
+
+Libraries
+---------
+
+Libs can be found in base/
+They are not submodules but simple clones from the original source. Submodules are evil(tm).
+
+
+License
+-------
+
+(C) 2009, Bjoern Rennhak, under a dual license of GPLv2 and MIT ( http://www.opensource.org/licenses/mit-license.php )
