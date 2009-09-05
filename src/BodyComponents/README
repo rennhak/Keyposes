@@ -1,0 +1,6 @@
+Execute with ruby -I ../../base/MotionX/src/plugins/vpm/src BodyComponents.rb
+
+Depends:
+
+- http://raa.ruby-lang.org/project/deep-clone/ (copy&pasted)
+- MotionX -> Plugins -> VPM
