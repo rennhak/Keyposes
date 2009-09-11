@@ -42,7 +42,7 @@ class BodyComponents
     @file = file
 
     puts "Loading file..."
-    vpm = ADT.new( file )
+    @adt = ADT.new( file )
     puts "Finished loading file..."
 
     ## b0rked! Singleton methods - but where??! (?? http://doc.okkez.net/191/view/method/Object/i/initialize_copy )
@@ -91,11 +91,11 @@ class BodyComponents
     ###########
 
     # Easy handling
-    pt30 = @pt30
-    pt27 = @pt27
-    pt9  = @relb
-    pt26 = @pt26
-    pt5  = @lelb
+    pt30 = @adt.pt30
+    pt27 = @adt.pt27
+    pt9  = @adt.relb
+    pt26 = @adt.pt26
+    pt5  = @adt.lelb
 
     # Make coords relative to p30 not global -- not normalized
     pt27new           = pt27 - pt30
@@ -182,7 +182,7 @@ class BodyComponents
     results[ "phi" ]  = ( ( 1 + Math.sqrt(5) ) / 2 )
 
     # get Coordinate Arrays, e.g. [ [ ..., ..., ... ], [ ... ], ... ]
-    s1, s2            = eval( "@#{segment1.to_s}.getCoordinates!" ), eval( "@#{segment2.to_s}.getCoordinates!" )
+    s1, s2            = eval( "@adt.#{segment2.to_s}.getCoordinates!" ), eval( "@adt.#{segment2.to_s}.getCoordinates!" )
 
     # push all x, y and z values to the subarrays in #{$x}tranPhi
     s1.each_with_index { |array, index| x, y, z = *array ; %w[x y z].each { |var| eval( "#{var.to_s}tranPhi << [ #{var} ]" ) } }
@@ -257,9 +257,6 @@ class BodyComponents
   end # end of determinat }}}
 
 
-
-
-
   # == Dynamical method creation at run-time
   # @param method Takes the method header definition
   # @param code Takes the body of the method
@@ -272,17 +269,18 @@ class BodyComponents
   end
 
 
-  attr_accessor :vpm
+  attr_accessor :adt
 end
 
 
 # Direct invocation, for manual testing beside rspec
 if __FILE__ == $0
 
-  file  = ARGV.first
-  bc    = BodyComponents.new( file )
+  file    = ARGV.first
+  bc      = BodyComponents.new( file )
+  points  = bc.getTurningPoints( "p27", "relb", "p26", "lelb", "p30", 1400, 1500 )
 
-
+  p points
 
 #  adt     = ADT.new( "../sample/Aizu_Female.vpm" )
 #  points  = adt.getTurningPoints( "p27", "relb", "p26", "lelb", "p30")
