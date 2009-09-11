@@ -5,3 +5,5 @@ db/*.sqlite3
 coverage
 doc/app/*
 base/*
+*.swp
+*.vpm

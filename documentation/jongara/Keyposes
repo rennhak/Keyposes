@@ -1,0 +1,97 @@
+Keyposes are around these frames:
+---------------------------------
+
+
+INDEX       Approx. Frame         Exact Frame         Desc.
+
+Nr.  0                                                Not a keypose? (Hand ausgestreckt)
+Nr.  1      1300-1337             1319
+Nr.  2      1435-1460             1441
+Nr.  3      1590-1620             1610                Lift leg
+            1705-1730             1714                Both arms up (style)
+
+Nr.  4      1890-1930             1912                Both arms are up (keypose)
+Nr.  5      2100-2125             2119
+            2190-2213             2203                Both arms are briefly up (style)
+Nr.  6      2400-2457             2448
+
+Nr.  7      2590-2617             2608
+
+            2665-2693             2683                Both arms are briefly up (style)a
+
+Nr.  8      2880-2928             2881
+Nr.  9      3070-3100             3088
+Nr. 10      3276-3314             3295
+Nr. 11      3540-3570             3560
+Nr. 12      3740-3794             3756
+
+Ref.: Manoj Thesis, p. 52-53
+
+
+Ideas:
+
+- We can make classifications into "Hand" or "Hand/Foot" or "Foot" emphasizing dance.
+- New rule (K3+)
+- Style is detected as a Keypose - How to filter style?
+- In case of ambigiouity, take sample window (+/- 20 and redetect)
+- In case of ambigiouity, take other plain? Instead of x-y <-> y-z ?
+- Sometimes there are large jumps from e.g. -8/-32 to +9/+32 what do they mean?
+  Do they indicate a Keypose?
+- If (Totalframes - Kx.nowframe ) - (Totalframes - Kx.frame) >= Threshhold? (Keyposes have a certain
+    distance to each other)
+
+
+Description           Index,  x,                  y
+
+Keypose 1             1313, -0.327062038239155, -1.26015862163158
+Keypose 2             1448, -0.00388717445441363, -0.51827878181829
+Keypose 3             1605, 0.00337127214617364, -1.03127539934985
+                      New rule? Get's monotone smaller (x) then switches sign.
+      
+
+                      1711, 0.0150394952672265, 1.43543572362356
+
+Keypose 4             1909, 0.197759125374464, -0.304033361841351
+Keypose 5             2122, 0.862351985207016, -0.994638068933869
+
+                      2199, 0.122573723430678, -3.08131446666557
+
+Keypose 6             2408, -0.201136808734578, -1.12498085916468 (more a range)
+Keypose 7             2625, -0.433897946587405, -0.579546856996322 (more a range)
+
+                      Style pose
+                      2663, 4.69984613357247, 50.1108511606634   (max. displacement)
+                      2674, 0.000115856678426724, 3.5509431225512 (turning point)
+                      2693, -23.6834551008382, -104.551683829598 (max. displacement)
+
+
+
+                      2805, -4.0412171397241, 0.808438609404715 (max. displacement)
+Keypose 8             2879, -1.00892447210552, -1.93111680401962  (dense)
+                      2907, 58.9286349174283, 148.923607952665 (max. displacement)
+
+
+                      3032, 3.48035774299552, -10.8706862100802 (max. displacement)
+Keypose 9             3068, -0.691157624081758, -0.438064445118502 (more a range)
+                      3136, 1.41418309280738, 0.593276740371813 (max. displacement)
+
+
+Keypose 10            3299, -0.392903127314368, -0.721511309467592
+
+
+                      3549, 17.48342635395, 1.36831477758503 (max. displacement)
+Keypose 11            3575, 0.276984502818136, 0.395366506818036 (dense)
+                      3597, 7.90955986547671, -40.8342216409489 (max. displacement)
+
+
+
+                      3706, -0.530253752380555, -0.62915640597542 (max. displacement)
+Keypose 12            3748, 0.206259136961464, -1.29323401262094 (dense)
+                      3814, 27.841241110194, -75.4160936905367 (max. displacement)
+
+
+12/12 + style poses
+
+
+
+
