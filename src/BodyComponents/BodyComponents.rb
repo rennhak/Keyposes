@@ -870,10 +870,11 @@ if __FILE__ == $0
 
     keyPoses = []
     smoothing = 3
-    direction = "xy" 
+    direction = "xz" 
     #rangeA = 1250
     rangeA = 0
-    rangeB = 3800
+    rangeB = 1100
+    #rangeB = 3800
 
     points  = bc.getTurningPoints( "p26", "relb", "p26", "lelb", "p30", direction, rangeA, rangeB) 
     index, x, y       = [], [], []
@@ -979,18 +980,24 @@ if __FILE__ == $0
       #yy[i] = ( (1/ekin) * (1/( velocity) * (1/accel) * (1/power) ) * (( (1/(meanPointsDistance))    ) * (( x[i] * y[i]) ) ).abs ) / 1000
       yy[i] = (  (1/power + 1/velocity +  1/accel ) * (( (1/(meanPointsDistance))    ) * (( x[i] * y[i]) ) ).abs ) / 1000
       
-      yy[i] = 1 if( yy[i] > 1 )
+      yy[i] = 0.999 if( yy[i] > 1 )
 
-      dissapearBelowThisFrame = 1310
-      yy[i] = 0 if( ((rangeA+i) >= 0) and ((rangeA+i) <= dissapearBelowThisFrame ) )
+      #@dissapearBelowThisFrame = 1310
+      @dissapearBelowThisFrame = 110
+      yy[i] = 0 if( ((rangeA+i) >= 0) and ((rangeA+i) <= @dissapearBelowThisFrame ) )
+      
+
       #normsky = Math.sqrt( (yy[i]**2) +  (x[i]**2) )
       #yy[i] /= normsky
       #puts "Frame: #{(rangeA+i).to_s} -> FG: #{fg.to_s}"
 
 
+      danceName = "Aizubandaisan Dance"
+      #danceName = "Jongara Bushi Dance"
+      scale     = 3
 
       keyPoseLowerThresh = 0.05  # graph
-      keyPoseFrameThresh = 60   # if keyposes are too close (e.g. 197 198.. etc. only the first counts)
+      keyPoseFrameThresh = 30   # if keyposes are too close (e.g. 197 198.. etc. only the first counts)
       if( ( yy[i] >= keyPoseLowerThresh ) and ( (keyPoses.last.to_i+keyPoseFrameThresh) <= (rangeA+i) ) )
         keyPoses << (rangeA+i) 
       end
@@ -998,9 +1005,15 @@ if __FILE__ == $0
     end
 
 
-    interestingFrames.collect! {|f| f += 1310 }
+    interestingFrames.collect! {|f| f += @dissapearBelowThisFrame }
     puts "Extreme frames (distances at absolute min):" 
-    p interestingFrames
+    #p interestingFrames
+
+    #interestingFrames.each do |f|
+    #  yy[f] += 0.1
+    #  yy[f] = 1 if( yy[f] > 1 )
+    #end
+
 
     puts "Keyposes:"
     p keyPoses
@@ -1035,8 +1048,17 @@ if __FILE__ == $0
   puts "This translates to points index -> #{index[ fakeGrad.index(fakeGrad.min) ].to_s}"
 
 
+  # http://www.gnu.org/software/plotutils/manual/html_node/plotutils_9.html#SEC9
 
-  GSL::graph([xx, yy], [xx2,yy2], "-T X -C -X x -Y y")
+  GSL::graph([xx, yy], "-T ps -C -X 'Frames n' -Y 'Turningvalues q(n)' --x-limits #{rangeA.to_s} #{rangeB.to_s} --y-limits 0 1 -L '#{danceName.to_s}, window=#{spread.to_s}' -g 3 -S 0 -w #{scale.to_s} --page-size a4 > /tmp/foo.ps") 
+  # -S 3
+
+
+  #newPoints = []
+  #points.each_with_index do |p,i|
+  #  newPoints << "index, x, y" if( i == 0 )
+  #  
+  #end
 
 
   ret     = bc.adt.writeCSV( "/tmp/results.csv", points )
