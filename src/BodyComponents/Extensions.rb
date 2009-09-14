@@ -1,6 +1,7 @@
 #!/usr/bin/ruby
 #
 
+
 #class Object
 #end
 #
@@ -53,6 +54,7 @@ class Object
   end
 
 
+
 #  # http://doc.okkez.net/191/view/method/Object/i/initialize_copy
 #  def check(obj)
 #    # puts "instance variables: #{obj.inspect}"
@@ -66,3 +68,7 @@ class Object
 #  end
 #
 end
+
+
+
+
