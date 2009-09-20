@@ -1,0 +1,18 @@
+
+Terminal type set to 'x11'
+gnuplot> plot '/tmp/results.csv' using 1:2
+gnuplot> plot '/tmp/results.csv' using 2:3
+gnuplot> plot '/tmp/results.csv' using 2:3 withlp
+
+gnuplot> plot '/tmp/results.csv' using 2:3 withlp
+                                           ^
+                                                    ';' expected
+
+                                                    gnuplot> plot '/tmp/results.csv' using 2:3 with
+                                                    lp
+                                                    gnuplot> plot [-50:50][-50:50]
+                                                    '/tmp/results.csv' using 2:3 with lp
+                                                    gnuplot> plot [-20:20][-20:20]
+                                                    '/tmp/results.csv' using 2:3 with lp
+                                                    gnuplot> 
+

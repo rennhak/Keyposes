@@ -1,0 +1,4 @@
+What is new in version 1.0
+
+* First release of ndlinear, a collection of multi-parameter,
+multi-dimensional linear fitting routines for GSL

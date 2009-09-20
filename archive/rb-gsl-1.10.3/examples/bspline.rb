@@ -54,4 +54,5 @@ x2.each_index do |i|
 #  printf("%f %f\n", xi, yi)
 end
 
+
 GSL::graph([x, y], [x2, y2], "-T X -C -X x -Y y -x 0 15 -y -1 1.3")

@@ -4,7 +4,7 @@ include GSL
 
 x, y = Vector.filescan("points")
 
-#spline = Spline.alloc(Interp::CSPLINE, n)
+#spline = Spline.alloc(Interp::CSPLINE, 5)
 #spline.init(x, y)
 #spline = Spline.alloc(x, y, "cspline")
 #spline = Spline.alloc("cspline", x, y)

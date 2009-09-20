@@ -17,6 +17,7 @@ Subprojects:
   Description:  "Body components w/ middle arms and projection from 3D->2D"
   Keywords:     "Golden Section, Body components, vpm, projection, turning points"
   Dependencies:  MotionX->plugins->VPM ; http://raa.ruby-lang.org/project/deep-clone/ (for marshal ; copy&pasted)
+                  https://webfiles.colorado.edu/alken/www/gsl/ndlinear-1.0.tar.gz Ruby GSL etc.
   FIXME:         Change to MotionX XYAML interface.
 
 

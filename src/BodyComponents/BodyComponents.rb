@@ -870,10 +870,13 @@ if __FILE__ == $0
 
     keyPoses = []
     smoothing = 3
-    direction = "xz" 
+    direction = "zx" 
     #rangeA = 1250
     rangeA = 0
-    rangeB = 1100
+    
+    #rangeB = 1743
+    rangeB = 3688
+    #rangeB = 1100
     #rangeB = 3800
 
     points  = bc.getTurningPoints( "p26", "relb", "p26", "lelb", "p30", direction, rangeA, rangeB) 
@@ -924,7 +927,7 @@ if __FILE__ == $0
       
       sum << distance
 
-      spread = 20
+      spread = 30
       meanPointsDistance = []
       ((i)-spread).upto((i)+spread) do |fs|
         unless( x[fs-1].nil? or y[fs-1].nil? or x[fs+1].nil? or y[fs+1].nil? )
@@ -978,12 +981,30 @@ if __FILE__ == $0
       
           
       #yy[i] = ( (1/ekin) * (1/( velocity) * (1/accel) * (1/power) ) * (( (1/(meanPointsDistance))    ) * (( x[i] * y[i]) ) ).abs ) / 1000
-      yy[i] = (  (1/power + 1/velocity +  1/accel ) * (( (1/(meanPointsDistance))    ) * (( x[i] * y[i]) ) ).abs ) / 1000
+      w = (  (1/power + 1/velocity +  1/accel ) )
+      
+      skill = false
+
+      if( skill )
+        # Extract Skill Parameter
+        #scaling = 300
+        scaling = 20
+        yy[i] = ((( (1/(meanPointsDistance))    ) * (( x[i] * y[i]) ) ).abs ) / scaling
+      else
+        # Extract DMP
+        scaling = 30
+        #scaling = 1000
+        yy[i] = ( w * (( (1/(meanPointsDistance))    ) * (( x[i] * y[i]) ) ).abs ) / scaling
+      end
       
       yy[i] = 0.999 if( yy[i] > 1 )
 
-      #@dissapearBelowThisFrame = 1310
-      @dissapearBelowThisFrame = 110
+
+      #puts "K3 area Frame #{i.to_s} -> y: #{yy[i].to_s}" if( i >= 480 or i <= 690 )
+
+      #@dissapearBelowThisFrame = 1310  # jongara
+      #@dissapearBelowThisFrame = 110 # aizu
+      @dissapearBelowThisFrame = 570 # Filter-donpan Manoj
       yy[i] = 0 if( ((rangeA+i) >= 0) and ((rangeA+i) <= @dissapearBelowThisFrame ) )
       
 
@@ -991,8 +1012,9 @@ if __FILE__ == $0
       #yy[i] /= normsky
       #puts "Frame: #{(rangeA+i).to_s} -> FG: #{fg.to_s}"
 
-
-      danceName = "Aizubandaisan Dance"
+      danceName = "Kokiriko Theodori"
+      #danceName = "Donpan Dance"
+      #danceName = "Aizubandaisan Dance"
       #danceName = "Jongara Bushi Dance"
       scale     = 3
 
@@ -1007,7 +1029,7 @@ if __FILE__ == $0
 
     interestingFrames.collect! {|f| f += @dissapearBelowThisFrame }
     puts "Extreme frames (distances at absolute min):" 
-    #p interestingFrames
+    p interestingFrames
 
     #interestingFrames.each do |f|
     #  yy[f] += 0.1
@@ -1051,6 +1073,7 @@ if __FILE__ == $0
   # http://www.gnu.org/software/plotutils/manual/html_node/plotutils_9.html#SEC9
 
   GSL::graph([xx, yy], "-T ps -C -X 'Frames n' -Y 'Turningvalues q(n)' --x-limits #{rangeA.to_s} #{rangeB.to_s} --y-limits 0 1 -L '#{danceName.to_s}, window=#{spread.to_s}' -g 3 -S 0 -w #{scale.to_s} --page-size a4 > /tmp/foo.ps") 
+  #GSL::graph([xx, yy], "-T ps -C -X 'Frames n' -Y 'Turningvalues q(n)' --x-limits #{rangeA.to_s} #{rangeB.to_s}  -L '#{danceName.to_s}, window=#{spread.to_s}' -g 3 -S 0 -w #{scale.to_s} --page-size a4 > /tmp/foo.ps") 
   # -S 3
 
 

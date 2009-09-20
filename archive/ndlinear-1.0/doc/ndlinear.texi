@@ -1,0 +1,351 @@
+\input texinfo @c -*-texinfo-*-
+@setfilename ndlinear.info
+@settitle Multi-dimensional Least Squares Extensions to the GNU Scientific Library
+@finalout
+@c %**end of header
+
+@dircategory Scientific software
+@direntry
+* ndlinear: (ndlinear).                   NDLINEAR extensions to GSL
+@end direntry
+
+@c How to use the math macros
+@c ==========================
+@c 
+@c For simple expressions, simply use the @math{} command, e.g.
+@c
+@c     @math{\exp(x)/(1+x^2)}
+@c 
+@c but if the expression includes characters that need to be 'escaped'
+@c in texinfo, like '{' or '}', or needs different output for TeX and info,
+@c then use the following form,
+@c
+@c     blah blah blah @c{$y^{1+b} \le \pi$}
+@c     @math{y^@{1+b@} <= \pi}
+@c
+@c The first part using @c{} must appear at the end of a line (it reads
+@c up to the line end -- as far as texinfo is concerned it's actually
+@c a 'comment').  The comment command @c has been modified to capture
+@c a TeX expression which is output by the next @math.
+@c
+@c For ordinary comments use the @comment command.
+
+@tex
+% Mathematical macros taken from the GNU Calc Manual
+% ==================================================
+%
+% Some special kludges to make TeX formatting prettier.
+% Because makeinfo.c exists, we can't just define new commands.
+% So instead, we take over little-used existing commands.
+%
+% Redefine @cite{text} to act like $text$ in regular TeX.
+% Info will typeset this same as @samp{text}.
+\gdef\goodtex{\tex \let\rm\goodrm \let\t\ttfont \turnoffactive}
+\gdef\goodrm{\fam0\tenrm}
+\gdef\math{\goodtex$\mathxxx}
+\gdef\mathxxx#1{#1$\endgroup}
+\global\let\oldxrefX=\xrefX
+\gdef\xrefX[#1]{\begingroup\let\math=\dfn\oldxrefX[#1]\endgroup}
+%
+% Redefine @i{text} to be equivalent to @cite{text}, i.e., to use math mode.
+% This looks the same in TeX but omits the surrounding ` ' in Info.
+%\global\let\i=\cite
+%\global\let\math=\cite
+%
+% Redefine @c{tex-stuff} \n @whatever{info-stuff}.
+\gdef\c{\futurelet\next\mycxxx}
+\gdef\mycxxx{%
+  \ifx\next\bgroup \goodtex\let\next\mycxxy
+  \else\ifx\next\mindex \let\next\relax
+  \else\ifx\next\kindex \let\next\relax
+  \else\ifx\next\starindex \let\next\relax \else \let\next\comment
+  \fi\fi\fi\fi \next
+}
+\gdef\mycxxy#1#2{#1\endgroup\mycxxz}
+\gdef\mycxxz#1{}
+%
+% Define \Hat to take over from \hat as an accent
+\gdef\Hat{\mathaccent "705E}
+%
+%\gdef\beforedisplay{\vskip-10pt}
+%\gdef\afterdisplay{\vskip-5pt}
+\gdef\beforedisplay{}
+\gdef\afterdisplay{}
+{\globaldefs = 1
+\abovedisplayskip=7pt plus 2pt minus 1pt
+\belowdisplayskip=7pt plus 2pt minus 1pt
+\abovedisplayshortskip=7pt plus 2pt minus 1pt
+\belowdisplayshortskip=7pt plus 2pt minus 1pt}
+%\abovedisplayskip=12pt plus 3pt minus 3pt
+%\belowdisplayskip=12pt plus 3pt minus 3pt
+%\abovedisplayshortskip=7pt plus 1pt minus 1pt
+%\belowdisplayshortskip=7pt plus 1pt minus 1pt
+%\gdef\beforedisplayh{\vskip-25pt}
+%\gdef\afterdisplayh{\vskip-10pt}
+%
+\gdef\arcsec{\hbox{\rm arcsec}}
+\gdef\arccsc{\hbox{\rm arccsc}}
+\gdef\arccot{\hbox{\rm arccot}}
+\gdef\sech{\hbox{\rm sech}}
+\gdef\csch{\hbox{\rm csch}}
+\gdef\coth{\hbox{\rm coth}}
+\gdef\arcsinh{\hbox{\rm arcsinh}}
+\gdef\arccosh{\hbox{\rm arccosh}}
+\gdef\arctanh{\hbox{\rm arctanh}}
+\gdef\arcsech{\hbox{\rm arcsech}}
+\gdef\arccsch{\hbox{\rm arccsch}}
+\gdef\arccoth{\hbox{\rm arccoth}}
+%
+\gdef\Re{\hbox{\rm Re}}
+\gdef\Im{\hbox{\rm Im}}
+\gdef\Sin{\hbox{\rm Sin}}
+\gdef\Cos{\hbox{\rm Cos}}
+\gdef\Log{\hbox{\rm Log}}
+%
+\gdef\erf{\hbox{\rm erf}}
+\gdef\erfc{\hbox{\rm erfc}}
+\gdef\sinc{\hbox{\rm sinc}}
+\gdef\sgn{\hbox{\rm sgn}}
+\gdef\sign{\hbox{\rm sign}}
+\gdef\det{\hbox{\rm det}}
+\gdef\Var{\hbox{\rm Var}}
+\gdef\arg{\hbox{\rm arg}} % avoid temporary clobbering of arg in texinfo-4.8
+@end tex
+
+@include version-ref.texi
+
+@copying
+Copyright @copyright{} 2007 Patrick Alken.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with the
+Invariant Sections being ``GNU General Public License'' and ``Free Software
+Needs Free Documentation'', the Front-Cover text being ``A GNU Manual'',
+and with the Back-Cover Text being (a) (see below).  A copy of the
+license is included in the section entitled ``GNU Free Documentation
+License''.
+@end copying
+
+@titlepage
+@title NDLINEAR
+@subtitle Extensions to the GNU Scientific Library
+@subtitle Version @value{VERSION}
+@subtitle @value{UPDATED}
+
+@author Patrick Alken
+@comment @email{alken@colorado.edu}
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top NDLINEAR
+
+This file documents NDLINEAR, a collection of routines for multi-linear,
+multi-parameter least squares fitting for the GNU Scientific Library (GSL). 
+
+Information about GSL can be found at the project homepage,
+@uref{http://www.gnu.org/software/gsl/}.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License.
+@end ifnottex
+
+@menu
+* Introduction::                
+* Functions::                   
+* Examples::                    
+* References and Further Reading::  
+* GNU Free Documentation License::  
+* Function Index::              
+* Variable Index::              
+* Type Index::                  
+* Concept Index::               
+@end menu
+
+@node  Introduction, Functions, Top, Top
+@chapter Introduction
+
+This GSL extension provides support for general linear least squares fitting
+to data which is a function of more than one variable (multi-linear
+or multi-dimensional least squares fitting). This model has the
+form
+@tex
+\beforedisplay
+$$
+y({\bf x}) = \sum_{i=1}^{N} a_i F_i({\bf x})
+$$
+\afterdisplay
+@end tex
+where @math{\bf x} is a vector of independent variables, @math{a_i} are the
+fit coefficients, and @math{F_i} are the basis functions of the fit.
+This GSL extension computes the design matrix @math{X_{ij} = F_j({\bf x}_i)}
+in the special case that the basis functions separate:
+@tex
+\beforedisplay
+$$
+F_i({\bf x}) = u_{i_1}^{(1)}(x_1) u_{i_2}^{(2)}(x_2) u_{i_3}^{(3)}(x_3) @cdots{}
+$$
+\afterdisplay
+@end tex
+Here the superscript value @math{j} indicates the basis function corresponding
+to the independent variable @math{x_j}. The subscripts
+@math{(i_1, i_2, i_3, @dots{})} refer to which basis function to use from
+the complete set. These subscripts are related to the index @math{i} in a
+complex way, which is the main problem this extension addresses. The model
+then becomes
+@tex
+\beforedisplay
+$$
+y({\bf x}) = \sum_{i_1=1}^{N_1} \sum_{i_2=1}^{N_2} @cdots{} \sum_{i_n=1}^{N_n} a_{i_1 i_2 @cdots{} i_n} u_{i_1}^{(1)}(x_1) u_{i_2}^{(2)}(x_2) @cdots{} u_{i_n}^{(n)}(x_n)
+$$
+\afterdisplay
+@end tex
+where @math{n} is the dimension of the fit and @math{N_i} is the number of
+basis functions for the variable @math{x_i}. Computationally, it is easier
+to supply the individual basis functions @math{u^{(j)}} than the total
+basis functions @math{F_i({\bf x})}. However the design matrix @math{X} is
+easiest to construct given @math{F_i({\bf x})}. Therefore the routines below
+allow the user to specify the individual basis functions @math{u^{(j)}} and
+then automatically construct the design matrix @math{X}.
+
+The routines in this extension are defined in the header file
+@file{gsl_multifit_ndlinear.h}.
+
+@node Functions, Examples, Introduction, Top
+@chapter Functions
+
+@deftypefun {gsl_multifit_ndlinear_workspace *} gsl_multifit_ndlinear_alloc (size_t @var{n_dim}, size_t @var{N}[], int (**@var{u})(double x, double y[], void * @var{params}), void * @var{params})
+This function allocates a workspace for solving multi-parameter,
+multi-dimensional linear least squares problems. @var{n_dim} specifies the
+dimension of the fit (the number of independent variables in the model).
+The array @var{N} of length @var{n_dim} specifies the number of terms
+in each sum, so that @var{N}[i] specifies the number of terms in the
+sum of the ith independent variable. The array of function pointers
+@var{u} of length @var{n_dim} specifies the basis functions for each
+independent fit variable, so that @var{u}[i] is a pointer to the
+basis function for the ith independent variable. @var{u} takes three
+arguments: a point @var{x} at which to evaluate the basis function,
+an array @var{y} of length @var{N}[i] which is filled on output with
+the basis function values at @var{x} for all @var{i}, and a @var{params}
+argument which contains parameters needed by the basis function. These
+parameters are supplied in the @var{params} argument to this function.
+The functions @var{u} should return either @code{GSL_SUCCESS} or an
+error.
+@end deftypefun
+
+@deftypefun void gsl_multifit_ndlinear_free (gsl_multifit_ndlinear_workspace * @var{w})
+This function frees the memory associated with the workspace @var{w}.
+@end deftypefun
+
+@deftypefun int gsl_multifit_ndlinear_design (const gsl_matrix * @var{vars}, gsl_matrix * @var{X}, gsl_multifit_ndlinear_workspace * @var{w})
+This function constructs the least squares design matrix @var{X}
+from the input @var{vars} and the previously specified basis functions.
+@var{vars} is a ndata-by-n_dim matrix where the ith
+row specifies the n_dim independent variables for the ith observation.
+@end deftypefun
+
+@deftypefun int gsl_multifit_ndlinear_est (const gsl_vector * @var{x}, const gsl_vector * @var{c}, const gsl_matrix * @var{cov}, double * @var{y}, double * @var{y_err}, gsl_multifit_ndlinear_workspace * @var{w})
+After the least squares problem is solved via @code{gsl_multifit_linear},
+this function can be used to evaluate the model at the data point @var{x}
+of length n_dim. The coefficient vector @var{c} and covariance matrix
+@var{cov} are outputs from @code{gsl_multifit_linear}. The model output
+value and its error are stored in @var{y} and @var{y_err} respectively.
+@end deftypefun
+
+@deftypefun double gsl_multifit_ndlinear_calc (const gsl_vector * @var{x}, const gsl_vector * @var{c}, gsl_multifit_ndlinear_workspace * @var{w})
+This function is similar to @code{gsl_multifit_ndlinear_est}, but does
+not compute the model error. It computes the model value at the data
+point @var{x} of length n_dim using the coefficient vector @var{c} and
+returns the model value.
+@end deftypefun
+
+@deftypefun size_t gsl_multifit_ndlinear_ncoeffs (gsl_multifit_ndlinear_workspace * @var{w})
+This function returns the total number of fit coefficients which is
+simply the product of the previously specified @math{N_i}.
+@end deftypefun
+
+@node Examples, References and Further Reading, Functions, Top
+@chapter Examples
+
+This example program generates data from the 3D isotropic harmonic
+oscillator wavefunction (real part) and then fits a model to the data
+using cubic B-splines in the r coordinate, Legendre polynomials in
+@math{\theta}, and sines/cosines in @math{\phi}. The model we use
+in this example program is
+@tex
+\beforedisplay
+$$
+\Psi(r, \theta, \phi) = \sum_{i=1}^{10} \sum_{j=1}^{10} \sum_{k=1}^{9}
+a_{ijk} B_i(r) P_j(\cos{\theta}) u_k(\phi)
+$$
+\afterdisplay
+@end tex
+@noindent where @math{u_k(\phi) = \cos{(k \phi / 2)}} if @math{k} is even,
+and @math{u_k(\phi) = \sin{((k+1) \phi / 2)}} if @math{k} is odd.
+
+@noindent The exact form of the solution is (neglecting the normalization
+constant for simplicity)
+@tex
+\beforedisplay
+$$
+Re(\psi_{klm}(r,\theta,\phi)) = r^l \exp{(-r^2)} L_k^{l + 1/2}(2 r^2) Re(Y_{lm}(\theta, \phi))
+$$
+\afterdisplay
+@end tex
+The example program models @math{\psi_{542}} by default.
+
+@example
+@verbatiminclude examples/harmosc.c
+@end example
+
+@noindent Here is the program output
+@example
+chisq = 9.315700e+00, Rsq = 0.993688
+rms error over all parameter space = 4.782888e-02
+@end example
+
+@noindent indicating a good agreement with the model and data. 2D cross
+sections of the model and exact solution (with @math{\phi = 0}) are
+given in the following plots.
+
+@iftex
+@sp 1
+@center @image{ndlinear,6.8in}
+@end iftex
+
+@node References and Further Reading, GNU Free Documentation License, Examples, Top
+@chapter References and Further Reading
+
+Any references
+
+@node GNU Free Documentation License, Function Index, References and Further Reading, Top
+@unnumbered GNU Free Documentation License
+@include fdl.texi
+
+@node Function Index, Variable Index, GNU Free Documentation License, Top
+@unnumbered Function Index
+
+@printindex fn
+
+@node Variable Index, Type Index, Function Index, Top
+@unnumbered Variable Index
+
+@printindex vr
+
+@node Type Index, Concept Index, Variable Index, Top
+@unnumbered Type Index
+
+@printindex tp
+
+@node Concept Index,  , Type Index, Top
+@unnumbered Concept Index
+
+@printindex cp
+
+@bye

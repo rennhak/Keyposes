@@ -3,12 +3,12 @@ library( pspline )
 
 
 results <- read.csv( "/tmp/results.csv" )
-plot( results$x, results$y, type = "o" )
+plot( results$x, results$y, pch = "o", xlab = "X-Values", ylab = "Y-Values" )
 
 x1 <- results$x[1]
 y1 <- results$y[1]
 
-#points( x1, y1, pch = 19, col = "green", cex = 1.5)
+points( x1, y1, pch = 19, col = "green", cex = 1.5)
 
 
 #results.spl <- sm.spline(results$x, results$y)
