@@ -28,6 +28,8 @@ require 'gsl'
 # Local includes
 require 'Logger.rb'
 require 'PCA.rb'
+require 'Plotter.rb'
+require 'Mathematics.rb'
 
 # Change Namespace
 include GSL
@@ -36,7 +38,12 @@ include GSL
 # The class Filter can take input data and provide means to filter out noise and outliers from it.
 class Filter # {{{
 
-  def initialize # {{{
+  def initialize options, from, to # {{{
+    @options             = options
+    @from, @to           = from, to
+    @log                 = Logger.new( @options )
+
+    @mathematics         = Mathematics.new
   end # of def initialize }}}
 
 
@@ -54,7 +61,7 @@ class Filter # {{{
     raise ArgumentError, "Polynom order argument should be of type Integer, but is of (#{polynom_order.class.to_s})" unless( polynom_order.is_a?( Integer ) )
     # }}}
 
-    message :info, "Starting filtering of all relevant motion segments"
+    @log.message :info, "Starting filtering of all relevant motion segments"
 
     # lets determine which segments we have in adt
     segments        = input.segments + %w[pt24 pt25 pt26 pt27 pt28 pt29 pt30 pt31]
@@ -74,7 +81,7 @@ class Filter # {{{
 
       # only process if it exists
       if( segments.include?( s.to_s ) )
-        message :info, "Filtering #{s.to_s} segment"
+        @log.message :info, "Filtering #{s.to_s} segment"
 
         segment     = eval( "input.#{s.to_s}" )
         coordinates = segment.getCoordinates!
@@ -92,7 +99,7 @@ class Filter # {{{
 
           # determine the piecewise linear from p0 to p1 (eucleadian distance)
           arc_lengths  = []
-          cluster.each_index { |index| arc_lengths << eucledian_distance( cluster[index], cluster[index+1] ) unless( (cluster[ index + 1 ]).nil? ) }
+          cluster.each_index { |index| arc_lengths << @mathematics.eucledian_distance( cluster[index], cluster[index+1] ) unless( (cluster[ index + 1 ]).nil? ) }
 
           cluster_l           = pca.reshape_data( cluster.dup, true, false )
           x, y, z             = cluster_l.shift, cluster_l.shift, cluster_l.shift
@@ -175,14 +182,14 @@ class Filter # {{{
         #pca.interactive_gnuplot( temp_container.slice( 0..20 ), "%e %e %e\n", %w[X Y Z],  "3d_plot_smooth.gp" )
         #exit
 
-        message :info, "Over-writing new filtered data to output ADT object"
+        @log.message :info, "Over-writing new filtered data to output ADT object"
 
         t_container = pca.reshape_data( temp_container, true, false )
 
         xtran, ytran, ztran = t_container.shift, t_container.shift, t_container.shift
 
-        # message :warning, "Size changed (bug in filter) - size of frames is now #{xtran.length.to_s} should be #{input.frames.to_s}"
-        # message :warning, "Size changed (bug in filter) - size of frames is now #{xtran.length.to_s} "
+        # @log.message :warning, "Size changed (bug in filter) - size of frames is now #{xtran.length.to_s} should be #{input.frames.to_s}"
+        # @log.message :warning, "Size changed (bug in filter) - size of frames is now #{xtran.length.to_s} "
 
         eval( "input.#{s.to_s}.xtran = xtran" )
         eval( "input.#{s.to_s}.ytran = ytran" )

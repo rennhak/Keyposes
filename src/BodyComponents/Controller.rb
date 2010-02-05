@@ -38,10 +38,13 @@ require 'Extensions.rb'
 require 'ADT.rb'
 
 # Local includes
-require 'PCA.rb'
-require 'Physics.rb'
 require 'Mathematics.rb'
+require 'Physics.rb'
+
+require 'PCA.rb'
 require 'Turning.rb'
+require 'Filter.rb'
+
 require 'Plotter.rb'
 require 'Logger.rb'
 
@@ -105,7 +108,7 @@ class Controller # {{{
 
           if( @options.filter_motion_capture_data )
             @log.message :info, "Filter Motion Capture data to smooth out outliers"
-            @filter                 = Filter.new
+            @filter                 = Filter.new( @options, @from, @to )
             @adt = @filter.filter_motion_capture_data( @adt )
           end
 
