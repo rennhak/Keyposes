@@ -18,6 +18,13 @@
 #######
 
 
+# Standard includes
+require 'rubygems'
+require 'narray'
+require 'gsl'
+
+# Warning: Including this line will cause everything to break.
+# include GSL
 
 
 # The class Mathematics provides helpful functions to calculate various things needed throughout this project
@@ -355,6 +362,73 @@ class Mathematics # {{{
 
     result
   end # end of getIntersectionPoint }}}
+
+
+  # The function takes an Array of input and calculates the derivative with the given step size h
+  #
+  # @param  [Array] input   Array, containing the input of the data which we want the derivative
+  # @param  [Float] h       Stepsize h, most of the time you want a small epsilon such as 
+  # @return [Array]         
+  #
+  # http://stackoverflow.com/questions/1559695/implementing-the-derivative-in-c-c
+  # The approximation error in (f(x + h) - f(x - h))/2h decreases as h gets smaller, which says you
+  # should take h as small as possible. But as h gets smaller, the error from floating point
+  # subtraction increases since the numerator requires subtracting nearly equal numbers. If h is too
+  # small, you can loose a lot of precision in the subtraction. So in practice you have to pick a
+  # not-too-small value of h that minimizes the combination of approximation error and numerical
+  # error.
+  #
+  # As a rule of thumb, you can try h = SQRT(DBL_EPSILON) where DBL_EPSILON is the smallest double
+  # precision number e such that 1 + e != e in machine precision. DBL_EPSILON is about 10^-15 so you
+  # could use h = 10^-7 or 10^-8.
+  #
+  # http://www.johndcook.com/NumericalODEStepSize.pdf
+  #
+  # @note http://en.wikipedia.org/wiki/Numerical_differentiation
+  def derivative input, h = 10**(-7) # {{{
+
+    # Pre-condition check # {{{
+    raise ArgumentError, "The argument input should be of type Array, but is (#{input.class.to_s})" unless( input.is_a?(Array) )
+    raise ArgumentError, "The argument h should be of type Numeric, but is (#{h.class.to_s})" unless( h.is_a?(Numeric) )
+    # }}}
+
+    # Main
+    derivative      = []
+    frames          = []
+
+    # Prepare a GSL Spline
+    spline          = GSL::Spline.alloc( "cspline", input.length )
+
+    # Generate frame steps for fitting
+    0.upto( input.length - 1 ) { |i| frames << (i) } # i*h
+
+    # Fit a spline to the input data
+    spline.init( GSL::Vector.alloc( frames ), GSL::Vector.alloc( input ) )
+
+    # Calculate derivative by numerical approximation
+    ( 0..(input.length - 1) ).step( h ) do |step|
+
+      # A simple three-point estimation is to compute the slope of a nearby secant line through the
+      # points (x-h,f(x-h)) and (x+h,f(x+h))
+      deriv         = ( spline.eval( step.to_f + h ) - spline.eval( step.to_f - h ) ) / ( 2 * h )
+      derivative   << deriv if( (step % 1) == 0.0 )
+    end
+
+    # Post-condition check
+    raise ArgumentError, "The function result should be of type Array, but is (#{derivative.class.to_s})" unless( derivative.is_a?(Array) )
+
+    derivative
+  end # of def derivative }}}
+
+
+  # The function takes 
+  def first_derivative_test # {{{
+  end # of def first_derivative_test }}}
+
+
+  # The function takes 
+  def second_derivative_test # {{{
+  end # of def second_derivative_test }}}
 
 
   # The function returns a solution for the following:

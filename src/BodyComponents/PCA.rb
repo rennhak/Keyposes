@@ -383,7 +383,7 @@ class PCA # {{{
   def do_pca input, reduce_dimensions # {{{
 
     # Pre-condition check {{{
-    raise ArgumentError, "Data needs to be of the shape [ [x1,x2,..xn], [y1,y2,..yn], [z1,z2,...zn] ] but it is has ( #{input.length.to_s} ) elements" unless( input.length == 3 )
+    # raise ArgumentError, "Data needs to be of the shape [ [x1,x2,..xn], [y1,y2,..yn], [z1,z2,...zn] ] but it is has ( #{input.length.to_s} ) elements" unless( input.length == 3 )
     input.each { |array| raise ArgumentError, "Data contained in the subarrays may not be nil" if( array.include?( nil ) ) }
     raise ArgumentError, "Reduce dimensions needs to be of type integer" unless( reduce_dimensions.is_a?( Integer ) )
     # }}}

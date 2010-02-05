@@ -649,11 +649,10 @@ class Turning # {{{
 
     @log.message :info, "CPA Extraction of all body components"
 
-    #body_components       = %w[upper_arms fore_arms hands thighs shanks feet]
-    # body_components       = %w[upper_arms fore_arms hands]
-    body_components       = %w[shanks]
-    
-    #body_components         = %w[thighs shanks feet]
+    upper_body              = %w[upper_arms fore_arms]
+    lower_body              = %w[thighs shanks feet]
+
+    body_components         = upper_body
 
     components            = []    # here we store our data refs in one place
 
@@ -707,7 +706,94 @@ class Turning # {{{
     a                                 = @physics.acceleration( pca.reshape_data( all_final.dup, false, true), 5 )
     p                                 = @physics.power( pca.reshape_data( all_final.dup, false, true ), mass, 5 )
 
-  
+
+
+    h = 10 ** (-1)
+    e_prime       = @mathematics.derivative( all_energy, h )           # slope of the function
+    e_prime_prime = @mathematics.derivative( e_prime, h )     # rate of change (or slope of the slope)
+
+    v_prime       = @mathematics.derivative( v, h )           # slope of the function
+    v_prime_prime = @mathematics.derivative( v_prime, h )     # rate of change (or slope of the slope)
+
+
+    # Get frames where Kappa > 0.02
+    kappa_candidates = []
+    energy_candidates = []
+    velocity_candidates = []
+
+    kappa.each_with_index { |k, i| kappa_candidates << i if( k >= 0.01 ) }
+   #  pca.normalize( v.dup ).each_with_index { |v, i| velocity_candidates << i if( v <= 0.2 ) }
+
+    v_prime_frames = []
+    0.upto( e_prime.length - 1 ) { |i| v_prime_frames << i }
+    # GSL::graph( [ GSL::Vector.alloc( v_prime_frames ), GSL::Vector.alloc( v_prime ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
+
+    v_prime_prime_frames = []
+    0.upto( v_prime_prime.length - 1 ) { |i| v_prime_prime_frames << i }
+    # GSL::graph( [ GSL::Vector.alloc( v_prime_prime_frames ), GSL::Vector.alloc( v_prime_prime ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
+
+
+    puts "Candidates after energy check"
+
+    e_res = ( (v_prime_frames.zip( e_prime ) ).zip( e_prime_prime ) ).collect { |a| a.flatten }
+    e_res.each do |frame, v1, v2|
+      v1_prev = e_res[ frame - 1 ][1]
+
+      if( ( v1_prev <= 0 and v1 >= 0 ) and ( v2 >= 0 )  )
+        energy_candidates << frame - 2
+        energy_candidates << frame - 1
+        energy_candidates << frame
+        energy_candidates << frame + 1
+        energy_candidates << frame + 2
+        puts "Frame: #{frame.to_s}    v_i #{v1.to_s}      v_ii #{v2.to_s}"
+      end
+    end
+
+    energy_candidates.uniq!
+
+    puts ""
+    puts "Candidates after velocity check"
+    puts ""
+
+    v_res = ( (v_prime_frames.zip( v_prime ) ).zip( v_prime_prime ) ).collect { |a| a.flatten }
+    v_res.each do |frame, v1, v2|
+      v1_prev = v_res[ frame - 1][1]
+
+      if( ( v1_prev <= 0 and v1 >= 0 ) and ( v2 >= 0 ) )
+
+        velocity_candidates << frame - 2
+        velocity_candidates << frame - 1
+        velocity_candidates << frame
+        velocity_candidates << frame + 1
+        velocity_candidates << frame + 2
+        puts "Frame: #{frame.to_s}    v_i #{v1.to_s}      v_ii #{v2.to_s}" # if( new_candidates.include?(frame) ) #  and velocity_candidates.include?(frame) ) # and ( v2 >= 0 )  )
+      end
+    end
+
+    velocity_candidates.uniq!
+
+    result = []
+    0.upto( all_energy.length - 1 ).each do |frame|
+      sum = ""
+      
+      sum += "ccccc"  if( kappa_candidates.include?(frame) )
+      sum += "eeeee" if( energy_candidates.include?(frame) )
+      sum += "vvvvv" if( velocity_candidates.include?(frame) )
+
+      result << sum
+    end
+
+    normed_energy = pca.normalize( all_energy.dup )
+    normed_velocity = pca.normalize( v.dup )
+
+    result.each_with_index do |r, i|
+      tmp = normed_energy[i] * normed_velocity[i] 
+      print "#{i.to_s}      |  #{(tmp).to_s}   | " + r +"\n" if( (r.length > 5) and (tmp <= 0.05) )
+    end
+
+    # GSL::graph( [ GSL::Vector.alloc( v_prime_prime_frames ), GSL::Vector.alloc( result ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
+
+
     # Kappa needs to be corrected because @from is not nil and not 0
     #if( @from.to_i > 0 )
     #  old_kappa = kappa.dup
