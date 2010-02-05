@@ -651,6 +651,7 @@ class Turning # {{{
 
     upper_body              = %w[upper_arms fore_arms]
     lower_body              = %w[thighs shanks feet]
+    full_body               = ( upper_body.concat( lower_body ) ).flatten
 
     body_components         = upper_body
 
@@ -786,13 +787,31 @@ class Turning # {{{
     normed_energy = pca.normalize( all_energy.dup )
     normed_velocity = pca.normalize( v.dup )
 
+    interesting = []
+
     result.each_with_index do |r, i|
+      interesting[i] = [ i, 0 ]
+
       tmp = normed_energy[i] * normed_velocity[i] 
-      print "#{i.to_s}      |  #{(tmp).to_s}   | " + r +"\n" if( (r.length > 5) and (tmp <= 0.05) )
+      if( (r.length > 5) and (tmp <= 0.05) )
+        print "#{i.to_s}      |  #{(tmp).to_s}   | " + r +"\n" 
+
+        strength = 1
+        strength += 1 if( tmp <= 0.01 )
+        interesting[i] = [ i, r.length + strength ]
+      end
     end
 
-    # GSL::graph( [ GSL::Vector.alloc( v_prime_prime_frames ), GSL::Vector.alloc( result ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
+ 
+    #GSL::graph( [ GSL::Vector.alloc( interesting ), GSL::Vector.alloc( interesting_values ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
 
+    
+    e_show = (v_prime_frames.zip(  e_prime.dup         ) ) 
+    ee_show = (v_prime_frames.zip( e_prime_prime.dup   ) )
+    v_show = (v_prime_frames.zip(  v_prime.dup         ) )
+    vv_show = (v_prime_frames.zip( v_prime_prime.dup   ) )
+
+    @plot.easy_gnuplot( v_show, "%e %e\n", ["Frames", "Dance Master Pose"], "Dance Master Pose extraction Graph", "new_weight_plot.gp", "new_weight_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "new_weight_dmp.gpdata" ) 
 
     # Kappa needs to be corrected because @from is not nil and not 0
     #if( @from.to_i > 0 )

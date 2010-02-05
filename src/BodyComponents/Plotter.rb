@@ -258,6 +258,53 @@ class Plotter # {{{
 
   end # of def interactive_gnuplot }}}
 
+  def easy_gnuplot data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil, pointsOfInterest = nil, pointsOfInterestRange = nil, pointsOfInterest_filename = nil, tp = nil, tp_filename = nil # {{{
+    oldLabels = labels.dup
+
+    File.open( filename.to_s, "w" ) do |f|
+      f.write( "reset\n" )
+      f.write( "set ticslevel 0\n" )
+      f.write( "set style line 1 lw 3\n" )
+      f.write( "set grid\n" )
+      f.write( "set border\n" )
+      f.write( "set pointsize 1\n" )
+
+      f.write( "set xlabel '#{labels.shift.to_s}' font \"Helvetica,20\"\n" )
+      f.write( "set ylabel '#{labels.shift.to_s}' font \"Helvetica,20\"\n" )
+      f.write( "set autoscale\n" )
+      f.write( "set font 'Helvetica,20'\n" )
+      f.write( "set key left box\n" )
+      f.write( "set output\n" )
+      f.write( "set terminal x11 persist\n" )
+      f.write( "set title '#{title}' font \"Helvetica,20\" \n" )
+
+      if( pointsOfInterest.nil? )
+        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line\n" )
+      else
+        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 1\n" )
+        #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'ekin.gpdata' ti \"Kinetic Energy\" w line, 'eucledian_distances_window_plot.gpdata' ti \"Eucledian Distance Window (speed)\" w line\n" )
+        #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7\n")
+      end
+    end # of File.open
+
+    File.open( data_filename.to_s, "w" ) do |f|
+  
+      data.each do |frame, value|
+        f.write( "#{frame.to_s} #{value.to_s}\n" )
+      end
+    end
+
+
+    unless( pointsOfInterest.nil? )
+      File.open( pointsOfInterest_filename.to_s, "w" ) do |f|
+        pointsOfInterest.each_with_index do |dmp, index|
+            f.write( "#{dmp.to_s} 0 #{pointsOfInterestRange[index].first.to_s} #{pointsOfInterestRange[index].last.to_s}\n" )
+        end # of data.each_with_index do |d,i|
+      end
+    end
+
+
+  end # of def easy_gnuplot }}}
 
 
 
