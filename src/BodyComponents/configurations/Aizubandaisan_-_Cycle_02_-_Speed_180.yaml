@@ -1,0 +1,21 @@
+---
+
+type: Dance
+name: Aizubandaisan_-_Cycle_02_-_Speed_180
+filename: ../../../../data/DanceData/Aizu_Wakamatsu_Experiments/yamada_180_cycle2.vpm
+from: 0
+to: 481
+
+
+# Dance Master Poses
+# - [ exact, [ approx. from, approx. to ] ]
+dmp: [
+    [1, [0, 9]],
+    [80, [69, 89]],
+    [163, [152, 168]],
+    [221, [210, 233]],
+    [280, [270, 286]],
+    [319, [305, 330]],
+    [412, [403, 421]],
+    [442, [436, 450]]
+]

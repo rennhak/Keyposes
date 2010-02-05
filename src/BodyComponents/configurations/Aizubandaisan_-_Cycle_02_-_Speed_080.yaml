@@ -1,0 +1,22 @@
+---
+
+type: Dance
+name: Aizubandaisan_-_Cycle_02_-_Speed_080
+filename: ../../../../data/DanceData/Aizu_Wakamatsu_Experiments/yamada_random_cooked_renamed.vpm
+from: 2664
+to: 3719
+
+
+# Dance Master Poses
+# - [ exact, [ approx. from, approx. to ] ]
+dmp: [
+    [2669, [2668, 2672]],
+    [2817, [2790, 2840]],
+    [3019, [2993, 3031]],
+    [3179, [3154, 3207]],
+    [3283, [3256, 3297]],
+    [3380, [3353, 3395]],
+    [3583, [3558, 3599]],
+    [3633, [3625, 3647]]
+]
+

@@ -1,0 +1,22 @@
+---
+
+type: Dance
+name: Aizubandaisan_-_Cycle_02_-_Speed_120
+filename: ../../../../data/DanceData/Aizu_Wakamatsu_Experiments/yamada_120_cycle2.vpm
+from: 0
+to: 719
+
+
+# Dance Master Poses
+# - [ exact, [ approx. from, approx. to ] ]
+dmp: [
+    [1, [0, 8]],
+    [127, [100, 136]],
+    [228, [215, 254]],
+    [345, [335, 360]],
+    [411, [393, 425]],
+    [475, [463, 488]],
+    [630, [615, 640]],
+    [664, [661, 670]]
+]
+
