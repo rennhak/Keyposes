@@ -25,6 +25,8 @@ group :development do
   gem 'psych'
 
   gem 'zmq'
+  gem 'ffi-rzmq'
+  gem 'json'
 
 end
 

@@ -98,6 +98,8 @@ class Clustering # {{{
       table[ c.to_s ] << f
     end
 
+    puts "Calculating cluster distances"
+
     distances = Hash.new # key == cluster id  value == array with each index being the distance of all cluster points to all other cluster points. Index of array is other clusters
     table.each_pair do |cluster, frames|
 
@@ -114,6 +116,7 @@ class Clustering # {{{
         # Calculate the distances of all points in frames (cluster) to all points in f (c)
         # for each of the outer frames go over each of the inner frames
         # store calcuated distances in values array
+
         frames.each do |i| 
           f.each do |j|
             values[ c.to_i ] += @mathematics.eucledian_distance( data[ i ], data[ j ] )
@@ -125,6 +128,8 @@ class Clustering # {{{
       distances[ cluster ] = values 
 
     end # of table.each_pair 
+
+    puts "Finished cluster distances"
 
     distances
   end # of def cluster_distances # }}}

@@ -58,6 +58,12 @@ require_relative 'PoseVisualizer.rb'
 require_relative 'Logger.rb'
 require_relative 'Compare.rb' 
 
+# ZMQ
+require_relative 'KMeans_Controller.rb'
+require_relative 'KMeans_Worker.rb'
+require_relative 'KMeans_Sink.rb'
+
+
 # Change Namespace
 include GSL
 
@@ -322,6 +328,40 @@ class Controller
             tmp_centroids     = []
 
             if( @options.zmq )
+              cpus            = @options.cpus.to_i
+              pids            = []
+
+              @log.message :info, "Spawning workers"
+
+              @options.clustering_iterations = 50
+
+              # Spawn workers
+              (cpus.to_i).times do |i|
+                pids << worker = fork do
+                  KMeans_Worker.new( @options, @log, i, ( @options.clustering_iterations.to_i / cpus.to_i ), @options.clustering_k_parameter.to_i, final )
+                end
+              end
+
+              # Compute and get results
+              sink            = KMeans_Sink.new( @log, cpus.to_i )
+
+              # Wait for workers
+              while( true ) do
+                @log.message :success, "Waiting until the workers are done...."
+                sleep 2
+                break if( sink.done )
+              end
+
+              # Get rid of the spawned processes
+              pids.each do |worker|
+                @log.message :info, "Killing worker #pid #{worker.to_s}"
+                Process.kill( "KILL", worker )
+              end
+
+              kms               = sink.kms
+              tmp_distortions   = sink.tmp_distortions
+              tmp_centroids     = sink.tmp_centroids
+
 
             else
               # Iterate over kmeans clustering with random initialization to find a better result for
@@ -562,6 +602,7 @@ class Controller
     options.process                         = ""
     options.turning_pose_extraction         = false
     options.zmq                             = false
+    options.cpus                            = 4
     options.filter_motion_capture_data      = false
     options.boxcar_filter                   = nil
     options.boxcar_filter_default           = 15

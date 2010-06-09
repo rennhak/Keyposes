@@ -147,6 +147,8 @@ class Mathematics
     # }}}
 
 
+    # puts "Eucledian distances calculation (#{point1.to_s}) (#{point2.to_s})"
+
     x1, y1, z1 = *point1
     x2, y2, z2 = *point2
 
