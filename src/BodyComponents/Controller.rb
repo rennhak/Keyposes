@@ -333,8 +333,6 @@ class Controller
 
               @log.message :info, "Spawning workers"
 
-              @options.clustering_iterations = 50
-
               # Spawn workers
               (cpus.to_i).times do |i|
                 pids << worker = fork do
@@ -342,26 +340,23 @@ class Controller
                 end
               end
 
+              sleep 1
+
               # Compute and get results
-              sink            = KMeans_Sink.new( @log, cpus.to_i )
+              sink = KMeans_Sink.new( @log, cpus.to_i )
 
-              # Wait for workers
-              while( true ) do
-                @log.message :success, "Waiting until the workers are done...."
-                sleep 2
-                break if( sink.done )
-              end
+              sleep 1
 
-              # Get rid of the spawned processes
-              pids.each do |worker|
-                @log.message :info, "Killing worker #pid #{worker.to_s}"
-                Process.kill( "KILL", worker )
-              end
-
+              # Get values we want from sink
               kms               = sink.kms
               tmp_distortions   = sink.tmp_distortions
               tmp_centroids     = sink.tmp_centroids
 
+              # Get rid of the spawned processes
+              pids.each do |worker|
+                 @log.message :info, "Killing worker #pid #{worker.to_s}"
+                 Process.kill( "KILL", worker )
+              end
 
             else
               # Iterate over kmeans clustering with random initialization to find a better result for

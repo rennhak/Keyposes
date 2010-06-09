@@ -34,7 +34,6 @@ class KMeans_Sink
 
     @logger     = logger
     @workers    = workers
-    @done       = false
 
     @logger.message :info, "Starting ZMQ K-Means Sink to collect results from #{workers.to_s} workers"
 
@@ -50,7 +49,7 @@ class KMeans_Sink
     @kms  = []
 
     # Process 100 confirmations
-    workers.to_i.times do |task_nbr|
+    ( workers.to_i - 1 ).times do |task_nbr|
       message = ""
       receiver.recv_string( message )
       kms, dist, cent = *( JSON.parse( message ) )
@@ -71,9 +70,7 @@ class KMeans_Sink
     total_msec = (tend-tstart) * 1000
     @logger.message :info, "Total elapsed time: #{total_msec} msec"
 
-    @done = true
   end # def initialize }}}
-
 
   attr        :kms, :tmp_distortions, :tmp_centroids
   attr_reader :done

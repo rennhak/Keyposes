@@ -79,6 +79,8 @@ class KMeans_Worker
 
     sender.send_string( payload )
 
+    @logger.message :info, "KMeans_Worker (id :#{@id.to_s}) finished"
+
   end # def initialize }}}
 
 end # of class KMeans_Worker # }}}

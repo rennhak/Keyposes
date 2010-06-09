@@ -64,7 +64,9 @@ class Clustering # {{{
         end
       end
 
+      puts "before kmeans"
       km_tmp      = KMeans.new(data, :centroids => centroids, :custom_centroids => cen )
+      puts "after kmeans"
     end
 
     centroids   = km_tmp.centroids
