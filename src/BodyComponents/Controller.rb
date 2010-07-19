@@ -73,7 +73,9 @@ class Controller # {{{
     @config.cache_dir             = "cache"
 
     # Determine which configs are available
-    @configurations       = Dir[ "#{@config.config_dir}/*.yaml" ].collect { |d| d.gsub( "#{@config.config_dir}/", "" ).gsub( ".yaml", "" ) }
+    @configurations               = Dir[ "#{@config.config_dir}/*.yaml" ].collect { |d| d.gsub( "#{@config.config_dir}/", "" ).gsub( ".yaml", "" ) }
+
+    @body_parts                   = %w[hands fore_arms upper_arms thighs shanks feet]
 
     unless( options.nil? )
       @log.message :success, "Starting #{__FILE__} run"
@@ -162,6 +164,7 @@ class Controller # {{{
     options.filter_motion_capture_data      = false
     options.boxcar_filter                   = nil
     options.boxcar_filter_default           = 15
+    options.body_parts                      = []
 
     pristine_options                        = options.dup
 
@@ -182,6 +185,10 @@ class Controller # {{{
 
       opts.on( "-b", "--box-car-filter OPT", "Filter curvature result through a Finite Impulse Response (FIR) Boxcar filter of order N (#{options.boxcar_filter_default.to_s})" ) do |b|
         options.boxcar_filter = b
+      end
+
+      opts.on("-p", "--parts OPT", @body_parts, "Proces one or more body parts during the computation (OPT: #{@body_parts.join(", ")})" ) do |p|
+        options.body_parts << p
       end
 
       opts.separator ""

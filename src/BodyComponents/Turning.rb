@@ -651,17 +651,20 @@ class Turning # {{{
 
     @log.message :info, "CPA Extraction of all body components"
 
-    upper_body              = %w[upper_arms fore_arms hands]
-    lower_body              = %w[thighs shanks feet]
-    full_body               = ( upper_body.concat( lower_body ) ).flatten
+    #upper_body              = %w[upper_arms fore_arms hands]
+    #lower_body              = %w[thighs shanks feet]
+    #full_body               = ( upper_body.concat( lower_body ) ).flatten
 
     # body_components         = upper_body
     # body_components         = %w[fore_arms]
-    body_components         = full_body
+    # body_components         = full_body
+    body_components         = @options.body_parts
 
     components            = []    # here we store our data refs in one place
 
+    p @options.body_parts
     body_components.each do |c|
+      @log.message :info, "Using the following body component: #{c.to_s}"
       eval( "@#{c} = get_components_cpa( :#{c} )" )
       components << instance_variable_get( "@#{c}" )
     end # of components.each
