@@ -629,7 +629,7 @@ class Turning # {{{
   #                           These symbols can be found in the MotionX package src/plugins/vpm/src/Body.rb
   # @param from Integer, representing the start of the desired frames
   # @param to Integer, representing the end of the desired frames
-  # @returns Coordinates of new CPA from the get_segment_spa method
+  # @returns Coordinates of new CPA from the get_segment_cpa method
   def get_components_cpa components_keyword, from = @from, to = @to # {{{
 
     raise ArgumentError, "The component keyword symbol you supplied (,,#{components_keyword.to_s}'') doesn't exist in group [ #{@adt.body.group.keys.join( ", ")} ]" unless( @adt.body.group.keys.include?( components_keyword ) ) 
@@ -651,25 +651,38 @@ class Turning # {{{
 
     @log.message :info, "CPA Extraction of all body components"
 
-    #upper_body              = %w[upper_arms fore_arms hands]
-    #lower_body              = %w[thighs shanks feet]
-    #full_body               = ( upper_body.concat( lower_body ) ).flatten
-
-    # body_components         = upper_body
-    # body_components         = %w[fore_arms]
-    # body_components         = full_body
     body_components         = @options.body_parts
 
     components            = []    # here we store our data refs in one place
 
-    p @options.body_parts
-    body_components.each do |c|
-      @log.message :info, "Using the following body component: #{c.to_s}"
-      eval( "@#{c} = get_components_cpa( :#{c} )" )
-      components << instance_variable_get( "@#{c}" )
-    end # of components.each
+    @log.message :success, "Using the following body components: #{@options.body_parts.join( ", " ).to_s}"
 
-    mass            = body_components.inject( 0 ) { |result, element| result + @adt.body.get_mass( element ) }
+    tmp_components        = []
+
+    # Get all individual components
+    body_components.each { |c| tmp_components << @adt.body.group[ c.to_sym ] } 
+
+    unless( @options.use_raw_data )
+      @log.message :success, "Using CPA technique before doing PCA to unify symetrical components"
+      # Push data into storage for PCA
+      body_components.each do |c|
+        # Apply CPA-PCA for all components
+        eval( "@#{c} = get_components_cpa( :#{c} )" )
+        components << instance_variable_get( "@#{c}" )
+      end # of components.each
+    else
+      @log.message :success, "Using RAW data for PCA matrix"
+      # Push raw data into storage for PCA 
+      tmp_components.flatten.uniq.each do |c|
+        component = eval("@adt.#{c.to_s}")
+        center    = eval("@adt.pt30")
+        
+        local     = component - center
+        components << local.getCoordinates!
+      end
+    end
+
+    mass = body_components.inject( 0 ) { |result, element| result + @adt.body.get_mass( element ) }
 
     all   = []
     count = 0

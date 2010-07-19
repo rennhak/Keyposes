@@ -165,6 +165,7 @@ class Controller # {{{
     options.boxcar_filter                   = nil
     options.boxcar_filter_default           = 15
     options.body_parts                      = []
+    options.use_raw_data                    = false
 
     pristine_options                        = options.dup
 
@@ -189,6 +190,10 @@ class Controller # {{{
 
       opts.on("-p", "--parts OPT", @body_parts, "Proces one or more body parts during the computation (OPT: #{@body_parts.join(", ")})" ) do |p|
         options.body_parts << p
+      end
+
+      opts.on("-r", "--raw-data", "Use raw data for PCA reduction instead of CPA data") do |r|
+        options.use_raw_data  = r
       end
 
       opts.separator ""
