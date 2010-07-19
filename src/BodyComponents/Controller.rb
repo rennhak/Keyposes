@@ -111,7 +111,7 @@ class Controller # {{{
           if( @options.filter_motion_capture_data )
             @log.message :info, "Filter Motion Capture data to smooth out outliers"
             @filter                 = Filter.new( @options, @from, @to )
-            @adt = @filter.filter_motion_capture_data( @adt )
+            @adt                    = @filter.filter_motion_capture_data( @adt )
           end
 
           if( @options.turning_pose_extraction )
@@ -166,6 +166,8 @@ class Controller # {{{
     options.boxcar_filter_default           = 15
     options.body_parts                      = []
     options.use_raw_data                    = false
+    options.filter_point_window_size        = 20
+    options.filter_polyomial_order          = 5
 
     pristine_options                        = options.dup
 
@@ -180,8 +182,12 @@ class Controller # {{{
         options.turning_pose_extraction     = t
       end
 
-      opts.on("-f", "--filter-motion-capture-data", "Filter the motion capture data against outliers before proceeding with other calculations (smoothing)") do |f|
-        options.filter_motion_capture_data  = f
+      opts.on("-f", "--filter-motion-capture-data OPT OPT2", "Filter the motion capture data against outliers before proceeding with other calculations (smoothing) with a polynomial of the order OPT with point window size OPT2 (e.g. \"5 20\")") do |f|
+        data = f.split( " " )
+        raise ArgumentError, "Needs at least two arguments provided enclosed by \"\"'s, eg. \"5 20\" for order 5 and 20 points" unless( data.length == 2 )
+        options.filter_motion_capture_data                               = true
+        data.collect! { |i| i.to_i }
+        options.filter_polyomial_order, options.filter_point_window_size = *data
       end
 
       opts.on( "-b", "--box-car-filter OPT", "Filter curvature result through a Finite Impulse Response (FIR) Boxcar filter of order N (#{options.boxcar_filter_default.to_s})" ) do |b|

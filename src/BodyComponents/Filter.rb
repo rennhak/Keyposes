@@ -48,18 +48,21 @@ class Filter # {{{
   end # of def initialize }}}
 
 
-  # The function takes a MotionX ADT Class as input and returns a filtered (smoothed) version of the input data
+  # The function takes a MotionX ADT Class as input and returns a filtered (smoothed) version of the input data via an overlapping sliding point window that uses a polynomial for fitting
   # @param    [ADT]     input           ADT Class Object of the MotionX package VPM plugin
   # @param    [Integer] point_window    Integer representing the window size in which the polynomial fitting is applied
   # @param    [Integer] polynom_order   Integer representing the order of the fitting polynomial
   # @returns  [ADT]                     ADT Class Object containing the new smoothed version of the input
-  def filter_motion_capture_data input, point_window = 40, polynom_order = 3 # {{{
-  # point_window = 10, polynom_order = 5 
+  def filter_motion_capture_data input, point_window = @options.filter_point_window_size, polynom_order = @options.filter_polyomial_order # {{{
+
+    @log.message :success, "Smoothing raw data with Polynomial of the order #{polynom_order.to_s} with a point window of #{point_window.to_s}"
 
     # Pre-condition check {{{
     raise ArgumentError, "Input argument should be of type ADT, but is of type (#{input.class.to_s})" unless( input.is_a?(ADT) )
     raise ArgumentError, "Point window argument should be of type Integer, but is of (#{point_window.class.to_s})" unless( point_window.is_a?( Integer ) )
     raise ArgumentError, "Polynom order argument should be of type Integer, but is of (#{polynom_order.class.to_s})" unless( polynom_order.is_a?( Integer ) )
+    raise ArgumentError, "Point window number needs to be even, but it is (#{point_window.to_s})" unless( ( point_window % 2 ) == 0 )
+    raise ArgumentError, "Point window divided by 2 needs to be even as well, but it is (#{(point_window/2).to_s})" unless( ( ( (point_window / 2) % 2 ) == 0 ) )
     # }}}
 
     @log.message :info, "Starting filtering of all relevant motion segments"
@@ -87,115 +90,108 @@ class Filter # {{{
         segment     = eval( "input.#{s.to_s}" )
         coordinates = segment.getCoordinates!
 
-        coordinate_chunks = coordinates % point_window
+        coordinate_chunks = coordinates % ( point_window / 2 )
 
+        #coordinate_chunks.each_with_index do |cluster, cluster_index|
 
-        print_one = []
-        print_two = []
+        while( not coordinate_chunks.empty? )
 
-        coordinate_chunks.each do |cluster|
+          # cluster = c1 + c2 since we have point_window / 2
+          c1 = coordinate_chunks.shift
+          c1_length = c1.length
 
-          # # Lets get a point sample
-          # n           = point_window
-          # cluster     = []
-          # coordinates.each_with_index do |points, index|
-          #   cluster << points
-          #   break if( index >= n )
-          # end
+          c2 = coordinate_chunks.shift
+          c2_length = ( c2.nil? ) ? ( 0 ) : ( c2.length )
 
-          # determine the piecewise linear from p0 to p1 (eucleadian distance)
-          arc_lengths  = []
-          cluster.each_index { |index| arc_lengths << @mathematics.eucledian_distance( cluster[index], cluster[index+1] ) unless( (cluster[ index + 1 ]).nil? ) }
+          cluster = ( c2.nil? ) ? ( c1 ) : ( c1.dup.concat( c2 ) )
 
-          cluster_l           = pca.reshape_data( cluster.dup, true, false )
-          x, y, z             = cluster_l.shift, cluster_l.shift, cluster_l.shift
+          unless( cluster.empty? )
+            # determine the piecewise linear from p0 to p1 (eucleadian distance)
+            arc_lengths  = []
+            cluster.each_index { |index| arc_lengths << @mathematics.eucledian_distance( cluster[index], cluster[index+1] ) unless( (cluster[ index + 1 ]).nil? ) }
 
-          t_s         = []
-          arc_lengths.each_index do |i|
-            # t[0] is 0
-            if( i == 0 )
-              t_s << 0
-              next
-            end
+            cluster_l           = pca.reshape_data( cluster.dup, true, false )
+            x, y, z             = cluster_l.shift, cluster_l.shift, cluster_l.shift
 
-            # from 2..n
-            t_s << t_s[ i - 1 ] + arc_lengths[ i ]
-          end
-
-          result_splines = []
-
-          # get independent splines through s1 = [ t(i), x(i) ], s2 =[ t(i), y(i) ], s3 = [ t(i), z(i) ]
-          # Should use bsline actually, maybe to wavevy?
-          [ [ t_s, x ], [ t_s, y ], [ t_s, z ] ].each do |array|
-
-
-            t, axis = *array
-
-            #if( t.length != point_window.to_i )
-            #  puts "Not enough points for spline fitting skipping #{t.length.to_s} points for #{s.to_s}"
-            #  next
-            #end
-
-            # original
-            # can we not throw away the last point?
-            # if( t.length != axis.length )
-            #  t_l, a_l = t.length, axis.length
-            #  if( t_l < a_l )
-            #    axis.pop
-            #  end
-            # end
-
-            if( t.length != axis.length )
-              t_l, a_l = t.length, axis.length
-              if( t_l < a_l )
-                # t << axis.last
-                t << t.last # best guess?
+            t_s         = []
+            arc_lengths.each_index do |i|
+              # t[0] is 0
+              if( i == 0 )
+                t_s << 0
+                next
               end
+
+              # from 2..n
+              t_s << t_s[ i - 1 ] + arc_lengths[ i ]
             end
 
+            result_splines = []
 
+            # get independent splines through s1 = [ t(i), x(i) ], s2 =[ t(i), y(i) ], s3 = [ t(i), z(i) ]
+            # Should use bsline actually, maybe to wavevy?
+            [ [ t_s, x ], [ t_s, y ], [ t_s, z ] ].each do |array|
 
-            gsl_t, gsl_axis           = GSL::Vector.alloc( t ), GSL::Vector.alloc( axis )
-            coef, err, chisq, status  = GSL::MultiFit::polyfit( gsl_t, gsl_axis, polynom_order )
+              t, axis = *array
 
-            # result_splines << [ coef, err, chisq, status ]
-            result_splines << coef
+              # original
+              # can we not throw away the last point?
+              # if( t.length != axis.length )
+              #  t_l, a_l = t.length, axis.length
+              #  if( t_l < a_l )
+              #    axis.pop
+              #  end
+              # end
 
-            # Standard error estimate
-            #err_sum = err.to_na.to_a.inject(0) { |r,e| r + e }
-            #err_final = Math.sqrt( err_sum / ( ( err.to_na.to_a.length - 1 ) - 2 ) )
-            errors += err.to_na.to_a
-            # printf( "Error: %-20s\n", err_final.to_s )
+              if( t.length != axis.length )
+                t_l, a_l = t.length, axis.length
+                if( t_l < a_l )
+                  # t << axis.last
+                  t << t.last # best guess?
+                end
+              end
+
+              gsl_t, gsl_axis           = GSL::Vector.alloc( t ), GSL::Vector.alloc( axis )
+              coef, err, chisq, status  = GSL::MultiFit::polyfit( gsl_t, gsl_axis, polynom_order )
+
+              # result_splines << [ coef, err, chisq, status ]
+              result_splines << coef
+
+              # Standard error estimate
+              #err_sum = err.to_na.to_a.inject(0) { |r,e| r + e }
+              #err_final = Math.sqrt( err_sum / ( ( err.to_na.to_a.length - 1 ) - 2 ) )
+              errors += err.to_na.to_a
+              # printf( "Error: %-20s\n", err_final.to_s )
+            end
+
+            cluster_smooth  = []
+            s1_coef, s2_coef, s3_coef = *result_splines
+
+            t_s.each_index do |i|
+              s1_t, s2_t, s3_t = s1_coef.eval( t_s[i] ), s2_coef.eval( t_s[i] ), s3_coef.eval( t_s[i] )
+
+              cluster_smooth << [ s1_t, s2_t, s3_t ]
+            end
+
+            x1 = cluster_smooth.shift( c1_length )
+            x2 = cluster_smooth.shift( c2_length )
+
+            # temp_container += cluster_smooth
+            temp_container += x1
+            coordinate_chunks.insert(0, x2 ) 
+          else
+            # cluster is empty
           end
 
-          cluster_smooth  = []
-          s1_coef, s2_coef, s3_coef = *result_splines
+        end # while
+        # end # of coordinate_chunks.each do |cluster|
 
-          t_s.each_index do |i|
-            s1_t, s2_t, s3_t = s1_coef.eval( t_s[i] ), s2_coef.eval( t_s[i] ), s3_coef.eval( t_s[i] )
 
-            cluster_smooth << [ s1_t, s2_t, s3_t ]
-          end
 
-          temp_container += cluster_smooth
-
-          #print_one << cluster
-          #print_two << cluster_smooth 
-
-          #if( print_one.length >= 20 )
-          #  @plotter.interactive_gnuplot( cluster, "%e %e %e\n", %w[X Y Z],  "3d_plot.gp" )
-          #  @plotter.interactive_gnuplot( cluster_smooth, "%e %e %e\n", %w[X Y Z],  "3d_plot_smooth.gp" )
-          #end
-
-        end # of coordinate_chunks.each do |cluster|
 
         #err_sum = errors.inject(0) { |r,e| r + e }
         #err_final = Math.sqrt( err_sum / ( ( errors.length - 1 ) - 2 ) )
         #puts "standard error of the estimate: #{ (err_final * 100 ).to_s} %"
 
-
-        #pca.interactive_gnuplot( temp_container.slice( 0..20 ), "%e %e %e\n", %w[X Y Z],  "3d_plot_smooth.gp" )
-        #exit
 
         @log.message :info, "Over-writing new filtered data to output ADT object"
 
