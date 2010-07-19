@@ -51,6 +51,7 @@ class Turning # {{{
 
     @mathematics          = Mathematics.new
     @physics              = Physics.new
+    @filter               = Filter.new( @options, @from, @to )
   end # of def initialize }}}
 
 
@@ -643,18 +644,20 @@ class Turning # {{{
   end # of def get_components_cpa }}}
 
 
+
   # = Perform calculations and extract data
   def get_data # {{{
     pca     = PCA.new
 
     @log.message :info, "CPA Extraction of all body components"
 
-    upper_body              = %w[upper_arms fore_arms]
+    upper_body              = %w[upper_arms fore_arms hands]
     lower_body              = %w[thighs shanks feet]
     full_body               = ( upper_body.concat( lower_body ) ).flatten
 
     # body_components         = upper_body
-    body_components         = %w[upper_arms]
+    # body_components         = %w[fore_arms]
+    body_components         = full_body
 
     components            = []    # here we store our data refs in one place
 
@@ -702,6 +705,22 @@ class Turning # {{{
     # kappa index is exacly 2 shorter than the others
     kappa = File.open( "work/kappa.csv", "r" ).readlines.collect! { |n| n.to_f }
 
+    unless( @options.boxcar_filter.nil? )
+      @log.message :info, "Applying FIR Boxcar filter of order #{@options.boxcar_filter.to_s} to Curvature"
+      boxcar_kappa = @filter.box_car_filter( kappa.zip(kappa), @options.boxcar_filter.to_i )
+      kappa = boxcar_kappa.collect { |a,b| b }
+    end
+
+   # bspline = GSL::BSpline.alloc(10, 50) # order, breakpoints
+   # knots   = bspline.knots_uniform( 0, kappa.length )
+
+   # new_kappa = []
+   # kappa.each do |k|
+   #   res     = bspline.eval( k )
+   #   new_kappa << res.to_a[0]
+   # end
+   # kappa = new_kappa
+
     @log.message :info, "Performing additional calculations (E_k, etc.)" 
 
     v                                 = @physics.velocity( pca.reshape_data( all_final.dup, false, true ), 5 )
@@ -735,7 +754,7 @@ class Turning # {{{
     # GSL::graph( [ GSL::Vector.alloc( v_prime_prime_frames ), GSL::Vector.alloc( v_prime_prime ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
 
 
-    puts "Candidates after energy check"
+    # puts "Candidates after energy check"
 
     e_res = ( (v_prime_frames.zip( e_prime ) ).zip( e_prime_prime ) ).collect { |a| a.flatten }
     e_res.each do |frame, v1, v2|
@@ -747,15 +766,15 @@ class Turning # {{{
         energy_candidates << frame
         energy_candidates << frame + 1
         energy_candidates << frame + 2
-        puts "Frame: #{frame.to_s}    v_i #{v1.to_s}      v_ii #{v2.to_s}"
+        # puts "Frame: #{frame.to_s}    v_i #{v1.to_s}      v_ii #{v2.to_s}"
       end
     end
 
     energy_candidates.uniq!
 
-    puts ""
-    puts "Candidates after velocity check"
-    puts ""
+    #puts ""
+    #puts "Candidates after velocity check"
+    #puts ""
 
     v_res = ( (v_prime_frames.zip( v_prime ) ).zip( v_prime_prime ) ).collect { |a| a.flatten }
     v_res.each do |frame, v1, v2|
@@ -768,7 +787,7 @@ class Turning # {{{
         velocity_candidates << frame
         velocity_candidates << frame + 1
         velocity_candidates << frame + 2
-        puts "Frame: #{frame.to_s}    v_i #{v1.to_s}      v_ii #{v2.to_s}" # if( new_candidates.include?(frame) ) #  and velocity_candidates.include?(frame) ) # and ( v2 >= 0 )  )
+        # puts "Frame: #{frame.to_s}    v_i #{v1.to_s}      v_ii #{v2.to_s}" # if( new_candidates.include?(frame) ) #  and velocity_candidates.include?(frame) ) # and ( v2 >= 0 )  )
       end
     end
 
@@ -791,11 +810,14 @@ class Turning # {{{
     interesting = []
 
     result.each_with_index do |r, i|
+
+      next if( kappa[i].nil? or normed_energy[i].nil? or normed_velocity[i].nil? )
+
       interesting[i] = [ i, 0 ]
 
       tmp = normed_energy[i] * normed_velocity[i] 
       if( (r.length > 5) and (tmp <= 0.05) )
-        print "#{i.to_s}      |  #{(tmp).to_s}   | " + r +"\n" 
+        # print "#{i.to_s}      |  #{(tmp).to_s}   | " + r +"\n" 
 
         strength = kappa[i] + (1 - normed_energy[i]) + (1 - normed_velocity[i] ) 
         #strength += 1 if( tmp <= 0.01 )
@@ -816,7 +838,7 @@ class Turning # {{{
     v_show = (v_prime_frames.zip(  v_prime.dup         ) )
     vv_show = (v_prime_frames.zip( v_prime_prime.dup   ) )
 
-    @plot.easy_gnuplot( interesting, "%e %e\n", ["Frames", "Dance Master Pose"], "Dance Master Pose extraction Graph", "new_weight_plot.gp", "new_weight_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "new_weight_dmp.gpdata" ) 
+    # @plot.easy_gnuplot( interesting, "%e %e\n", ["Frames", "Dance Master Pose"], "Dance Master Pose extraction Graph", "new_weight_plot.gp", "new_weight_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "new_weight_dmp.gpdata" ) 
 
     # Kappa needs to be corrected because @from is not nil and not 0
     #if( @from.to_i > 0 )
@@ -885,58 +907,58 @@ class Turning # {{{
     kappa_smooth = []
     0.upto( kappa.length - 1 ) { |n| kappa_smooth << coef.eval( n ) }
 
-    # NEW METHOD
-    n               = 16
-    nc              = 3
-    iterations      = ( kappa.length / n ) - 1
-    rest            = ( kappa.length % n ) - 1
-    kappa_wavelet   = GSL::Vector.alloc( ( ( iterations + 1 ) * n ) )
-    cycle           = 0
-
-    0.upto( iterations ) do |i|
-
-      k               = GSL::Vector.alloc( n )
-      c               = ( i * n ) - 1
-      0.upto( n - 1 ) { |j|  k.set( j, kappa[ c + j ] ) }
-
-      # daubechies | daubechies_centered
-      # This is the Daubechies wavelet family of maximum phase with k/2 vanishing moments. The
-      # implemented wavelets are k=4, 6, ..., 20, with k even.
-      #
-      # haar | haar_centered
-      # This is the Haar wavelet. The only valid choice of k for the Haar wavelet is k=2. 
-      #
-      # bspline | bspline_centered
-      # This is the biorthogonal B-spline wavelet family of order (i,j). The implemented values
-      # of k = 100*i + j are 103, 105, 202, 204, 206, 208, 301, 303, 305 307, 309. 
-      #
-      # The centered forms of the wavelets align the coefficients of the various sub-bands on
-      # edges. Thus the resulting visualization of the coefficients of the wavelet transform in
-      # the phase plane is easier to understand. 
-      wavelet         = GSL::Wavelet.alloc( "haar", 2 ) 
-      work            = GSL::Wavelet::Workspace.alloc( n )
-      data2           = wavelet.transform( k, GSL::Wavelet::FORWARD, work)
-      perm            = data2.abs.sort_index
-
-
-      cnt = 0
-      while( cnt + nc ) < n
-        data2[ perm[ cnt ] ] = 0.0
-        cnt += 1
-      end
-
-      intermediate    = ( GSL::Wavelet.transform_inverse( wavelet, data2 ) ).to_a
-      cycle          += 1
-
-      0.upto( n - 1 ) { |j| kappa_wavelet.set( ( c + j ), intermediate[ j ] ) }
-      #0.upto( n - 1 ) { |j| kappa_wavelet.set( ( c + j ), data2[ j ] ) }
-    end
-    kappa_wavelet     = kappa_wavelet.to_a
+#    # NEW METHOD
+#    n               = 16
+#    nc              = 3
+#    iterations      = ( kappa.length / n ) - 1
+#    rest            = ( kappa.length % n ) - 1
+#    kappa_wavelet   = GSL::Vector.alloc( ( ( iterations + 1 ) * n ) )
+#    cycle           = 0
+#
+#    0.upto( iterations ) do |i|
+#
+#      k               = GSL::Vector.alloc( n )
+#      c               = ( i * n ) - 1
+#      0.upto( n - 1 ) { |j|  k.set( j, kappa[ c + j ] ) }
+#
+#      # daubechies | daubechies_centered
+#      # This is the Daubechies wavelet family of maximum phase with k/2 vanishing moments. The
+#      # implemented wavelets are k=4, 6, ..., 20, with k even.
+#      #
+#      # haar | haar_centered
+#      # This is the Haar wavelet. The only valid choice of k for the Haar wavelet is k=2. 
+#      #
+#      # bspline | bspline_centered
+#      # This is the biorthogonal B-spline wavelet family of order (i,j). The implemented values
+#      # of k = 100*i + j are 103, 105, 202, 204, 206, 208, 301, 303, 305 307, 309. 
+#      #
+#      # The centered forms of the wavelets align the coefficients of the various sub-bands on
+#      # edges. Thus the resulting visualization of the coefficients of the wavelet transform in
+#      # the phase plane is easier to understand. 
+#      wavelet         = GSL::Wavelet.alloc( "haar", 2 ) 
+#      work            = GSL::Wavelet::Workspace.alloc( n )
+#      data2           = wavelet.transform( k, GSL::Wavelet::FORWARD, work)
+#      perm            = data2.abs.sort_index
+#
+#
+#      cnt = 0
+#      while( cnt + nc ) < n
+#        data2[ perm[ cnt ] ] = 0.0
+#        cnt += 1
+#      end
+#
+#      intermediate    = ( GSL::Wavelet.transform_inverse( wavelet, data2 ) ).to_a
+#      cycle          += 1
+#
+#      0.upto( n - 1 ) { |j| kappa_wavelet.set( ( c + j ), intermediate[ j ] ) }
+#      #0.upto( n - 1 ) { |j| kappa_wavelet.set( ( c + j ), data2[ j ] ) }
+#    end
+#    #kappa_wavelet     = kappa_wavelet.to_a
 
     # Smoothing poly - use sth between 50 - 100
-    coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa_wavelet.length-1).to_s}" )), GSL::Vector.alloc( kappa_wavelet ), 50)
-    wavelet_kappa_smooth = []
-    0.upto( kappa_wavelet.length - 1 ) { |n| wavelet_kappa_smooth << coef.eval( n ) }
+    #coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa_wavelet.length-1).to_s}" )), GSL::Vector.alloc( kappa_wavelet ), 50)
+    #wavelet_kappa_smooth = []
+    #0.upto( kappa_wavelet.length - 1 ) { |n| wavelet_kappa_smooth << coef.eval( n ) }
 
 
     # kappa_smooth_dx = []
@@ -1015,18 +1037,18 @@ class Turning # {{{
 
     @log.message :info, "Preparing data and plot files for gnuplot"
     
-    @plot.interactive_gnuplot_eucledian_distances( wavelet_kappa_smooth, "%e %e\n", ["Frames", "Wavelet Smoothed Curvature, then poly fitted Value (0 <= e <= 1)"], "Wavelet Smoothed Curvature then poly fitted Value Graph", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gp", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "poly_wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "poly_wavelet_tp_smoothed_frenet_frame.gpdata" ) 
-    @plot.interactive_gnuplot_eucledian_distances( kappa_wavelet, "%e %e\n", ["Frames", "Normalized and Wavelet Smoothed Curvature Value (0 <= e <= 1)"], "Normalized and Wavelet Smoothed Curvature Value Graph", "wavelet_smoothed_frenet_frame_kappa_plot.gp", "wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "wavelet_tp_smoothed_frenet_frame.gpdata" ) 
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Curvature Value (0 <= e <= 1)"], "Normalized Curvature Value Graph", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_frenet_frame.gpdata", turning_poses, "tp_frenet_frame.gpdata" )
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Curvature Value (0 <= e <= 1)"], "Normalized Smoothed Curvature Value Graph", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_smoothed_frenet_frame.gpdata", turning_poses, "tp_smoothed_frenet_frame.gpdata" ) 
+    #@plot.interactive_gnuplot_eucledian_distances( wavelet_kappa_smooth, "%e %e\n", ["Frames", "Wavelet Smoothed Curvature, then poly fitted Value (0 <= e <= 1)"], "Wavelet Smoothed Curvature then poly fitted Value Graph", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gp", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "poly_wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "poly_wavelet_tp_smoothed_frenet_frame.gpdata" ) 
+    #@plot.interactive_gnuplot_eucledian_distances( kappa_wavelet, "%e %e\n", ["Frames", "Normalized and Wavelet Smoothed Curvature Value (0 <= e <= 1)"], "Normalized and Wavelet Smoothed Curvature Value Graph", "wavelet_smoothed_frenet_frame_kappa_plot.gp", "wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "wavelet_tp_smoothed_frenet_frame.gpdata" ) 
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Curvature Value"], "Normalized Curvature Value Graph", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_frenet_frame.gpdata", turning_poses, "tp_frenet_frame.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Curvature Value"], "Normalized Smoothed Curvature Value Graph", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_smoothed_frenet_frame.gpdata", turning_poses, "tp_smoothed_frenet_frame.gpdata" ) 
     
     #@plot.interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity Value (0 <= e <= 1)"], "Normalized Velocity Value Graph", "velocity_plot.gp", "velocity_plot.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity Value"], "Normalized Velocity Value Graph", "velocity_plot.gp", "velocity_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_velocity_plot.gpdata" )
     #@plot.interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
     
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "Normalized Eucledian Distance Window Graph (Speed)", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_eucleadian_distance.gpdata", turning_poses, "tp_eucleadian_distance.gpdata" )
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v (0 <= e <= 1)"], "Normalized Kinetic Energy Graph", "ekin.gp", "ekin.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_ekin.gpdata", turning_poses, "tp_ekin.gpdata" )
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight (0 <= e <= 1)"], "Normalized Weight Graph", "weight.gp", "weight.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_weight.gpdata", turning_poses, "tp_weight.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value"], "Normalized Eucledian Distance Window Graph (Speed)", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_eucleadian_distance.gpdata", turning_poses, "tp_eucleadian_distance.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v"], "Normalized Kinetic Energy Graph", "ekin.gp", "ekin.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_ekin.gpdata", turning_poses, "tp_ekin.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight"], "Normalized Weight Graph", "weight.gp", "weight.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_weight.gpdata", turning_poses, "tp_weight.gpdata" )
     #pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
     #pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[X Y Z],  "forearms_plot.gp" )
 

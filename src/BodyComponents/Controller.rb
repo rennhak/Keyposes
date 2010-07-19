@@ -160,6 +160,8 @@ class Controller # {{{
     options.process                         = []
     options.turning_pose_extraction         = false
     options.filter_motion_capture_data      = false
+    options.boxcar_filter                   = nil
+    options.boxcar_filter_default           = 15
 
     pristine_options                        = options.dup
 
@@ -176,6 +178,10 @@ class Controller # {{{
 
       opts.on("-f", "--filter-motion-capture-data", "Filter the motion capture data against outliers before proceeding with other calculations (smoothing)") do |f|
         options.filter_motion_capture_data  = f
+      end
+
+      opts.on( "-b", "--box-car-filter OPT", "Filter curvature result through a Finite Impulse Response (FIR) Boxcar filter of order N (#{options.boxcar_filter_default.to_s})" ) do |b|
+        options.boxcar_filter = b
       end
 
       opts.separator ""

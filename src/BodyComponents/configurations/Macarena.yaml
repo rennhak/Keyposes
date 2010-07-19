@@ -3,19 +3,20 @@
 type: Dance
 name: Macarena
 filename: ../../../../experiments/Macarena_-_CMU_Database_-_28_06_2010/143_35.vpm
-from: 0
-to: 700
+from: 90
+to: 670
 
 # Dance Master Poses
 # - [ exact, [ approx. from, approx. to ] ]
+# In the drawing the pose 5 is skippen in the motion data
+#
 dmp: [
-   [  159, [  0, 0 ] ],
-   [  226, [  0, 0 ] ],
-   [  314, [  0, 0 ] ],
-   [  408, [  0, 0 ] ],
-   [  509, [  0, 0 ] ],
-   [  512, [  0, 0 ] ],
-   [  526, [  526, 593 ] ],
-   [  623, [  623, 660 ] ]
+   [  151, [  130, 166 ] ],
+   [  228, [  220, 245 ] ],
+   [  315, [  306, 334 ] ],
+   [  408, [  398, 425 ] ],
+   [  512, [  491, 521 ] ],
+   [  552, [  526, 581 ] ],
+   [  628, [  611, 654 ] ]
 ]
 

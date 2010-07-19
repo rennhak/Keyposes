@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<todo version="0.1.20">
+    <note priority="veryhigh" time="1279538448">
+        Use a sliding window for smoothing
+    </note>
+    <note priority="high" time="1279538470">
+        Stuff all raw input data into PCA to see what happens after reduction
+    </note>
+    <note priority="medium" time="1279538654">
+        How to filter for text information poses?
+    </note>
+    <note priority="low" time="1279538669">
+        read up on l0, l1, l2 norm
+    </note>
+</todo>

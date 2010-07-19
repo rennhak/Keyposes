@@ -205,25 +205,34 @@ class Plotter # {{{
 
     File.open( filename.to_s, "w" ) do |f|
       f.write( "reset\n" )
+      f.write( "set size 3,3\n" )
       f.write( "set ticslevel 0\n" )
-      f.write( "set style line 1 lw 3\n" )
+      # f.write( "set style line 1 lw 3\n" )
+      f.write( "set style line 2 lw 3\n" )
+      f.write( "set style line 1 lt 1 lw 8 lc rgb 'blue'\n")
       f.write( "set grid\n" )
       f.write( "set border\n" )
-      f.write( "set pointsize 1\n" )
+      f.write( "set pointsize 3\n" )
 
-      f.write( "set xlabel '#{labels.shift.to_s}' font \"Helvetica,20\"\n" )
-      f.write( "set ylabel '#{labels.shift.to_s}' font \"Helvetica,20\"\n" )
-      f.write( "set autoscale\n" )
-      f.write( "set font 'Helvetica,20'\n" )
-      f.write( "set key left box\n" )
-      f.write( "set output\n" )
-      f.write( "set terminal x11 persist\n" )
-      f.write( "set title '#{title}' font \"Helvetica,20\" \n" )
+      f.write( "set xrange [#{@from.to_s}:#{@to.to_s}]\n" )
+      f.write( "set yrange [0:1.19]\n" )
+
+      f.write( "set xlabel '#{labels.shift.to_s}' font \"Helvetica,60\"\n" )
+      f.write( "set ylabel '#{labels.shift.to_s}' font \"Helvetica,60\"\n" )
+      # f.write( "set autoscale\n" )
+      f.write( "set font 'Helvetica,60'\n" )
+      # f.write( "set key left box\n" )
+      # # set key box outside above cente
+      f.write( "set output '#{File.basename(filename, '.gp')}.eps'\n" )
+      # f.write( "set terminal x11 persist\n" )
+      f.write( "set terminal postscript eps enhanced color \"Helvetica\" 60\n")
+      f.write( "set title '#{title}' font \"Helvetica,60\" \n" )
 
       if( pointsOfInterest.nil? )
-        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line\n" )
+        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3\n" )
       else
-        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 1, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'frenet_frame_kappa_plot.gpdata' ti \"Raw Curvature\" w line\n" )
+        # ORIG; f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 1, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'frenet_frame_kappa_plot.gpdata' ti \"Raw Curvature\" w line\n" )
+        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w lines linestyle 1, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 4\n")
         #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'ekin.gpdata' ti \"Kinetic Energy\" w line, 'eucledian_distances_window_plot.gpdata' ti \"Eucledian Distance Window (speed)\" w line\n" )
         #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7\n")
       end
