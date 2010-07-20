@@ -7,7 +7,5 @@ Depends:
 
 
 rm -f *.gp; rm -f work/*.csv; rm -f *.gpdata; time ruby -I../../base/MotionX/src/plugins/vpm/src
-                        BodyComponents.rb /home/br/universities/todai/data/DanceData/Aizu_Female.vpm
-
-
-
+Controller.rb -tc -p Donpan -b 15 --parts hands --parts fore_arms --parts upper_arms --parts thighs
+--parts shanks --parts feet -f "5 22" ; for i in *.gp; do gnuplot $i; done
