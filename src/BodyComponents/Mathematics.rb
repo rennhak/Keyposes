@@ -26,12 +26,12 @@ require 'gsl'
 # Warning: Including this line will cause everything to break.
 # include GSL
 
+require 'c/c_mathematics'
 
 # The class Mathematics provides helpful functions to calculate various things needed throughout this project
 class Mathematics # {{{
 
   def initialize # {{{
-    @power_of_two_lookup_table = []
   end # of def initialize }}}
 
 
@@ -145,9 +145,18 @@ class Mathematics # {{{
       #puts "Calculating eucledian_distance for 3D coordinates"
       #x = x2 - x1
       #y = y2 - y1
-      #z = z2 
+      #z = z2 - z1
 
-      result = Math.sqrt( ((x2-x1)**2) + ((y2-y1)**2) + ((z2-z1)**2) )
+      #@power_of_two_lookup_table[x] = x**2 if( @power_of_two_lookup_table[ x ].nil? )
+      #@power_of_two_lookup_table[y] = y**2 if( @power_of_two_lookup_table[ y ].nil? )
+      #@power_of_two_lookup_table[z] = z**2 if( @power_of_two_lookup_table[ z ].nil? )
+
+      #x = @power_of_two_lookup_table[ x ]
+      #y = @power_of_two_lookup_table[ y ]
+      #z = @power_of_two_lookup_table[ z ]
+
+      # result = Math.sqrt( ((x2-x1)**2) + ((y2-y1)**2) + ((z2-z1)**2) )
+      result = C_mathematics.c_eucledian_distance( x1, y1, z1, x2, y2, z2 )
     end
 
     # Post-condition check
