@@ -61,8 +61,8 @@ class Filter # {{{
     raise ArgumentError, "Input argument should be of type ADT, but is of type (#{input.class.to_s})" unless( input.is_a?(ADT) )
     raise ArgumentError, "Point window argument should be of type Integer, but is of (#{point_window.class.to_s})" unless( point_window.is_a?( Integer ) )
     raise ArgumentError, "Polynom order argument should be of type Integer, but is of (#{polynom_order.class.to_s})" unless( polynom_order.is_a?( Integer ) )
-    raise ArgumentError, "Point window number needs to be even, but it is (#{point_window.to_s})" unless( ( point_window % 2 ) == 0 )
-    raise ArgumentError, "Point window divided by 2 needs to be even as well, but it is (#{(point_window/2).to_s})" unless( ( ( (point_window / 2) % 2 ) == 0 ) )
+    #raise ArgumentError, "Point window number needs to be even, but it is (#{point_window.to_s})" unless( ( point_window % 2 ) == 0 )
+    #raise ArgumentError, "Point window divided by 2 needs to be even as well, but it is (#{(point_window/2).to_s})" unless( ( ( (point_window / 2) % 2 ) == 0 ) )
     # }}}
 
     @log.message :info, "Starting filtering of all relevant motion segments"

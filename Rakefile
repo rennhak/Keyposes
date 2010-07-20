@@ -48,9 +48,14 @@ task :clean do |t|
   `rm coverage.info` if( File.exists?( "coverage.info" ) )
   `rm -rf coverage`  if( File.exists?( "coverage" ) )
   `rm -rf .yardoc`   if( File.exists?( ".yardoc" ) )
-  Dir.chdir( "doc" ) do 
-    `rm -rf yardoc`  if( File.exists?( "yardoc" ) )
+  if( File.exists?( "doc" ) )
+    Dir.chdir( "doc" ) do 
+      `rm -rf yardoc`  if( File.exists?( "yardoc" ) )
+    end
   end
+  `rm -rf src/BodyComponents/*.gp`
+  `rm -rf src/BodyComponents/*.gpdata`
+  `rm -rf src/BodyComponents/*.eps`
 end
 
 desc "Flog the code"
