@@ -56,6 +56,7 @@ task :clean do |t|
   `rm -rf src/BodyComponents/*.gp`
   `rm -rf src/BodyComponents/*.gpdata`
   `rm -rf src/BodyComponents/*.eps`
+  `rm -f  src/BodyComponents/work/*.csv`
 end
 
 desc "Flog the code"

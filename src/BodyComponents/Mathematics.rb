@@ -31,6 +31,7 @@ require 'gsl'
 class Mathematics # {{{
 
   def initialize # {{{
+    @power_of_two_lookup_table = []
   end # of def initialize }}}
 
 
@@ -142,7 +143,11 @@ class Mathematics # {{{
       result = Math.sqrt( ( (x2 - x1) ** 2 ) + ( (y2 - y1) ** 2  )  )
     else
       #puts "Calculating eucledian_distance for 3D coordinates"
-      result = Math.sqrt( ((x2-x1)**2) + ((y2-y1)**2) + ((z2-z2)**2) )
+      #x = x2 - x1
+      #y = y2 - y1
+      #z = z2 
+
+      result = Math.sqrt( ((x2-x1)**2) + ((y2-y1)**2) + ((z2-z1)**2) )
     end
 
     # Post-condition check
@@ -150,6 +155,22 @@ class Mathematics # {{{
 
     result
   end # of def eucledian_distance point1, point2 }}}
+
+
+# int ipow(int base, int exp)
+#{
+#    int result = 1;
+#    while (exp)
+#    {
+#        if (exp & 1)
+#            result *= base;
+#        exp >>= 1;
+#        base *= base;
+#    }
+#
+#    return result;
+#}
+
 
 
   # The function eucledian_distance_window takes a given dataset (x1,y1,z1;..) and calculates the

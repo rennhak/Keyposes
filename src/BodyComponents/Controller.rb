@@ -289,8 +289,36 @@ end # of class Controller }}}
 
 # Direct Invocation
 if __FILE__ == $0 # {{{
+  require 'ruby-prof'
+
+  # Profile the code
+  #RubyProf.start
+
   options = Controller.new.parse_cmd_arguments( ARGV )
   bc      = Controller.new( options )
+
+  exit 
+  results = RubyProf.stop
+ # printer = RubyProf::GraphPrinter.new(result)
+ # printer.print(STDOUT, 0)
+
+ # printer = RubyProf::GraphHtmlPrinter.new(result)
+  #printer.print(STDOUT, :min_percent=>0)
+
+
+  File.open "tmp/profile-graph.html", 'w' do |file|
+    RubyProf::GraphHtmlPrinter.new(results).print(file)
+  end
+
+  File.open "tmp/profile-flat.txt", 'w' do |file|
+    RubyProf::FlatPrinter.new(results).print(file)
+  end
+
+  File.open "tmp/profile-tree.prof", 'w' do |file|
+    RubyProf::CallTreePrinter.new(results).print(file)
+  end
+
+
 end # of if __FILE__ == $0 }}}
 
 # vim=ts:2
