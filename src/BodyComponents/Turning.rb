@@ -691,8 +691,10 @@ class Turning # {{{
       end # of components.each
     else
       @log.message :success, "Using RAW data for PCA matrix"
-      # Push raw data into storage for PCA 
+
+      # Push raw data into storage for PCA
       tmp_components.flatten.uniq.each do |c|
+        @log.message :info, "Transferring #{c.to_s} from absolute to local coordinate system"
         component = eval("@adt.#{c.to_s}")
         center    = eval("@adt.pt30")
         
