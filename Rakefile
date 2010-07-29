@@ -59,6 +59,15 @@ task :clean do |t|
   `rm -f  src/BodyComponents/work/*.csv`
 end
 
+desc "Generate eps from gnuplot gp files"
+task :gnuplot do |t|
+  Dir.chdir( "src/BodyComponents" ) do |d|
+    Dir["*.gp"].each do |g|
+      `gnuplot #{g.to_s}`
+    end
+  end
+end
+
 desc "Flog the code"
 task :flog do |t|
   files = Dir["**/*.rb"]

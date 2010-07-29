@@ -626,14 +626,15 @@ class Turning # {{{
   # @param from Integer, representing the start of the desired frames
   # @param to Integer, representing the end of the desired frames
   # @returns Coordinates of new CPA from the get_segment_cpa method
-  def get_components_cpa components_keyword, from = @from, to = @to # {{{
+  def get_components_cpa components_keyword, model = nil, from = @from, to = @to # {{{
 
+    raise ArgumentError, "Model cannot be nil" if( model.nil? )
     raise ArgumentError, "The component keyword symbol you supplied (,,#{components_keyword.to_s}'') doesn't exist in group [ #{@adt.body.group.keys.join( ", ")} ]" unless( @adt.body.group.keys.include?( components_keyword ) ) 
 
     @log.message :info, "Calculating CPA of #{components_keyword.to_s}"
 
     center            = @adt.body.center
-    components        = @adt.body.group[ components_keyword ]
+    components        = eval( "@adt.body.group_#{model.to_s}_model[ components_keyword ]" )
 
     result            = get_segments_cpa( components, center, from, to )
 
@@ -647,22 +648,45 @@ class Turning # {{{
     @log.message :info, "CPA Extraction of all body components"
 
     body_components         = @options.body_parts
+    model                   = @options.model.to_i
+
+    raise ArgumentError, "Model needs to be either 1, 4, 8 or 12" unless( [1,4,8,12].include?( model ) )
 
     components            = []    # here we store our data refs in one place
 
-    @log.message :success, "Using the following body components: #{@options.body_parts.join( ", " ).to_s}"
 
     tmp_components        = []
 
     # Get all individual components
-    body_components.each { |c| tmp_components << @adt.body.group[ c.to_sym ] } 
+    case model
+      when 1:
+        @log.message :warning, "We will used a fixed components set, if you defined specific components over the CLI they are ignored with the 1 Model."
+        @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
+        raise NotImplementedError, "This is not yet implemented"
+      when 4:
+        @log.message :warning, "We will used a fixed components set. So only parts that can be allowed are upper_arms, thighs all others will be automatically removed" 
+        body_components.delete_if { |c| %w[hands feet fore_arms shanks].include?( c.to_s ) } # Remove hands and feet from list if exist
+        @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
+        body_components.each { |c| tmp_components << @adt.body.group_4_model[ c.to_sym ] } 
+      when 8:
+        @log.message :warning, "We will used a fixed components set. So only parts that can be allowed are upper_arms, lower_arms, thighs, shanks all others will be automatically removed."
+        body_components.delete_if { |c| %w[hands feet].include?( c.to_s ) } # Remove hands and feet from list if exist
+        @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
+        body_components.each { |c| tmp_components << @adt.body.group_8_model[ c.to_sym ] } 
+      when 12:
+        @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
+        body_components.each { |c| tmp_components << @adt.body.group_12_model[ c.to_sym ] } 
+      else
+        raise ArgumentError, "Model can only be 1, 4, 8 or 12 not anything else." unless( [1, 4, 8, 12].include?( model.to_i ) )
+    end
+
 
     unless( @options.use_raw_data )
       @log.message :success, "Using CPA technique before doing PCA to unify symetrical components"
       # Push data into storage for PCA
       body_components.each do |c|
         # Apply CPA-PCA for all components
-        eval( "@#{c} = get_components_cpa( :#{c} )" )
+        eval( "@#{c} = get_components_cpa( :#{c}, #{model} )" )
         components << instance_variable_get( "@#{c}" )
       end # of components.each
     else

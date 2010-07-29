@@ -84,7 +84,6 @@ class Controller # {{{
       @log.message :success, "Starting #{__FILE__} run"
       @log.message :debug,    "Colorizing output as requested" if( @options.colorize )
 
-
       RubyProf.start if( @options.profiling )
 
       ####
@@ -193,6 +192,8 @@ class Controller # {{{
     options.filter_point_window_size        = 20
     options.filter_polyomial_order          = 5
     options.profiling                       = false
+    options.model                           = 12
+
 
     pristine_options                        = options.dup
 
@@ -221,6 +222,10 @@ class Controller # {{{
 
       opts.on("-p", "--parts OPT", @body_parts, "Proces one or more body parts during the computation (OPT: #{@body_parts.join(", ")})" ) do |p|
         options.body_parts << p
+      end
+
+      opts.on("-m", "--model OPT", "Determine how many components the body model has 1 (one big component), 4 (two arms/legs), 8 (with upper/lower arms/legs), 12 (with hands/feet)" ) do |m|
+        options.model = m
       end
 
       opts.on("-r", "--raw-data", "Use raw data for PCA reduction instead of CPA data") do |r|
