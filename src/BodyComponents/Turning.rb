@@ -649,12 +649,11 @@ class Turning # {{{
 
     body_components         = @options.body_parts
     model                   = @options.model.to_i
+    side                    = @options.side         # which side do we process?
 
     raise ArgumentError, "Model needs to be either 1, 4, 8 or 12" unless( [1,4,8,12].include?( model ) )
 
     components            = []    # here we store our data refs in one place
-
-
     tmp_components        = []
 
     # Get all individual components
@@ -667,19 +666,55 @@ class Turning # {{{
         @log.message :warning, "We will used a fixed components set. So only parts that can be allowed are upper_arms, thighs all others will be automatically removed" 
         body_components.delete_if { |c| %w[hands feet fore_arms shanks].include?( c.to_s ) } # Remove hands and feet from list if exist
         @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
-        body_components.each { |c| tmp_components << @adt.body.group_4_model[ c.to_sym ] } 
+
+        case @options.side
+          when "both"
+            body_components.each { |c| tmp_components << @adt.body.group_4_model[ c.to_sym ] } 
+          when "left"
+            body_components.each { |c| tmp_components << @adt.body.group_4_model_left[ c.to_sym ] } 
+          when "right"
+            body_components.each { |c| tmp_components << @adt.body.group_4_model_right[ c.to_sym ] } 
+          else
+            raise ArgumentError, "Something is seriously wrong with the @option.side value (#{@option.side.to_s}) it can only be of (left, right, both)"
+        end # of case @option.side
+
       when 8:
         @log.message :warning, "We will used a fixed components set. So only parts that can be allowed are upper_arms, lower_arms, thighs, shanks all others will be automatically removed."
         body_components.delete_if { |c| %w[hands feet].include?( c.to_s ) } # Remove hands and feet from list if exist
         @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
-        body_components.each { |c| tmp_components << @adt.body.group_8_model[ c.to_sym ] } 
+
+        case @options.side
+          when "both"
+            body_components.each { |c| tmp_components << @adt.body.group_8_model[ c.to_sym ] } 
+          when "left"
+            body_components.each { |c| tmp_components << @adt.body.group_8_model_left[ c.to_sym ] } 
+          when "right"
+            body_components.each { |c| tmp_components << @adt.body.group_8_model_right[ c.to_sym ] } 
+          else
+            raise ArgumentError, "Something is seriously wrong with the @option.side value (#{@option.side.to_s}) it can only be of (left, right, both)"
+        end # of case @option.side
+
       when 12:
         @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
-        body_components.each { |c| tmp_components << @adt.body.group_12_model[ c.to_sym ] } 
+        
+        case @options.side
+          when "both"
+            body_components.each { |c| tmp_components << @adt.body.group_12_model[ c.to_sym ] } 
+          when "left"
+            body_components.each { |c| tmp_components << @adt.body.group_12_model_left[ c.to_sym ] } 
+          when "right"
+            body_components.each { |c| tmp_components << @adt.body.group_12_model_right[ c.to_sym ] } 
+          else
+            raise ArgumentError, "Something is seriously wrong with the @option.side value (#{@option.side.to_s}) it can only be of (left, right, both)"
+        end # of case @option.side
+
       else
         raise ArgumentError, "Model can only be 1, 4, 8 or 12 not anything else." unless( [1, 4, 8, 12].include?( model.to_i ) )
     end
 
+    if( @options.side == "left" or @options.side == "right" )
+      raise ArgumentError, "In order to make proper use of left/right side components you need to use it with the -r switch !" unless( @options.use_raw_data )
+    end
 
     unless( @options.use_raw_data )
       @log.message :success, "Using CPA technique before doing PCA to unify symetrical components"
@@ -697,7 +732,7 @@ class Turning # {{{
         @log.message :info, "Transferring #{c.to_s} from absolute to local coordinate system"
         component = eval("@adt.#{c.to_s}")
         center    = eval("@adt.pt30")
-        
+
         local     = component - center
         components << local.getCoordinates!
       end

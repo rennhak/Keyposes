@@ -77,12 +77,13 @@ class Controller # {{{
 
     # Determine which configs are available
     @configurations               = Dir[ "#{@config.config_dir}/*.yaml" ].collect { |d| d.gsub( "#{@config.config_dir}/", "" ).gsub( ".yaml", "" ) }
-
+    @sides                        = %w[left right both]
     @body_parts                   = %w[hands fore_arms upper_arms thighs shanks feet]
 
     unless( options.nil? )
       @log.message :success, "Starting #{__FILE__} run"
-      @log.message :debug,    "Colorizing output as requested" if( @options.colorize )
+      @log.message :debug,   "Colorizing output as requested" if( @options.colorize )
+      @log.message :info,    "Processing the following sides: ''#{@options.side.to_s}''"
 
       RubyProf.start if( @options.profiling )
 
@@ -193,6 +194,7 @@ class Controller # {{{
     options.filter_polyomial_order          = 5
     options.profiling                       = false
     options.model                           = 12
+    options.side                            = "both"
 
 
     pristine_options                        = options.dup
@@ -222,6 +224,10 @@ class Controller # {{{
 
       opts.on("-p", "--parts OPT", @body_parts, "Proces one or more body parts during the computation (OPT: #{@body_parts.join(", ")})" ) do |p|
         options.body_parts << p
+      end
+
+      opts.on("-s", "--side OPT", @sides, "Choose which side to process (OPT: #{@sides.join(", ")}) - Default: #{options.side.to_s}" ) do |s|
+        options.side = s
       end
 
       opts.on("-m", "--model OPT", "Determine how many components the body model has 1 (one big component), 4 (two arms/legs), 8 (with upper/lower arms/legs), 12 (with hands/feet)" ) do |m|
