@@ -8,3 +8,8 @@ base/*
 *.swp
 *.vpm
 tags
+base/*
+base/MotionX
+base/MotionX/*
+graphs
+src/BodyComponents/*.avi
