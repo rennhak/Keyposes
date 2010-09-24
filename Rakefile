@@ -2,46 +2,46 @@ $:.unshift(File.dirname(__FILE__) + '/../../lib')
 
 
 require "date"
-require 'cucumber/rake/task'
-require 'spec/rake/spectask'
+# require 'cucumber/rake/task'
+# require 'spec/rake/spectask'
 
 
-desc "Default Task - Run cucumber and rspec with rcov"
-task :all => [ "rcov:all" ]
+# desc "Default Task - Run cucumber and rspec with rcov"
+# task :all => [ "rcov:all" ]
 
-desc "Run Cucumber"
-Cucumber::Rake::Task.new
+#desc "Run Cucumber"
+#Cucumber::Rake::Task.new
 
 # Include RCOV
-namespace :rcov do # {{{
+# namespace :rcov do # {{{
 
-  desc "Run Cucumber Features"
-  Cucumber::Rake::Task.new( :cucumber ) do |t|
-    t.rcov = true
-    t.rcov_opts = %w{--aggregate coverage.info}
-    t.rcov_opts << %[-o "coverage"]
-    t.cucumber_opts = %w{--format pretty}
-  end
-
-
-  Spec::Rake::SpecTask.new(:rspec) do |t|
-    t.spec_files = FileList['spec/**/*_spec.rb']
-    t.rcov = true
-    #t.rcov_opts = lambda do
-    #  IO.readlines("#{RAILS_ROOT}/spec/rcov.opts").map {|l| l.chomp.split " "}.flatten
-    #end
-  end
-
-  desc "Run both specs and features to generate aggregated coverage"
-  task :all do |t|
-    rm "coverage.info" if File.exist?("coverage.info")
-    Rake::Task['rcov:rspec'].invoke
-    Rake::Task["rcov:cucumber"].invoke
-    # Rake::Task["flog"].invoke
-    # Rake::Task["flay"].invoke
-  end
-
-end # of namespace :rcov }}}
+#   desc "Run Cucumber Features"
+#   Cucumber::Rake::Task.new( :cucumber ) do |t|
+#     t.rcov = true
+#     t.rcov_opts = %w{--aggregate coverage.info}
+#     t.rcov_opts << %[-o "coverage"]
+#     t.cucumber_opts = %w{--format pretty}
+#   end
+# 
+# 
+#   Spec::Rake::SpecTask.new(:rspec) do |t|
+#     t.spec_files = FileList['spec/**/*_spec.rb']
+#     t.rcov = true
+#     #t.rcov_opts = lambda do
+#     #  IO.readlines("#{RAILS_ROOT}/spec/rcov.opts").map {|l| l.chomp.split " "}.flatten
+#     #end
+#   end
+# 
+#   desc "Run both specs and features to generate aggregated coverage"
+#   task :all do |t|
+#     rm "coverage.info" if File.exist?("coverage.info")
+#     Rake::Task['rcov:rspec'].invoke
+#     Rake::Task["rcov:cucumber"].invoke
+#     # Rake::Task["flog"].invoke
+#     # Rake::Task["flay"].invoke
+#   end
+# 
+# end # of namespace :rcov }}}
 
 
 desc "Toggle date between -1 year and now"

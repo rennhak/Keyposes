@@ -764,13 +764,20 @@ class Turning # {{{
     all_distances                     = @mathematics.eucledian_distance_window( pca.reshape_data( all_final.dup, false, true), spread )
     all_energy                        = @physics.energy( pca.reshape_data( all_final.dup, false, true ), mass, spread )
 
+    # Calculate the distance of tdata point to local coordinate center
+    tdata_distance                    = []
+    center                            = ( eval("@adt.pt30") ).getCoordinates!
+
+    ( pca.reshape_data( all_final.dup, false, true  ) ).each_with_index do |array, index|
+      # eucledian distance between t-data point and coord center (float)
+      tdata_distance << @mathematics.eucledian_distance( array, center[ index ] )
+    end # of ( pca.reshape_data( all_final.dup,...)
 
     #### Messy Mablab interaction
     # Dump to file for matlab
     File.open( "work/data.csv", File::WRONLY|File::TRUNC|File::CREAT, 0667 ) do |f|
       pd = pca.reshape_data( all_final.dup, false, true  )
 
-      #@fore_arms.each do |x,y,z|
       pd.each do |x,y,z|
         f.write( "#{x.to_s}, #{y.to_s}, #{z.to_s}\n" )
       end
@@ -1127,6 +1134,7 @@ class Turning # {{{
     #@plot.interactive_gnuplot_eucledian_distances( wavelet_kappa_smooth, "%e %e\n", ["Frames", "Wavelet Smoothed Curvature, then poly fitted Value (0 <= e <= 1)"], "Wavelet Smoothed Curvature then poly fitted Value Graph", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gp", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "poly_wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "poly_wavelet_tp_smoothed_frenet_frame.gpdata" ) 
     #@plot.interactive_gnuplot_eucledian_distances( kappa_wavelet, "%e %e\n", ["Frames", "Normalized and Wavelet Smoothed Curvature Value (0 <= e <= 1)"], "Normalized and Wavelet Smoothed Curvature Value Graph", "wavelet_smoothed_frenet_frame_kappa_plot.gp", "wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "wavelet_tp_smoothed_frenet_frame.gpdata" ) 
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Curvature"], "", "graphs/frenet_frame_kappa_plot.gp", "graphs/frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmps_frenet_frame.gpdata", turning_poses, "graphs/tp_frenet_frame.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( tdata_distance ), "%e %e\n", ["Frames", "Normalized T-Data Point distance"], "", "graphs/tdata_point_distance_to_coord_center_plot.gp", "graphs/tdata_point_distance_to_coord_center.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmp_tdata_point_distance_to_coord_center.gpdata", turning_poses, "graphs/tp_tdata_point_distance.gpdata" )
     # @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Curvature"], "", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_smoothed_frenet_frame.gpdata", turning_poses, "tp_smoothed_frenet_frame.gpdata" ) 
     
     #@plot.interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
