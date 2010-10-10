@@ -1,0 +1,15 @@
+---
+
+type: Pirouette
+name: Pirouette
+filename: ../../../../experiments/Pirouette/pirouette.vpm
+from: 0
+#to: 222
+to: 206
+
+# Dance Master Poses
+# - [ exact, [ approx. from, approx. to ] ]
+dmp: [
+]
+
+

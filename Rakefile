@@ -137,7 +137,7 @@ end
 #   distribute over cores or machines
 
 desc "Generate an all component graph for a given dance"
-task :graph, :config_name, :pattern, :speed, :cycle do |g, args|
+task :graph, :config_name, :pattern, :speed, :cycle, :yaml do |g, args|
 
   # Why is this necesarry? args.cycle gives us otherwise weird garbage. (ruby bug)
   args_hash     = args.to_hash
@@ -145,6 +145,7 @@ task :graph, :config_name, :pattern, :speed, :cycle do |g, args|
   pattern       = args_hash[ :pattern ]
   speed         = args_hash[ :speed ]
   cycle         = args_hash[ :cycle ]
+  yaml          = args_hash[ :yaml ]
 
   Dir.chdir( "src/BodyComponents" ) do
 
@@ -179,10 +180,10 @@ task :graph, :config_name, :pattern, :speed, :cycle do |g, args|
 
       %w[both].each do |side|
 
-        printf( "[Name: %s, Pattern: %s, Speed: %s, Cycle: %s] Calculating ->  Side: %-6s part: %-10s model: %3s\n", config_name.to_s, pattern.to_s, speed.to_s, cycle.to_s, side.to_s, part.to_s, model.to_s )
+        printf( "[Name: %s, Pattern: %s, Speed: %s, Cycle: %s, Yaml: %s] Calculating ->  Side: %-6s part: %-10s model: %3s\n", config_name.to_s, pattern.to_s, speed.to_s, cycle.to_s, yaml.to_s, side.to_s, part.to_s, model.to_s )
 
         `rake clean`
-        `ruby19 -I../../base/MotionX/src/plugins/vpm/src Controller.rb -tc --name #{config_name.to_s} --pattern #{pattern.to_s} --speed #{speed.to_s} --cycle #{cycle.to_s} -b #{boxcar.to_s} --parts #{part.to_s} -m #{model.to_s} -v -o #{side.to_s}`
+        `ruby19 -I../../base/MotionX/src/plugins/vpm/src Controller.rb -tc --name #{config_name.to_s} --pattern #{pattern.to_s} --speed #{speed.to_s} --cycle #{cycle.to_s} --yaml #{yaml.to_s} -b #{boxcar.to_s} --parts #{part.to_s} -m #{model.to_s} -v -o #{side.to_s}`
         `rake gnuplot`
 
         model_dir   = ( model.to_i < 10 ) ? ( "0" + model.to_s ) : ( model.to_s )
@@ -202,7 +203,7 @@ task :ctags do |t|
 end 
 
 desc "Generate an all component graph for a given dance"
-task :graph_gen, :config_name, :pattern, :speed, :cycle do |g, args|
+task :graph_gen, :config_name, :pattern, :speed, :cycle, :yaml do |g, args|
 
   # Why is this necesarry? args.cycle gives us otherwise weird garbage. (ruby bug)
   args_hash     = args.to_hash
@@ -210,6 +211,7 @@ task :graph_gen, :config_name, :pattern, :speed, :cycle do |g, args|
   pattern       = args_hash[ :pattern ]
   speed         = args_hash[ :speed ]
   cycle         = args_hash[ :cycle ]
+  yaml          = args_hash[ :yaml ]
 
   Dir.chdir( "src/BodyComponents" ) do
 
