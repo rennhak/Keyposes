@@ -648,6 +648,82 @@ class Turning # {{{
   end # of def get_components_cpa }}}
 
 
+  # = The function get_octants determines which sign the given point has according to the three
+  # dimensional subspaces (octants)
+  #
+  # @param    array Array, containing the point data (array of length n) for the T-Data calculation
+  # @param    original Array, containing the point data (array of length n) for the original motion data
+  # @returns        Array, containing the octant results for each data point (array of length n)
+  def get_octants array = nil, original = nil # {{{
+    raise ArgumentError, "Data should be of shape [ [x,y,z],...]" if( (array.length == 3) and not (array.first.length == 3 ) )
+
+    # FIXME: The original data is wrong..! 
+
+    # Source: http://mathforum.org/library/drmath/view/59275.html
+    # (x,y,z) = (+,+,+)  first octant
+    # (-,+,+)  second octant
+    # (-,-,+)  third octant   [convention is same as in 2D case]
+    # (+,-,+)  fourth octant
+    # (+,+,-)  fifth octant   [here's a natural choice - for 
+    # (-,+,-)  sixth octant    fifth through eighth just repeat 
+    # (-,-,-)  seventh octant  first through fourth for negative 
+    # (+,-,-)  eighth octant   z values]
+
+    octants = Hash.new
+    octants[ "+++" ] = "first"
+    octants[ "-++" ] = "second"
+    octants[ "--+" ] = "third"
+    octants[ "+-+" ] = "fourth"
+    octants[ "++-" ] = "fifth"
+    octants[ "-+-" ] = "sixth" 
+    octants[ "---" ] = "seventh"
+    octants[ "+--" ] = "eighth"
+
+    results = []
+
+    array.each do |x,y,z|
+      value = ""
+
+      ( x > 0 ) ? ( value += "+" ) : ( value += "-" )
+      ( y > 0 ) ? ( value += "+" ) : ( value += "-" )
+      ( z > 0 ) ? ( value += "+" ) : ( value += "-" )
+
+      results << value
+    end # of array.each
+
+
+    # Orientation of arms same or not same?
+    # p original
+
+
+    puts <<EOS
+digraph states {
+    rankdir=LR;
+      size="20,20"
+          node [shape = doublecircle]; start end;
+        node [shape = circle];
+EOS
+
+    0.upto( results.length ) do |i|
+      next if( ( i+1 ) > results.length ) 
+
+
+      first   = octants[ results[ i ] ]
+      second  = octants[ results[ i+1 ] ]
+
+      next if( second.nil? )
+
+      puts "#{first} -> #{second} [ label = \"#{i.to_s}\" ];" unless( first == second )
+      puts "start -> #{second} [ label = \"#{i.to_s}\" ];" if( i == 0 )
+      puts "#{first} -> end [ label = \"#{(i+2).to_s}\" ];" if( i == results.length - 2 )
+    end
+
+    puts "}"
+
+    # exit
+  end # of def get_octants }}}
+
+
   # = Perform calculations and extract data
   def get_data # {{{
     pca     = PCA.new
@@ -662,6 +738,7 @@ class Turning # {{{
 
     components            = []    # here we store our data refs in one place
     tmp_components        = []
+    components_sav        = []
 
     # Get all individual components
     case model
@@ -733,6 +810,7 @@ class Turning # {{{
         # Apply CPA-PCA for all components
         eval( "@#{c} = get_components_cpa( :#{c}, #{model} )" )
         components << instance_variable_get( "@#{c}" )
+        components_sav << instance_variable_get( "@#{c}" )
       end # of components.each
     else
       @log.message :success, "Using RAW data for PCA matrix"
@@ -744,7 +822,9 @@ class Turning # {{{
         center    = eval("@adt.pt30")
 
         local     = component - center
-        components << local.getCoordinates!
+
+        coord     = local.getCoordinates!
+        components << coord.dup
       end
     end
 
@@ -802,10 +882,14 @@ class Turning # {{{
 
     end # of if( ext_calc )
 
+
+    pd = pca.reshape_data( all_final.dup, false, true  )
+    octants = get_octants( pd.dup, components_sav )
+
     #### Messy Mablab interaction
     # Dump to file for matlab
     File.open( "work/data.csv", File::WRONLY|File::TRUNC|File::CREAT, 0667 ) do |f|
-      pd = pca.reshape_data( all_final.dup, false, true  )
+      # pd = pca.reshape_data( all_final.dup, false, true  )
 
       pd.each do |x,y,z|
         f.write( "#{x.to_s}, #{y.to_s}, #{z.to_s}\n" )
