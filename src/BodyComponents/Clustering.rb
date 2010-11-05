@@ -28,6 +28,23 @@ class Clustering # {{{
   end # of def initialize }}}
 
 
+  def kmeans data, centroids = 8
+    raise ArgumentError, "Data should be of shape [ [x,y,z],...]" if( (data.length == 3) and not (data.first.length == 3 ) )
+
+    km_tmp    = KMeans.new(data, :centroids => centroids)
+    km        = eval( km_tmp.inspect.to_s )
+
+    clusters  = Hash.new
+
+    km.each_with_index do |cluster_array, cluster_index|
+      cluster_array.each do |frame|
+        clusters[ frame ] = cluster_index
+      end
+    end
+
+    return clusters
+  end
+
 
 end # of class Clustering }}}
 

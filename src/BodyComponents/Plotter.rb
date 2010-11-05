@@ -96,7 +96,9 @@ class Plotter # {{{
   # @param data_printf Accepts a formatting instruction like printf does, e.g. "%e, %e, %e\n" etc.
   # @param labels Accepts an array containing strings with the labels for each subarray of data, e.g. %w[Foo Bar Baz]
   # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext)
-  def interactive_gnuplot data, data_printf, labels, filename = "/tmp/tmp.plot.gp", eigen_values = nil, eigen_vectors = nil # {{{
+  def interactive_gnuplot data, data_printf, labels, filename = "/tmp/tmp.plot.gp", eigen_values = nil, eigen_vectors = nil, kmeans = nil # {{{
+
+    # raise ArgumentError, "Kmeans input can't be nil" if( kmeans.nil? )
 
     File.open( filename.to_s, "w" ) do |f|
       f.write( "reset\n" )
@@ -133,7 +135,10 @@ class Plotter # {{{
       end
 
 
-      f.write( "splot '-' w linespoints lt 1 pt 6\n" )
+      # f.write( "splot '-' w linespoints lt 1 pt 6\n" )
+      # f.write( "splot '-' using 1:2:3:4 w labels\n" )
+      f.write( "splot '-' using 1:2:3:4 with points pt 5 ps 1 lt palette\n" )
+      # splot '-' using 1:2:3:4 with lines lw 5 pt 5 ps 1 lt palette
 
       # TODO: Rewrite - this is too messy
       # Construct data array call string. We have -> data (array of arrays) but we want -> data[0][i], ... etc.
@@ -141,14 +146,15 @@ class Plotter # {{{
 
       0.upto( data.length - 1 ) { |n| d << "data[#{n.to_s}][i]" }
 
-      data.each do |array|
+      data.each_with_index do |array, index|
+
         #data.first.each_index do |i|
         #  nd = d.collect{|item| eval( item ).to_f }
         #  content = sprintf( data_printf.to_s, *nd ) 
         #  f.write( content )
         #end # of data.first.each_index
 
-        f.write( array.join( " " ) + "\n" )
+        f.write( array.join( " " ) + " #{kmeans[ index ].to_s} \n" )
       end # of data.each do |array|
 
     end # of File.open

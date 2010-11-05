@@ -28,6 +28,7 @@ require 'gsl'
 # Local includes
 require_relative 'Logger.rb'
 require_relative 'PCA.rb'
+require_relative 'Clustering.rb'
 
 require_relative 'Mathematics.rb'
 require_relative 'Physics.rb'
@@ -670,14 +671,14 @@ class Turning # {{{
     # (+,-,-)  eighth octant   z values]
 
     octants = Hash.new
-    octants[ "+++" ] = "first"
-    octants[ "-++" ] = "second"
-    octants[ "--+" ] = "third"
-    octants[ "+-+" ] = "fourth"
-    octants[ "++-" ] = "fifth"
-    octants[ "-+-" ] = "sixth" 
-    octants[ "---" ] = "seventh"
-    octants[ "+--" ] = "eighth"
+    octants[ "+++" ] = 1
+    octants[ "-++" ] = 2
+    octants[ "--+" ] = 3
+    octants[ "+-+" ] = 4
+    octants[ "++-" ] = 5
+    octants[ "-+-" ] = 6
+    octants[ "---" ] = 7
+    octants[ "+--" ] = 8
 
     results = []
 
@@ -704,12 +705,16 @@ digraph states {
         node [shape = circle];
 EOS
 
+    ret_value = Hash.new
+
     0.upto( results.length ) do |i|
       next if( ( i+1 ) > results.length ) 
 
 
       first   = octants[ results[ i ] ]
       second  = octants[ results[ i+1 ] ]
+
+      ret_value[ i ] = first
 
       next if( second.nil? )
 
@@ -720,8 +725,48 @@ EOS
 
     puts "}"
 
-    # exit
+    return ret_value
+
   end # of def get_octants }}}
+
+
+  def get_dot_graph hash = nil, filename = "graphs/cluster.dot"  # {{{
+
+    # Hash data is
+    # (key ) frame = (value) cluster id
+
+    f = File.open( filename, "w" )
+
+    f.write <<EOS
+digraph states {
+    rankdir=LR;
+      size="20,20"
+          node [shape = doublecircle]; start end;
+        node [shape = circle];
+EOS
+
+    ret_value = Hash.new
+
+    0.upto( hash.keys.max ) do |i|
+      next if( ( i+1 ) > hash.keys.max ) 
+
+      # cluster id
+      first   = hash[ i ]
+      second  = hash[ i + 1 ]
+
+      next if( second.nil? )
+
+      f.write "#{first.to_s} -> #{second.to_s} [ label = \"#{i.to_s}\" ];\n" unless( first == second )
+      f.write "start -> #{second.to_s} [ label = \"#{i.to_s}\" ];\n" if( i == 0 )
+      f.write "#{first.to_s} -> end [ label = \"#{(i+2).to_s}\" ];\n" if( i == hash.keys.max - 2 )
+    end
+
+    f.write "}\n"
+
+    f.close
+
+  end # of def get_octants }}}
+
 
 
   # = Perform calculations and extract data
@@ -884,7 +929,14 @@ EOS
 
 
     pd = pca.reshape_data( all_final.dup, false, true  )
-    octants = get_octants( pd.dup, components_sav )
+    
+    # octants = get_octants( pd.dup, components_sav )
+    clustering  = Clustering.new( @options )
+    kmeans      = clustering.kmeans( pd, 8 )
+    
+    get_dot_graph( kmeans )
+
+    #kmeans      = octants
 
     #### Messy Mablab interaction
     # Dump to file for matlab
@@ -1262,7 +1314,7 @@ EOS
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy"], "", "graphs/ekin.gp", "graphs/ekin.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmps_ekin.gpdata", turning_poses, "graphs/tp_ekin.gpdata" )
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight"], "", "graphs/weight.gp", "graphs/weight.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmps_weight.gpdata", turning_poses, "graphs/tp_weight.gpdata" )
     #pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
-    #pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[X Y Z],  "forearms_plot.gp" )
+    @plot.interactive_gnuplot( pd, "%e %e %e\n", %w[X Y Z],  "graphs/3d_plot.gp", nil, nil, kmeans )
 
   end # of getData }}}
 
