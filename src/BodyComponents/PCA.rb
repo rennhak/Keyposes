@@ -327,9 +327,9 @@ if __FILE__ == $0 # {{{
   x = [2.5, 0.5, 2.2, 1.9, 3.1, 2.3, 2.0, 1.0, 1.5, 1.1 ]
   y = [2.4, 0.7, 2.9, 2.2, 3.0, 2.7, 1.6, 1.1, 1.6, 0.9 ]
 
-  new = pca.do_pca( [ x, y ], 1 )
-  pca.graph( GSL::Vector.alloc(x), GSL::Vector.alloc(y)      , "graph.png" )
-  pca.graph( GSL::Vector.alloc(new.first), GSL::Vector.alloc(new.last), "graph2.png" )
+  #new = pca.do_pca( [ x, y ], 1 )
+  #pca.graph( GSL::Vector.alloc(x), GSL::Vector.alloc(y)      , "graph.png" )
+  #pca.graph( GSL::Vector.alloc(new.first), GSL::Vector.alloc(new.last), "graph2.png" )
 
 
 end # of if __FILE__ == $0 }}}
