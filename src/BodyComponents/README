@@ -1,4 +1,4 @@
-Execute with ruby -I ../../base/MotionX/src/plugins/vpm/src BodyComponents.rb
+Execute with ruby -I ../../base/MotionX/src/plugins/vpm/src BodyComponents.rb myvpmfile.vpm
 
 Depends:
 

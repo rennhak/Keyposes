@@ -30,6 +30,8 @@ require 'Extensions.rb'                                 # Deep_Clone hack
 # From MotionX - FIXME: Use MotionX's XYAML interface
 require 'ADT.rb'
 
+# Change Namespace
+include GSL
 
 
 ###
@@ -41,8 +43,9 @@ require 'ADT.rb'
 # @param   file File represents a string of path/filename where the vpm data can be found
 #
 #######
-class BodyComponents
-  def initialize file
+class BodyComponents # {{{
+
+  def initialize file # {{{
     @file = file
 
     puts "Loading file..."
@@ -66,7 +69,8 @@ class BodyComponents
     # p vpm.segments
     # See shiratori thesis page 132
 
-  end
+  end # of initialize }}}
+
 
 
   # = getTurningPoints returns a set of values after turning point calculation (B. Rennhak's Method '09)
@@ -188,7 +192,252 @@ class BodyComponents
 
   end # end of getTurningPoints }}}
 
+  # TODO: We need to abstract all this out of all programs into a own math lib (DRY!!)
+  def getNorm x, y, z # {{{
+    Math.sqrt( (x*x) + (y*y) + (z*z) )
+  end # of def getNorm }}}
 
+  # Distance between Lines and Segments with their Closest Point of Approach
+  # http://softsurfer.com/Archive/algorithm_0106/algorithm_0106.htm
+  # @param line1_pt0 Segment class
+  # @param line1_pt1 Segment
+  # @param line2_pt0 Segment
+  # @param line2_pt1 Segment
+  # Deprec: @returns Array of scalars with the distances between line1(a,b) and line2(c,d)
+  # @returns Segment dP which is the new closest point for all frames f
+  def distance_of_line_to_line line1_pt0, line1_pt1, line2_pt0, line2_pt1
+    # FIXME: Make a line abstration of lines
+
+    # segments class -> u, v, w
+    u = line1_pt1 - line1_pt0
+    v = line2_pt1 - line2_pt0
+    w = line1_pt0 - line2_pt0
+
+    # array of scalars of length frames -> a,b,c,d,e
+    a = u.dot_product( u )  # always >=0
+    b = u.dot_product( v )
+    c = v.dot_product( v )  # always >=0
+    d = u.dot_product( w )
+    e = v.dot_product( w )
+
+    d = []
+
+    0.upto( a.length - 1 ) { |index| d[index] = ( (a[index] * c[index]) - (b[index] * b[index]) ) } # always >=0
+    sc, tc    = [], []  # array of floats
+
+    0.upto( a.length - 1 ) do |index|
+      # compute the line parameters of the two closest points
+      if( d[index] < 0.00000001 )   # lines almost parallel
+        sc[index] = 0.0
+        tc[index] = ( b[index] > c[index] ) ? ( d[index] / b[index] ) : ( e[index] / c[index] )  # use largest denominator
+      else
+        sc[index] = ( ( b[index] * e[index] ) - ( c[index] * d[index] ) ) / d[index]
+        tc[index] = ( ( a[index] * e[index] ) - ( b[index] * d[index] ) ) / d[index]
+      end # of if( d[index] < 0.00000001 )
+    end # of 0.upto
+
+    # get the difference of the two closest points for all frames
+    dP  = w + (u*sc) - (v*tc) # L1(sc) - L2(tc)
+
+    return dP
+  end # of def distance_3D_line_to_line
+
+
+
+  # = getTrianglePatch returns a set of values after turning point calculation (B. Rennhak's Method '10)
+  # takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for
+  # @param segment1a Name of segment which together with segment1b builds a 3D line
+  # @param segment1b Name of segment which together with segment1a builds a 3D line
+  # @param segment2a Name of segment which together with segment2b builds a 3D line
+  # @param segment2b Name of segment which together with segment2a builds a 3D line
+  # @param center Name of segment which is our coordinate center for measurement and projection (3D->2D)
+  # @param from Expects a number indicating to start from which time frame
+  # @param to Expects a number indicating to end on which time frame
+  # @param direction Expects a string of either "xy", "xz" or "yz" (direction of extraction)
+  # @returns Array, containing the points after the calculation
+  # @warning FIXME: This thing is too slow, speed it up
+  def getTrianglePatch segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "p30", direction = "xy", from = nil, to = nil # {{{
+
+    #####
+    #
+    # Reference case
+    # e.g. S. Kudoh Thesis, Page 109, VPM File used "Aizu_Female.vpm"
+    #
+    # Center of Coordinate System:  p30
+    # Right Arm:                    p27 and p9 ("relb")
+    # Left Arm:                     p26 and p5 ("lelb")
+    #
+    ###########
+
+    # Easy handling
+    pt30 = @adt.pt30
+    pt27 = @adt.pt27
+    pt9  = @adt.relb
+    pt26 = @adt.pt26
+    pt5  = @adt.lelb
+    ptP  = distance_of_line_to_line( pt9, pt27, pt5, pt26 )
+
+    # Point l1_1 :   pt9  (right elbow)
+    # Point l1_2 :   pt27 (right wrist)
+    # Point l2_1 :   pt5  (left elbow)
+    # Point l2_2 :   pt26 (left wrist)
+    # Point P    :   Intersection of L1 & L2 (CPA Approach)
+
+    # Area of triangle:   line0( pt5, pt9 )  line1( pt9, pt27 )   line2( pt5, pt26 )
+    arms = pt5.area_of_triangle( pt9, ptP )
+    
+
+    # Lower body via Tibia
+    # Area of triangle:   line0( pt14, pt20 )   line1( pt20, pt21 )   line2( pt14, pt15  )
+    pt14  = @adt.lkne
+    pt20  = @adt.rkne
+    pt21  = @adt.rank
+    pt15  = @adt.lank
+    ptP  = distance_of_line_to_line( pt20, pt21, pt14, pt15 )
+    legs = pt14.area_of_triangle( pt20, ptP )
+
+    result = []
+    [arms, legs].transpose.each do |array|
+      arm, leg = *array
+      #result << ( arm * leg ) / ( Math.sqrt( (arm*arm) + (leg*leg)) )
+      result << ( arm * leg ) # / ( Math.sqrt( (arm*arm) ))
+    end
+    result
+
+
+#    [ pt27new.getCoordinates!.zip( pt9new.getCoordinates! ) ].each do |array|
+#      array.each do |point27Array, point9Array|
+#        slopeCoordsVars1 << getSlopeForm( point27Array, point9Array, direction )
+#      end
+#    end
+#
+#    [ pt26new.getCoordinates!.zip( pt5new.getCoordinates! ) ].each do |array|
+#      array.each do |point26Array, point5Array|
+#        slopeCoordsVars2 << getSlopeForm( point26Array, point5Array, direction )
+#      end
+#    end 
+#
+#    points = []
+#
+#    # Determine the intersection point of the two lines
+#    [ slopeCoordsVars1.zip( slopeCoordsVars2 ) ].each do |array|
+#      array.each do |line1, line2|  # line1 == [m, t]   --> f(x) y = m*x + t
+#        points << getIntersectionPoint( line1, line2 )
+#      end
+#    end
+#
+#    pt30Coords = pt30.getCoordinates!
+#    pt5Coords  = pt5.getCoordinates!
+#    pt9Coords  = pt9.getCoordinates!
+#
+#    final = []
+#    n = 0
+#
+#    # get the norms
+#    normX, normY = 0, 0
+#    points.each do |p1,p2|
+#      normX += p1**2
+#      normY += p2**2
+#    end
+#
+#    normX = Math.sqrt(normX)
+#    normY = Math.sqrt(normY)
+#
+#    points.each do |p1, p2|
+#
+#      x = pt30Coords[n].shift
+#      y = pt30Coords[n].shift
+#      z = pt30Coords[n].shift
+#
+#      pt5_x   = pt5Coords[n].shift
+#      pt5_y   = pt5Coords[n].shift
+#      pt5_z   = pt5Coords[n].shift
+#
+#      pt9_x   = pt9Coords[n].shift
+#      pt9_y   = pt9Coords[n].shift
+#      pt9_z   = pt9Coords[n].shift
+#
+#      norm = false
+#
+#      if( norm )
+#        # final << [ "#{n.to_s}, #{((p1/normX)-x).to_s}, #{((p2/normY)-y).to_s}" ]
+#      else
+#        # length = Math.sqrt( (x*x) + (y*y) + (z*z) )
+#        # final << [ "#{n.to_s}, #{ ((p1-x)/length).to_s}, #{((p2-y)/length).to_s}" ]
+#        
+#        a = [ pt5_x / getNorm( pt5_x, pt5_y, pt5_z ), pt5_y / getNorm( pt5_x, pt5_y, pt5_z ) ] # is this projecction ok? Can I just drop z under the table?
+#        b = [ pt9_x / getNorm( pt9_x, pt9_y, pt9_z ), pt9_y / getNorm( pt9_x, pt9_y, pt9_z ) ]
+#        c = [ p1 / getNorm( p1, p2, 0 ), p2 / getNorm( p1, p2, 0 ) ]    # p1 = x, p2 = y ---> point c on plane ..
+#
+#
+#        # puts "a (#{a.join(", ")}), b (#{b.join(", ")}), c (#{c.join(", ")})"
+#        # Using Cartesian coordinates with a general determinant
+#        # http://en.wikipedia.org/wiki/Triangle
+#        # Area = 0.5 * |  (x_a - x_c) * (y_b - y_a) - (x_a - x_b) * (y_c - y_a) |
+#        area = 0.5 * ( ( (a.first - c.first)*(b.last - a.last) ) - ( (a.first - b.first)*(c.last - a.last) ) ).abs
+#
+#
+#        # Three dimansional area of general triangle
+#        # Area = 0.5 * | 
+#
+#        final << [ "#{n.to_s}, #{area.to_s}" ]
+    #  end
+
+    #  n += 1
+    #end
+
+#    # Modify our array if we want only a certain range
+#    if( from.nil? )
+#      if( to.nil? )
+#        # from && to == nil
+#        # do nothing, we have already all resuts
+#      else
+#        # from == nil ; to != nil
+#        # we start from 0 upto to
+#        final = eval( "final[0..#{to}]" )
+#      end
+#    else
+#      if( to.nil? )
+#        # from != nil ; to == nil
+#        final = eval( "final[#{from}..-1]" )
+#      else
+#        # from && to != nil
+#        final = eval( "final[#{from}..#{to}]" )
+#      end
+#    end
+#
+    #final
+
+  end # end of getTrianglePatch }}}
+
+
+  # = maxDensePoints takes 
+  def maxDensePoints # {{{
+
+  end # }}}
+  
+
+  # = eucleadianDistance takes 
+  def eucleadianDistance x1, y1, x2, y2 # {{{
+    Math.sqrt( ( (x2 - x1) ** 2 ) + ( (y2 - y1) ** 2  )  )
+  end # }}}
+
+
+  # = getKeyposes takes a given results from getTurningPoints and extracts Keyposes
+  # @param tp Parameter needs results from the getTurningPoints function which is an array
+  # @param window Parameter needs an integer which defines the size of the eucleadian mean distance sample window. (see paper for reference)
+  #               This means that e.g. 20 values around each point n (x,y)  \forall n-(window/2)->n+(window/2) will be taken and then their
+  #               distance will be summarized for weighting of point n.
+  # @returns Array, with extracted Keyposes information.
+  def getKeyposes tp = getTurningPoints( "p26", "relb", "p26", "lelb", "p30", "xy" ), window = 30 # {{{
+    # 1.) get tp frames and get approx grad results
+    # 2.) calculate eucleadian distance over a mean point of size "window"
+    # 3.) calculate dense frames as special
+    # 4.) calculate Keyposes and other candidates 
+    # 5.) refine Keyposes and get rid of false positives
+    
+
+  end # of getKeyposes }}}
 
 
   # = getPhi takes two segements and performs a simple golden ratio calculation for each coordinate pair
@@ -221,6 +470,16 @@ class BodyComponents
 
     results
   end # end of getPhi }}}
+
+
+  # = approxGradient is a very simple and naive approximation for a real gradient calculation
+  # @param x X-Coordinate of a given point p
+  # @param y Y-Coordinate of a given point p
+  # @returns Float, rough and naive approximation of a gradient of point p(x,y)
+  # @warning FIXME: This method should be substituted by a real derivative calculation
+  def approxGradient x, y # {{{
+    ( x.to_f + y.to_f**2 )
+  end # of approxGradient }}}
 
 
   # = getSlopeForm returns a solution of the following:
@@ -297,1017 +556,50 @@ class BodyComponents
   # == Dynamical method creation at run-time
   # @param method Takes the method header definition
   # @param code Takes the body of the method
-  def learn method, code
+  def learn method, code # {{{
       eval <<-EOS
           class << self
               def #{method}; #{code}; end
           end
       EOS
-  end
-
+  end # end of learn( method, code ) }}}
 
   attr_accessor :adt
-end
+end # of class BodyComponents }}}
 
 
 # Direct invocation, for manual testing beside rspec
-if __FILE__ == $0
-
-  include GSL
+if __FILE__ == $0 # {{{
 
   file    = ARGV.first
   bc      = BodyComponents.new( file )
-  #points  = bc.getTurningPoints( "p26", "relb", "p26", "lelb", "p30", 150, 200 )
   
+  f = File.open( "weigths.csv" ).readlines
+  weights = []
+  f.each do |l|
+    w, i, v = l.split(",")
+    v.chomp!
+    weights << v.to_f
+  end  
 
+  tri = bc.getTrianglePatch
+  totalNorm = 0
+  tri.each { |area| totalNorm += Math.sqrt( area.to_f * area.to_f )  }
+  totalNorm / tri.length
 
-  # 100-200...
-  #   min 153
-  #      128-178
-  #         min 153
-  #           accept
-  #         max 178
-  #           153-203
-  #             min 153
-  #               accept
-  #             max 196
-  #               171-221
-  #                 max 196
-  #                   accept
-  #                 min 153
-  #                   accept
-  # 
-  #  K1 area ... we have for 100-200 -> min 153 ; max 196
-
-
-  # 200-300...
-  #   min 229
-  #     204-254
-  #       max 254
-  #         ack
-  #       min 229
-  #         ack
-  #   max 256
-  #     231-281
-  #       max 256
-  #         accept
-  #       min 231
-  #         206-256
-  #           max 256
-  #             accept
-  #           min 229
-  #             ack.. or cont. to iterate
-  #     
-  # K2 area ... we have for 200-300 -> min. 229 ; max 256
-
-
-  # 300-400...
-  #   max 323
-  #     298-348
-  #       max 323
-  #         ack
-  #       min 327
-  #         ack
-  #   min 327
-  #     302-357
-  #       max 
-  #       min
-  #
-  # K3 area ... we have for 300-400 -> min 327 ; max 323
-  # K3 before K4
-
-  # 400-500
-  #   max 431
-  #     406-456
-  #       max 431
-  #         accept
-  #       min 453
-  #         428-478
-  #           max 431
-  #             accept
-  #           min 453
-  #             accept
-  #   min 400
-  #     375-425
-  #       max 425
-  #         400-450
-  #           max 425
-  #             accept
-  #           min 400
-  #             accept
-  #       min 400
-  #         accept
-  #
-  # 
-  #
-  # K4 area ... we have for 400-500 -> min. 400 ; max. 453
-
-  # 500-600
-  #   max 595
-  #     570-620
-  #       max 595
-  #         accept
-  #       min 620
-  #         595-645
-  #           max 595
-  #             accept
-  #           min 620
-  #             accept
-  #   min 527
-  #     502-557
-  #       max 557
-  #         532-582
-  #           max 564
-  #             549-588
-  #               max 564
-  #               min 532
-  #           min 532
-  #       min 527
-  #         accept
-
-
-
-  # 100-300 -=> K1 -> 153
-  # 200-400 -=> K2 -> 323
-  # 400-600 -=> K3 -> 527
-
-
-
-  allowHundreds = false
-
-  # We step through ~2s intervalls
-  upperDensityThreshhold = 1000000    # this is only necessary when we don't get good resutls
-  #lowerDensityThreshhold = 0.8        # 0.6 or higher is ok
-  lowerDensityThreshhold = 0        # 0.6 or higher is ok
-
-  sampleSize = 20                     # 20 * 0.08333 = ~1.666s
-
-  keyposesFramesXY100 = []
-  keyposesFramesYZ100 = []
-  keyposesFramesXY200 = []
-  keyposesFramesYZ200 = []
-  keyposesFramesXY300 = []
-  keyposesFramesYZ300 = []
-  keyposesFramesXY400 = []
-  keyposesFramesYZ400 = []
-
-
-  if(allowHundreds)
-    stepsArray = [100, 200, 300, 400]
-  else
-    stepsArray = [200, 300, 400]
+  [tri, weights].transpose.each do |area, weight|
+    #puts "Tri: #{area.to_s}   Weight: #{weight.to_s}"
+    puts ( area.to_f  ) * weight.to_f
+    # puts area.to_f / totalNorm
+    # puts area.to_f
   end
 
-  stepsArray.each do |step|
-
-    puts "STEPPING DISTANCE: "+step.to_s
-    
-    [ "xy", "yz" ].each do |direction|
-
-      puts "DIRECTION: "+direction.to_s
-
-
-      (100..1000).step( step ) do |n|
-      #(1200..3800).step( step ) do |n|
-
-        points  = bc.getTurningPoints( "p26", "relb", "p26", "lelb", "p30", direction, n, n+step ) 
-
-        index, x, y       = [], [], []
-
-        points.each do |array|
-          indexVal, xVal, yVal = array.to_s.split(",")
-          index << indexVal.strip.to_i
-          x << xVal.strip.to_f
-          y << yVal.strip.to_f
-        end
-
-        xx = GSL::Vector.alloc( index.length )
-        yy = GSL::Vector.alloc( index.length )
-
-        fakeGrad = []
-        normFakeGrad = 0
-
-        for i in 0..(index.length-1) do
-          xx[i] = x[i]
-          yy[i] = y[i]
-          
-
-          # xx[i] = i
-          # yy[i] = x[i]*y[i]
-
-          fg = (x[i].to_f + y[i].to_f**2)
-          
-          fakeGrad << fg
-          normFakeGrad += fg**2
-          #normFakeGrad = 1 
-          #puts "Index: #{i.to_s} -> #{fakeGrad}"
-        end
-
-        # norm
-        normFakeGrad = Math.sqrt( normFakeGrad )
-        fakeGrad.collect!{|n| (n/normFakeGrad).abs }
-
-        maxFrame = index[ fakeGrad.index(fakeGrad.max) ]
-        minFrame = index[ fakeGrad.index(fakeGrad.min) ]
-        maxFrameLocal = fakeGrad.index( fakeGrad.max )
-        minFrameLocal = fakeGrad.index( fakeGrad.min )
-
-        puts "(--)    Maxima F: #{maxFrame.to_s} (Local: #{maxFrameLocal.to_s}) -||- Minima F: #{minFrame.to_s} (Local: #{minFrameLocal.to_s})"
-        #puts "Local maxima #{fakeGrad.max.to_s} at index: #{fakeGrad.index(fakeGrad.max)}"
-        #puts "This translates to points index -> #{index[ fakeGrad.index(fakeGrad.max) ].to_s}"
-        #puts "Local minima #{fakeGrad.min.to_s} at index: #{fakeGrad.index(fakeGrad.min)}"
-        #puts "This translates to points index -> #{index[ fakeGrad.index(fakeGrad.min) ].to_s}"
-
-        # get samples around each max and min and check for density
-        [ maxFrameLocal, minFrameLocal ].each do |frame|
-          frames = []
-          (frame - sampleSize).upto( frame + sampleSize) do |fnum|
-            frames << [ x[fnum], y[fnum] ]
-          end
-
-          avgX, avgY = 0, 0
-          frames.each do |array|
-            localX, localY = *array
-            next if localX.nil?
-            next if localY.nil?
-
-
-            avgX += localX.abs
-            avgY += localY.abs
-          end
-
-          avgX /= (sampleSize*2.0)
-          avgY /= (sampleSize*2.0)
-
-
-          (puts "(--)   Looking at Frame Nr. #{maxFrame.to_s}" or cur = maxFrame) if( frame == maxFrameLocal )
-          (puts "(--)   Looking at Frame Nr. #{minFrame.to_s}" or cur = minFrame) if( frame == minFrameLocal )
-
-          avgNorm = Math.sqrt( (avgX**avgX) +  (avgY**avgY) )
-          #avg     = (avgX/avgNorm + avgY/avgNorm)/2.0
-          avg     = (avgX/avgNorm + avgY/avgNorm)
-
-
-          puts "(--)    thresh_floor (#{lowerDensityThreshhold.to_s}) >= avg (#{avg.to_s} >= (#{upperDensityThreshhold.to_s})"
-          if( (avg >= lowerDensityThreshhold) and (avg <= upperDensityThreshhold ) )
-            # Keypose
-            puts "(II) Keypose found at #{cur.to_s}"
-            eval( "keyposesFrames#{direction.upcase}#{step.to_s} << #{cur.to_s}" )
-          end
-
-        end
-
-      end
-
-    end
-
-  end
-
-
-
-  puts "---XY---"
-  puts "Extracted (XY) 100:" if( allowHundreds )
-  p keyposesFramesXY100.sort if( allowHundreds )
-  puts "Extracted (XY) 200:"
-  p keyposesFramesXY200.sort
-    puts "Extracted (XY) 300:"
-  p keyposesFramesXY300.sort
-  puts "Extracted (XY) 400:"
-  p keyposesFramesXY400.sort
-
-  puts "---YZ---"
-  puts "Extracted (YZ) 100:" if( allowHundreds )
-  p keyposesFramesYZ100.sort if( allowHundreds )
-  puts "Extracted (YZ) 200:"
-  p keyposesFramesYZ200.sort
-  puts "Extracted (YZ) 300:"
-  p keyposesFramesYZ300.sort
-  puts "Extracted (YZ) 400:"
-  p keyposesFramesYZ400.sort
-
-
-
-  puts ""
-  puts "Merged & Unified:"
-  kpFrames = []
-  kpFrames << keyposesFramesXY400
-  kpFrames << keyposesFramesYZ400
-  kpFrames << keyposesFramesXY200
-  kpFrames << keyposesFramesYZ200
-  kpFrames << keyposesFramesXY300
-  kpFrames << keyposesFramesYZ300
- 
-  kpFrames << keyposesFramesXY100 if( allowHundreds )
-  kpFrames << keyposesFramesYZ100 if( allowHundreds )
-
-  kpFrames.flatten!.sort!
-
-  20.times do 
-
-    # Frames difference which allows merging
-    # avg -> merging => (v1 + v2 ) / 2
-    threshholdForMerge = 35
-    finalKpFrames = []
-    deleteFrames = []
-
-  #  kpFrames.each_with_index do |frame, index|
-  #    # is this frame close to some other value?
-  #    if( (kpFrames[ index + 1 ] - threshholdForMerge) <)
-  #  end
-
-
-    kpFrames.each do |f1|
-      kpFrames.each_with_index do |f2, i|
-        if( ((f1 - f2).abs < threshholdForMerge) and ((f1-f2).abs > 0) )
-          finalKpFrames << ((f1+f2).abs / 2)
-          deleteFrames << f1
-          deleteFrames << f2
-        else
-          # Nothing to merge just push res to new array
-          finalKpFrames << f1
-        end
-      end
-    end
-
-    finalKpFrames.collect! { |x| x unless deleteFrames.include?( x ) }
-    finalKpFrames.uniq!.compact!
-
-    kpFrames.clear
-    kpFrames = finalKpFrames.dup
-
-  end
-
-
-  # If Keyposes are within 1s of Frames they have to compete with eech other
-  competitonThreshhold = 1 / 0.008333 # approx. 1s
-  competitonThreshhold = 100
-  # Insert beat of the dance here
-
-  compete = []
-  (kpFrames.dup % 2).each do |array|
-    a, b = *array
-    next if a.nil?
-    next if b.nil?
-    d = (a.abs - b.abs).abs
-    if( d <= competitonThreshhold)
-
-      # Check if a vs b or b vs c is more interesting.
-      # min distance counts
-
-      compete << [a,b]
-
-
-    end
-  end
-
-  puts "These need to compete for survival:"
-  p compete
-
-
-  # Determine the differences between all frames
-  distances = []
-  kpFrames.each_with_index do |frame, index|
-    if( (index - 1) >= 0 )
-      previousFrame = kpFrames[ index - 1 ]
-    else
-      previousFrame = nil
-    end 
-
-    if( (index + 1) <= kpFrames.length )
-      nextFrame     = kpFrames[ index + 1 ]
-    else
-      nextFrame     = nil
-    end
-
-    if( previousFrame.nil? )
-      # we have the first element there is no previous
-      distances << [ ( frame - nextFrame ).abs, frame, nextFrame ] if( (frame-nextFrame).abs < competitonThreshhold )
-    else
-      # we are somewhere not beginning though
-      distances << [ (previousFrame - frame).abs, previousFrame, frame ] if( (previousFrame-frame).abs < competitonThreshhold )
-      if( nextFrame.nil? )
-        # we are at the end, there is no next frame
-        # do nothing
-      else
-        # we are not at the end
-        distances << [ (nextFrame - frame).abs, frame, nextFrame ] if( (nextFrame-frame).abs < competitonThreshhold  )
-      end
-    end
-
-  end
-
-  distances.sort!.uniq!
-
-  distances.each do |array|
-    d,a,b = *array
-    puts "#{d.to_s} -> #{a.to_s} #{b.to_s} "
-  end
-
-  compete = false
-
-  if( compete )
-
-    # Rules: 
-    # in xy plain both max and min need to converge on a value inside threshhold +/-10
-    # if they compete they need to compete with the right partner. Check.
-    #       a -> b -> c
-    #       a-b = x
-    #       b-c = y
-    #       b vs c if x>y else a vs b
-
-    # (frames)
-    competeThreshhold = 5
-
-    # Stores which frames we already did
-    done = []
-
-    distances.each do |array|
-      d, a, b = *array
-      next if d.nil?
-      next if a.nil?
-      next if b.nil?
-
-      # Store frames we already processed here
-      next if( done.include?(a) )
-      next if( done.include?(b) )
-      done << a
-      done << b
-
-      points  = bc.getTurningPoints( "p26", "relb", "p26", "lelb", "p30", "xy", a, b) 
-      index, x, y       = [], [], []
-
-      points.each do |array|
-        indexVal, xVal, yVal = array.to_s.split(",")
-        index << indexVal.strip.to_i
-        x << xVal.strip.to_f
-        y << yVal.strip.to_f
-      end
-
-      xx = GSL::Vector.alloc( index.length )
-      yy = GSL::Vector.alloc( index.length )
-
-      fakeGrad = []
-      normFakeGrad = 0
-
-      for i in 0..(index.length-1) do
-        #xx[i] = x[i]
-        #yy[i] = y[i]
-        xx[i] = i
-        yy[i] = x[i]*y[i]
-
-        fg = (x[i].to_f + y[i].to_f**2)
-        
-        fakeGrad << fg
-        normFakeGrad += fg**2
-        #puts "Index: #{i.to_s} -> #{fakeGrad}"
-      end
-
-      if( ( index[ fakeGrad.index( fakeGrad.max ) ] - index[ fakeGrad.index( fakeGrad.min ) ] ).abs <= competeThreshhold )
-        newFrame = ( index[ fakeGrad.index( fakeGrad.max ) ] + index[ fakeGrad.index( fakeGrad.min ) ] ) / 2  # avg
-        puts "A (Frame: #{a.to_s})  VS  B (Frame: #{b.to_s}) ---> both converge into Frame: #{newFrame.to_s}"
-
-        kpFrames.delete( a )
-        kpFrames.delete( b )
-        kpFrames << newFrame
-
-      else
-        puts "A (Frame: #{a.to_s})  VS  B (Frame: #{b.to_s}) ---> both DO NOT converge. Unchanged."
-      end
-
-    end
-
-
-  end # if( compete )
-
-
-  puts "Final Keyposes:"
-  kpFrames.sort!.shift    # FIXME: get rid of the 108' beginning outlier
-  p kpFrames
-
-  puts "Ground truth: (aizu)"
-  p [193, 345, 520, 678, 808, 900, 1030, 1073]
-
-  # ----
-  
-  interestingFrames = []
-
-  mStep = 100
-  (0..1100).step(mStep) do |n|
-    smoothing = 5
-    direction = "xy"
-    #rangeA = 150
-    #rangeB = 250
-    rangeA = n
-    rangeB = n+mStep
-
-    points  = bc.getTurningPoints( "p26", "relb", "p26", "lelb", "p30", direction, rangeA, rangeB) 
-    index, x, y       = [], [], []
-
-    points.each do |array|
-      indexVal, xVal, yVal = array.to_s.split(",")
-      index << indexVal.strip.to_i
-      x << xVal.strip.to_f
-      y << yVal.strip.to_f
-    end
-
-    xx = GSL::Vector.alloc( index.length )
-    yy = GSL::Vector.alloc( index.length )
-
-    fakeGrad = []
-    normFakeGrad = 0
-
-    sum = []
-
-    for i in 0..(index.length-1) do
-      #xx[i] = x[i]
-      #yy[i] = y[i]
-      xx[i] = i
-      #yy[i] = x[i]*y[i]
-      
-      # j == x ; i == y
-      # j + n*i
-
-      # distance of point i to pt i-1
-      # x,y <-> x2,y2
-      # delta y / delta x
-
-      if( i != 0 or i >= index.length-1 )
-        distance = Math.sqrt( ( (x[i-1] - x[i]) ** 2 ) + ( (y[i-1] - y[i]) ** 2  )  )
-      else
-        distance = 0.1
-      end
-
-      sum << distance
-
-      #puts "Frame: #{i}     Distance: #{1/distance}"
-
-      yy[i] = ( x[i] + ( (i+rangeA)*y[i] )  ).abs
-
-      fg = (x[i].to_f + y[i].to_f**2)
-      
-      fakeGrad << fg
-      normFakeGrad += fg**2
-      #puts "Index: #{i.to_s} -> #{fakeGrad}"
-    end
-    
-
-    spread = 10
-    f = sum.index( sum.min )
-    meanPointsDistance = []
-    (f-spread).upto(f+spread) { |fs| meanPointsDistance << sum[fs] }
-    nils = (meanPointsDistance - meanPointsDistance.compact ).length
-    meanPointsDistance = meanPointsDistance.compact.flatten.sum
-    meanPointsDistance /= ( (spread*2) - nils)
-
-    #puts "Sum: #{(sum.dup.sum / sum.length).to_s}"
-    puts "Min: #{sum.min.to_s} at Frame #{(rangeA + sum.index( sum.min )).to_s}  ... sum of distance of #{(spread*2).to_s} points (#{meanPointsDistance.to_s})"
-    #puts "Max: #{sum.max.to_s} at Frame #{(rangeA + sum.index( sum.max )).to_s}"
-
-    interestingFrames << (rangeA + sum.index( sum.min ))
-
-  end # end of 0..1000
-
-
-    keyPoses = []
-    smoothing = 3
-    direction = "zx" 
-    #rangeA = 1250
-    rangeA = 0
-    
-    #rangeB = 1743
-    rangeB = 3688
-    #rangeB = 1100
-    #rangeB = 3800
-
-    points  = bc.getTurningPoints( "p26", "relb", "p26", "lelb", "p30", direction, rangeA, rangeB) 
-    index, x, y       = [], [], []
-
-    points.each do |array|
-      indexVal, xVal, yVal = array.to_s.split(",")
-      index << indexVal.strip.to_i
-      x << xVal.strip.to_f
-      y << yVal.strip.to_f
-    end
-
-    xx = GSL::Vector.alloc( index.length )
-    yy = GSL::Vector.alloc( index.length )
-
-    fakeGrad = []
-    normFakeGrad = 0
-
-    sum = []
-
-    #for i in 0..(index.length-1) do
-    for i in 0..(index.length-1) do
-      #xx[i] = x[i]
-      #yy[i] = y[i]
-      xx[i] = i
-      #yy[i] = x[i]*y[i]
-      
-      # j == x ; i == y
-      # j + n*i
-
-      # distance of point i to pt i-1
-      # x,y <-> x2,y2
-      # delta y / delta x
-
-
-      if( i != 0 or i >= index.length-1 )
-        unless( x[i-1].nil? or y[i-1].nil? or x[i+1].nil? or y[i+1].nil? )
-          distance = Math.sqrt( ( (x[i-1] - x[i]) ** 2 ) + ( (y[i-1] - y[i]) ** 2  )  )
-          afterDistance = Math.sqrt( ( (x[i+1] - x[i]) ** 2 ) + ( (y[i+1] - y[i]) ** 2  )  )
-        else
-          distance = 0.1
-          afterDistance = 0.1
-        end
-      else
-        distance = 0.1
-        afterDistance = 0.1
-      end
-      
-      sum << distance
-
-      spread = 30
-      meanPointsDistance = []
-      ((i)-spread).upto((i)+spread) do |fs|
-        unless( x[fs-1].nil? or y[fs-1].nil? or x[fs+1].nil? or y[fs+1].nil? )
-          distance = Math.sqrt( ( (x[fs-1] - x[fs]) ** 2 ) + ( (y[fs-1] - y[fs]) ** 2  )  )
-          meanPointsDistance << distance
-        end
-      end
-
-      if( meanPointsDistance.empty? )
-        p x.length
-
-        u = ((rangeA+i)-spread)
-        l = ((rangeA+i)+spread)
-      end
-
-      nils = (meanPointsDistance - meanPointsDistance.compact ).length
-      meanPointsDistance = meanPointsDistance.compact.flatten.sum
-      totalDistance = meanPointsDistance
-      meanPointsDistance /= ( (spread*2) - nils)
-
-      fg = (x[i].to_f + y[i].to_f**2)
-      
-      fakeGrad << fg
-      normFakeGrad += fg**2
-
-      #puts "Index: #{i.to_s} -> #{fakeGrad}"
-
-      #puts "Frame: #{i}     Distance: #{1/distance}"
-
-      #yy[i] = ( x[i] + ( (i+rangeA)*y[i] )  ).abs
-      #time = (0.08333 * (i+rangeA))
-      time = (0.08333 * spread)
-      velocity = totalDistance / time
-      accel = velocity / time
-
-
-      d = (1/(distance)) + (1/(afterDistance))
-
-      # yy[i] = (fg/10) + (d/10) * (( x[i] * y[i]) )
-      #yy[i] = (d/10) * (( x[i] * y[i]) )
-      mass = 2.2 * 2
-      ekin = 0.5 * mass * (velocity**2)
-      gravity = 9.81
-      height = meanPointsDistance
-      epot = mass * gravity * height
-      f = mass * accel
-      work = f * meanPointsDistance
-      power = f * velocity
-
-      #puts "F: #{(rangeA+i).to_s} -> Acc: #{accel.to_s} --> Vel: #{velocity.to_s} -> EKin: #{ekin.to_s} -> EPot: #{epot.to_s} -> Force: #{f.to_s} -> Work: #{work.to_s} -> Power: #{power.to_s}"
-      
-          
-      #yy[i] = ( (1/ekin) * (1/( velocity) * (1/accel) * (1/power) ) * (( (1/(meanPointsDistance))    ) * (( x[i] * y[i]) ) ).abs ) / 1000
-      w = (  (1/power + 1/velocity +  1/accel ) )
-      
-      skill = false
-
-      if( skill )
-        # Extract Skill Parameter
-        #scaling = 300
-        scaling = 20
-        yy[i] = ((( (1/(meanPointsDistance))    ) * (( x[i] * y[i]) ) ).abs ) / scaling
-      else
-        # Extract DMP
-        scaling = 30
-        #scaling = 1000
-        yy[i] = ( w * (( (1/(meanPointsDistance))    ) * (( x[i] * y[i]) ) ).abs ) / scaling
-      end
-      
-      yy[i] = 0.999 if( yy[i] > 1 )
-
-
-      #puts "K3 area Frame #{i.to_s} -> y: #{yy[i].to_s}" if( i >= 480 or i <= 690 )
-
-      #@dissapearBelowThisFrame = 1310  # jongara
-      #@dissapearBelowThisFrame = 110 # aizu
-      @dissapearBelowThisFrame = 570 # Filter-donpan Manoj
-      yy[i] = 0 if( ((rangeA+i) >= 0) and ((rangeA+i) <= @dissapearBelowThisFrame ) )
-      
-
-      #normsky = Math.sqrt( (yy[i]**2) +  (x[i]**2) )
-      #yy[i] /= normsky
-      #puts "Frame: #{(rangeA+i).to_s} -> FG: #{fg.to_s}"
-
-      danceName = "Kokiriko Theodori"
-      #danceName = "Donpan Dance"
-      #danceName = "Aizubandaisan Dance"
-      #danceName = "Jongara Bushi Dance"
-      scale     = 3
-
-      keyPoseLowerThresh = 0.05  # graph
-      keyPoseFrameThresh = 30   # if keyposes are too close (e.g. 197 198.. etc. only the first counts)
-      if( ( yy[i] >= keyPoseLowerThresh ) and ( (keyPoses.last.to_i+keyPoseFrameThresh) <= (rangeA+i) ) )
-        keyPoses << (rangeA+i) 
-      end
-
-    end
-
-
-    interestingFrames.collect! {|f| f += @dissapearBelowThisFrame }
-    puts "Extreme frames (distances at absolute min):" 
-    p interestingFrames
-
-    #interestingFrames.each do |f|
-    #  yy[f] += 0.1
-    #  yy[f] = 1 if( yy[f] > 1 )
-    #end
-
-
-    puts "Keyposes:"
-    p keyPoses
-    puts "--"
-    #puts "Ground truth: (aizu)"
-    #p [193, 345, 520, 678, 808, 900, 1030, 1073]
-
-    puts "Jongara GT"
-    puts "Nr.  1      1300-1337             1319"
-    puts "Nr.  2      1435-1460             1441"
-    puts "Nr.  3      1590-1620             1610"
-    puts "Nr.  4      1890-1930             1912"
-    puts "Nr.  5      2100-2125             2119"
-    puts "Nr.  6      2400-2457             2448"
-    puts "Nr.  7      2590-2617             2608"
-    puts "Nr.  8      2880-2928             2881"
-    puts "Nr.  9      3070-3100             3088"
-    puts "Nr. 10      3276-3314             3295"
-    puts "Nr. 11      3540-3570             3560"
-    puts "Nr. 12      3740-3794             3756"
-
-
-  spline = Spline.alloc(xx, yy)
-  xx2 = Vector.linspace(xx[0], xx[-1], smoothing)
-
-  yy2 = spline.eval(xx2)
-
-
-  puts "Local maxima #{fakeGrad.max.to_s} at index: #{fakeGrad.index(fakeGrad.max)}"
-  puts "This translates to points index -> #{index[ fakeGrad.index(fakeGrad.max) ].to_s}"
-  puts "Local minima #{fakeGrad.min.to_s} at index: #{fakeGrad.index(fakeGrad.min)}"
-  puts "This translates to points index -> #{index[ fakeGrad.index(fakeGrad.min) ].to_s}"
-
-
-  # http://www.gnu.org/software/plotutils/manual/html_node/plotutils_9.html#SEC9
-
-  GSL::graph([xx, yy], "-T ps -C -X 'Frames n' -Y 'Turningvalues q(n)' --x-limits #{rangeA.to_s} #{rangeB.to_s} --y-limits 0 1 -L '#{danceName.to_s}, window=#{spread.to_s}' -g 3 -S 0 -w #{scale.to_s} --page-size a4 > /tmp/foo.ps") 
-  #GSL::graph([xx, yy], "-T ps -C -X 'Frames n' -Y 'Turningvalues q(n)' --x-limits #{rangeA.to_s} #{rangeB.to_s}  -L '#{danceName.to_s}, window=#{spread.to_s}' -g 3 -S 0 -w #{scale.to_s} --page-size a4 > /tmp/foo.ps") 
-  # -S 3
-
-
-  #newPoints = []
-  #points.each_with_index do |p,i|
-  #  newPoints << "index, x, y" if( i == 0 )
-  #  
+  #bc.getTrianglePatch.each do |line|
+  #  index, area = line.to_s.split(",")
+  #  puts "#{index.to_s}, #{area.to_s}" # if( area.to_i <= 600 )
   #end
 
-
-  ret     = bc.adt.writeCSV( "/tmp/results.csv", points )
-
-
-
-  # Let's do a mean-shift calculation.
-  # Simple gradient is ok, but yiels not always good results
-  # we want a area with many samples as possible
-  
-  # We start to shifts. One at the beginning and one at the end of the data.
-  
-
-
-
-
-  # Norms
-  # normX = Math.sqrt( (x.dup).collect { |val| val**2 }.sum )
-  # normY = Math.sqrt( (y.dup).collect { |val| val**2 }.sum )
-
-  # Normalize values
-  #x.collect! { |val| val/normX }
-  #y.collect! { |val| val/normY }
-
-
-  # 1.) Differences between points abs(x1) - abs(x2) etc.
-  # 2.) Plot on x/y
-
-  exit
-
-  # Eucledian distance
-  d = []
-
-  dummyValues, differenceX, differenceY = GSL::Vector.alloc( index.length ), GSL::Vector.alloc( index.length ), GSL::Vector.alloc( index.length )
-  ( points % 2 ).each do |array|
-    index1, x1, y1 = (array.shift).to_s.split(",")
-    index2, x2, y2 = (array.shift).to_s.split(",")
-
-    myX = (x1.to_f).abs - (x2.to_f).abs
-    myY = (y1.to_f).abs - (y2.to_f).abs
-
-    #p myX
-
-    differenceX << myX
-    differenceY << myY
-
-  end
-
-
-  
-
-
-  for i in 0..(index.length/2) do
-    dummyValues << i
-  end
-
-  #GSL::graph([dummyValues, differenceX], "-T X -C -X x -Y y")
-  #exit
-
-
-  #coef, cov, chisq, status = GSL::Poly.fit(xx, yy, 6)
-  #coef, cov, chisq, status =  GSL::MultiFit.polyfit(xx, yy, 6)
-  #p coef
-  #xx2 = GSL::Vector.linspace(xx[0], xx[-1], 100)
-
-  #for i in 0..(xx2.size-1) do
-  #  puts "#{i.to_s} | #{xx[i].to_s} #{coef.eval(xx2[i]).to_s}"
-  #end
-
-  #for i in 0..(xx2.size - 2) do
-  #  p bc.getSlopeForm( [ xx[i], xx2[i], 0 ], [ xx[i+1], xx2[i+1], 0 ] )
-  #end
-
-
-  #GSL::graph([xx, yy], [xx2, coef.eval(xx2)], "-C")
-
-
-  spline = Spline.alloc(xx, yy)
-  xx2 = Vector.linspace(xx[0], xx[-1], 25)
-
-  yy2 = spline.eval(xx2)
-  
-
-  GSL::graph([xx, yy], [xx2,yy2], "-T X -C -X x -Y y")
-
-  # Polar coordinate experiment
-#  r     = []
-#  theta = []
-#  for i in 0..(xx.size-1) do 
-#    r << Math.sqrt( (yy[i]**2) + (xx[i]**2) ) # y**2 - x**2
-#    if( xx[i] == 0 and yy[i] == 0 )
-#      theta << 0
-#      next
-#    end
-#
-#    if( xx[i] >= 0 )
-#      theta << Math.asin( yy[i] / r.last )
-#    end
-#
-#    if( xx[i] < 0 )
-#      theta << - Math.asin( yy[i] / r.last ) + Math::PI
-#    end
-#  end
-#
-#  p r
-#  p theta
-#
-#  ax = GSL::Vector.alloc( r.length )
-#  by = GSL::Vector.alloc( r.length )
-#
-#  for i in 0..(r.length-1) do
-#    ax << ( r[i] * Math.cos( theta[i] ) )
-#    by << ( r[i] * Math.sin( theta[i] ) )
-#    puts "ax: #{ax.last} by: #{by.last}"
-#  end
-#
-#  GSL::graph([ax, by],  "-T X -C -X x -Y y")
-
-
-  # EPIC FAil
-  # Turn x and y into x->linvect ; x and x->linvect; y ("linearize")
-  #linear = GSL::Vector.alloc( index.length - 1 )
-  #for i in 0..(index.length - 1 ) do
-  #  xx[i] = x[i].to_f * 100
-  #  yy[i] = x[i].to_f * 100 
-  #end
-#
-  #for i in 0..(index.length - 1 ) do
-  #  linear <<  i
-  #  puts "lin: #{linear.last.to_s} x: #{xx[i].to_s} y: #{yy[i].to_s}"
-  #end
-#
-  #GSL::graph([linear, xx], [linear, yy], "-T X -C -X x -Y y")
-  #GSL::graph([xx, yy], [xx2, yy2], "-T X -C -X x -Y y")
-
-
-#  # Lets print grad
-#  xgrad = GSL::Vector.alloc( fakeGrad.length - 1 )
-#  ygrad = GSL::Vector.alloc( fakeGrad.length - 1 )
-#  for i in 0..(fakeGrad.length-1) do 
-#    xgrad << i
-#    ygrad << fakeGrad[i]
-#  end
-#
-#  GSL::graph([xgrad, ygrad], "-T X -C -X x -Y y")
-#
-#  ret     = adt.writeCSV( "/tmp/results.csv", points )
-
-#  adt     = ADT.new( "../sample/Jongara.vpm" )
-#  points  = adt.getTurningPoints( "p27", "relb", "p26", "lelb", "p30", 1400, 1500 )
-#  values = []
-#  points.each do |string|
-#    index, x, y = *(string.to_s.gsub(" ","").split(","))
-#    index   = index.to_i
-#    x       = x.to_f
-#    y       = y.to_f
-#
-#    values << [index,x,y]
-#  end
-#
-#  results = []
-#  i = 0
-#  threshhold = 1
-#
-#  # If the frame i we are in is a twisting point we set a 1 if not 0
-#  values.each do |array|
-#    index, x, y = array.shift, array.shift, array.shift
-#    index   = index.to_i
-#    x       = x.to_f
-#    y       = y.to_f
-#
-#    if( values.length >= (i+2) )    # only get values in the range of our array
-#      thisX = x
-#      thisY = y
-#
-#      x2 = ((values[ i+1 ].to_s.gsub(" ","").split(","))[1]).to_f
-#      y2 = ((values[ i+1 ].to_s.gsub(" ","").split(","))[2]).to_f
-#
-#      x3 = ((values[ i+2 ].to_s.gsub(" ","").split(","))[1]).to_f
-#      y3 = ((values[ i+2 ].to_s.gsub(" ","").split(","))[2]).to_f
-#
-#
-#      finalX = (x+x2+x3)/3.0
-#      finalY = (y+y2+y3)/3.0
-#
-#      if( (finalX or finalY) >= threshhold )
-#        results << 1
-#      else
-#        results << 0
-#      end
-#    else
-#      # push a 0
-#      results << 0
-#    end
-#
-#    i += 1
-#  end
-#
-#
-#  #
-#  # 1.) Ruby19
-#  # 2.) RubyProf
-#  # 3.) Tuning
-#  #
-#
-##  results.each_with_index { |r, i| puts "#{i.to_s}  -> #{r.to_s}" }
-#
-#  #ret     = adt.writeCSV( "/tmp/results.csv", points )
-#
-#
-#  # = PHI Calculation
-#  # x = adt.getPhi( "pt24", "pt30", 10 )["ytranPhi"]
-#  # p x = adt.getPhi( "pt26", "lsho", 10 )
-#  # @results = []
-#  # if( x.is_a?(Numeric) )
-#  #   p x
-#  # else
-#  #   x.each_with_index { |val, index| @results << "#{index},#{( 1.61803398874989 - val ).abs}\n" }
-#  #   File.open( "/tmp/foo", "w" ) { |f| f.write( "x,y\n" ); f.write( @results.to_s ) }
-#  # end
-#
-## end # end of if __FILE__ == $0
-#
-#
-
-end
+end # }}}
 
 
 # vim=ts:2

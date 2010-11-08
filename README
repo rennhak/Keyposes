@@ -24,8 +24,10 @@ Subprojects:
 Libraries
 ---------
 
-Libs can be found in base/
-They are not submodules but simple clones from the original source. Submodules are evil(tm).
+Libraries can be found in base/
+
+They are not submodules but simple clones from the original source. Submodules seem to be not the
+right solution.
 
 
 License
