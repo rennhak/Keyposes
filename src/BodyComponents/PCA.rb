@@ -208,9 +208,9 @@ class PCA # {{{
 
   # = Function pca takes input of arbitrary numbers (array containing arrays) and does a PCA extraction of the required dimensions
   # @param input Array of arrays. Each sub-array contains integers or floats.
-  # @param dimensions Integer, number of dimension which to reduce from the original. Resulting dimensions are n-p in total (n = orign. dimensions, p = dimensions to reduce).
+  # @param reduce_dimensions Integer, number of dimension which to reduce from the original. Resulting dimensions are n-p in total (n = orign. dimensions, p = dimensions to reduce).
   # @returns Array of arrays. Returns the dimensionaly reduced data.
-  def do_pca input, dimensions # {{{
+  def do_pca input, reduce_dimensions # {{{
 
     original                      = input.dup
 
@@ -236,7 +236,24 @@ class PCA # {{{
     # end
 
     # Calculate the finaldata with all eigenvectors
-    row_feature_vector            = eigen_vectors
+    if( reduce_dimensions <= 0 )
+      row_feature_vector            = eigen_vectors
+    else
+      # reduce 1 or more
+      if( eigen_vectors.size.first <= reduce_dimensions )
+        raise ArgumentError, "You cannot reduce the dimensions of the eigen vector matrix by #{reduce_dimensions.to_s} because the matrix is only of size #{eigen_vectors.size.join(",").to_s}."
+      else
+        x_size, y_size                = eigen_vectors.size
+        y_size                       -= reduce_dimensions
+
+        row_feature_vector            = GSL::Matrix.alloc( x_size, y_size )
+        0.upto( y_size-1 ) { |y| row_feature_vector.set_col( y, eigen_vectors.get_col(y) ) }
+
+      end # of if( eigen_vectors.size.first <= reduce_dimensions )
+    end # of if( reduce_dimensions <= 0 )
+
+    row_feature_vector = row_feature_vector.transpose
+
     row_data_adjust               = matrix.transpose
     final_data                    = row_feature_vector * row_data_adjust
     row_original_data             = row_feature_vector.transpose * final_data
@@ -251,7 +268,6 @@ class PCA # {{{
 
     result
   end # of def do_pca }}}
-
 
 end # of class PCA }}}
 
@@ -314,7 +330,6 @@ if __FILE__ == $0 # {{{
   new = pca.do_pca( [ x, y ], 1 )
   pca.graph( GSL::Vector.alloc(x), GSL::Vector.alloc(y)      , "graph.png" )
   pca.graph( GSL::Vector.alloc(new.first), GSL::Vector.alloc(new.last), "graph2.png" )
-  # TODO: Add the dimension reduction functionality  ", 1" of the function...
 
 
 end # of if __FILE__ == $0 }}}
