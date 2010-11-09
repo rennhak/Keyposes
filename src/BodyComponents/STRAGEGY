@@ -1,0 +1,52 @@
+
+Forearms verification
+---------------------
+
+1.      Data ordination
+        
+        Reduce dimensions of data for both forearms from
+        4 x 3D points (forearms) == 12D -> 3D
+
+        t(0):
+        X1  X2  ... X12
+        Y1  Y2  ... Y12
+        Z1  Z2  ... Z12
+
+        t(1):
+        X1  X2  ... X12
+        Y1  Y2  ... Y12
+        Z1  Z2  ... Z12
+      
+        take upto t(150) ? ~ 1s
+
+
+
+        o How much data loss?
+        o Can we use PCA or do we need SPCA?
+
+2.      On 3D data
+
+        Estimate curvature
+        Estimate desity
+
+
+3.      What is questions...
+          ... Turning motions
+          ... Turning poses
+
+4.      Turning motions Analysis
+
+
+Full Body Symetry
+-----------------
+
+Repeat the previous method on all symetrical components
+
+Style vs. Function Analysis
+---------------------------
+
+GA
+Weighting factor for component
+Overall graph
+
+
