@@ -278,6 +278,138 @@ class PCA # {{{
     result
   end # of def do_pca }}}
 
+
+  # = The function array_of_arrays_to_eigensystem converts the external data structure of type "array of arrays" to a eigensystem (GSL)
+  # @param data Array of arrays. Each sub-array contains integers or floats.
+  # @returns Array containing as first element the extracted and eigen values and as second (and last) element the corresponding eigen vectors
+  def array_of_arrays_to_eigensystem data, sort = true
+    # Convert the subarrys into a GSL matrix
+    matrix                        = GSL::Matrix.alloc( *data ).transpose
+    cov_matrix                    = covariance_matrix( matrix )
+    
+    # Extract eigen-values and -vectors via GSL
+    eigen_values, eigen_vectors   = cov_matrix.eigen_symmv
+
+    if( sort ) 
+      # Sort in-place the eigen-vectors or importance (most to least)
+      GSL::Eigen.symmv_sort eigen_values, eigen_vectors, GSL::Eigen::SORT_VAL_DESC
+    end
+
+    # eigen_values.to_a.each_index do |i|
+    #   printf "l = %.3f\n", eigen_values.get(i)
+    #   eigen_vectors.get_col(i).printf "%.3f"
+    #   puts
+    # end
+    [ eigen_values, eigen_vectors ]
+  end
+
+
+  # = The function covariance_matrix_gnuplot plots the cov. matrix of given data to a gnuplot script file.
+  # @param data Array of arrays. Each sub-array contains integers or floats.
+  # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext) of where to store the gnuplot script.
+  def covariance_matrix_gnuplot data, filename = "/tmp/tmp.plot.gp" # {{{
+    eigen_values, eigen_vectors = array_of_arrays_to_eigensystem( data ) 
+
+    File.open( filename.to_s, "w" ) do |f|
+      f.write( "reset\n" )
+      #f.write( "set ticslevel 0\n" )
+      f.write( "set xtics 1\n" )
+      f.write( "set mxtics 0\n" )
+      f.write( "set style line 1 lw 3\n" )
+      f.write( "set grid\n" )
+      f.write( "set border\n" )
+      f.write( "set pointsize 3\n" )
+
+      f.write( "set xlabel 'Eigenvalue (Descending order)'\n" )
+      f.write( "set ylabel 'Energy'\n" )
+      f.write( "set autoscale\n" )
+      f.write( "set font 'arial'\n" )
+      # f.write( "set key left box\n" )
+      f.write( "set output\n" )
+      f.write( "set terminal x11 persist\n" )
+
+      f.write( "plot '-' w line lw 2\n" )
+
+      eigen_values.to_a.each_index do |i|
+        content = sprintf( "%e %e\n", (i + 1).to_s, eigen_values.get( i ) )
+        f.write( content )
+      end
+    end # of File.open
+  end # of def interactive_gnuplot }}}
+
+
+  # = The function normalize takes any input array containing floats/integers and normalizes them between a desired range
+  # @param data Accepts an array containing floats or integers of which to normalize to new_min and new_max
+  # @param new_min Accepts an integer or float as lower boundary for the normalization (inclusive)
+  # @param new_max Accepts an integer or float as upper boundary for the normalization (inclusive)
+  # @returns Array containing the newly normalized data
+  #
+  # Inspired by http://stackoverflow.com/questions/695084/how-do-i-normalize-an-image
+  def normalize data, new_min = 0, new_max = 1, old_min = nil, old_max = nil # {{{
+    old_min, old_max  = data.min, data.max if( old_min.nil?  && old_max.nil? ) 
+    old_range         = old_max - old_min
+
+    new_range         = new_max.to_f - new_min.to_f
+
+    # ymin + (x-xmin) * (yrange.to_f / xrange) 
+
+    data.collect! do |n|
+      # where in the old scale is this value (0...1)
+      scale   = ( n - old_min ) / old_range
+
+      # place this scale in the new range
+      new_value = ( new_range.to_f * scale ) + new_min
+    end
+
+    data
+  end # def normalize data, new_min = 0, new_max = 1 }}}
+ 
+
+  # = The function eigenvalue_energy_gnuplot plots the accumulated energy of all eigenvalues to a gnuplot script.
+  # @param data Array of arrays. Each sub-array contains integers or floats.
+  # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext) of where to store the gnuplot script.
+  def eigenvalue_energy_gnuplot data, filename = "/tmp/tmp.plot.gp" # {{{
+
+    eigen_values, eigen_vectors = array_of_arrays_to_eigensystem( data ) 
+
+    File.open( filename.to_s, "w" ) do |f|
+      f.write( "reset\n" )
+      f.write( "set xtics 1\n" )
+      f.write( "set mxtics 0\n" )
+      # f.write( "set ytics 0.1\n" )
+      f.write( "set yrange [0:1]\n" )
+      f.write( "set style line 1 lw 3\n" )
+      f.write( "set grid\n" )
+      f.write( "set border\n" )
+      f.write( "set pointsize 3\n" )
+
+      f.write( "set xlabel 'Eigenvalues (Descending order)'\n" )
+      f.write( "set ylabel 'Accumulation of Energy ( 0 <= e <= 1 )'\n" )
+      f.write( "set autoscale\n" )
+      f.write( "set font 'arial'\n" )
+      f.write( "set key left box\n" )
+      f.write( "set output\n" )
+      f.write( "set terminal x11 persist\n" )
+
+      # f.write( "plot '-' w steps lw 2\n" )
+      f.write( "plot '-' w lines lw 2\n" )
+
+      # TODO: ERROR, the sum values for the energy don't add up to 1 but just slightly below due to
+      # the 0-1 normalization. This is not correct. - FIXME
+      # Normalize the data between 0 and 1 BUT make sure the total sum of the elements in the array is 1
+      sum_of_evn  = eigen_values.to_a.dup.inject() { |result, element| result + element }
+      evn         = normalize( eigen_values.to_a, 0, 1, eigen_values.to_a.min, sum_of_evn )
+
+      sum = 0
+      evn.each_index do |i|
+        sum += evn[ i ]
+        content = sprintf( "%e %e\n", (i + 1).to_s, sum.to_s )
+        f.write( content )
+      end
+    end # of File.open
+  end # of def interactive_gnuplot }}}
+
+
   # = The function interactive_gnuplot opens an X11 window in persist mode to view the data with the mouse.
   # @param data Accepts array of arrays. Each subarray is filled with integers or floats (needs to be uniform/of same length)
   # @param data_printf Accepts a formatting instruction like printf does, e.g. "%e, %e, %e\n" etc.
@@ -322,7 +454,7 @@ end # of class PCA }}}
 # Direct invocation
 if __FILE__ == $0 # {{{
 
-#  pca = PCA.new
+  pca = PCA.new
 
 #  # test of example page 4
 #  x1 = [1, 2, 4, 6, 12, 15, 25, 45, 68, 67, 65, 98]
@@ -371,10 +503,14 @@ if __FILE__ == $0 # {{{
 #  # p eigen_vectors 
 #
   # === PCA example
-#  x = [2.5, 0.5, 2.2, 1.9, 3.1, 2.3, 2.0, 1.0, 1.5, 1.1 ]
-#  y = [2.4, 0.7, 2.9, 2.2, 3.0, 2.7, 1.6, 1.1, 1.6, 0.9 ]
+  x = [2.5, 0.5, 2.2, 1.9, 3.1, 2.3, 2.0, 1.0, 1.5, 1.1 ]
+  y = [2.4, 0.7, 2.9, 2.2, 3.0, 2.7, 1.6, 1.1, 1.6, 0.9 ]
+  z = [1.0, 5.7, 1.9, 22.2, 31.0, 22.7, 0.6, 5.1, 1.0, 1.9 ]
 #  z = [0,   0,   0,   0,   0,   0,   0,   0,   0,   0]
-#
+
+  #pca.covariance_matrix_gnuplot( [x,y], "cov.gp" )
+  #pca.eigenvalue_energy_gnuplot( [x,y], "energy.gp" )
+
 #  new = pca.do_pca( [ x, y ], 1 )
 #  #pca.graph( GSL::Vector.alloc(x), GSL::Vector.alloc(y)      , "graph.png" )
 #  #pca.graph( GSL::Vector.alloc(new.first), GSL::Vector.alloc(new.last), "graph2.png" )
@@ -388,12 +524,18 @@ if __FILE__ == $0 # {{{
 #  # doPCA works as expected
 #  # http://docs.google.com/viewer?a=v&q=cache:rsPO4yD6T40J:www.miislita.com/information-retrieval-tutorial/pca-spca-tutorial.pdf+PCA+example&hl=en&pid=bl&srcid=ADGEEShfP_ke-gMSOF1Ab9vwPiGTgk75e9u186SDGvLLE6fvS8HkDFGAQt3qE3RHWkJm7moEu7--MDg5AGPOOk2oaRLTK_haAe8IvcmxTGgFN_8IV-UW3JA6bDuHfwVi9RSCK_WwZjT_&sig=AHIEtbSXlE4I4iFiwkSkoD2pBr1eNKuuyQ
 #
-#  age     = [  8, 10,  6, 11,  8,  7, 10,  9, 10,  6, 12,  9 ]
-#  weight  = [ 64, 71, 53, 67, 55, 58, 77, 57, 56, 51, 76, 68 ]
-#  height  = [ 57, 59, 49, 62, 51, 50, 55, 48, 42, 42, 61, 57 ]
+  age     = [  8, 10,  6, 11,  8,  7, 10,  9, 10,  6, 12,  9 ]
+  weight  = [ 64, 71, 53, 67, 55, 58, 77, 57, 56, 51, 76, 68 ]
+  height  = [ 57, 59, 49, 62, 51, 50, 55, 48, 42, 42, 61, 57 ]
 #
-#  new = pca.do_pca( [ age, weight, height ], 1 )
-# 
+  new = pca.do_pca( [ age, weight, height ], 0 )
+ 
+  #pca.covariance_matrix_gnuplot( [age,weight,height], "cov.gp" )
+  #pca.eigenvalue_energy_gnuplot( [age,weight,height], "energy.gp" )
+  pca.covariance_matrix_gnuplot( new, "cov.gp" )
+  pca.eigenvalue_energy_gnuplot( new, "energy.gp" )
+
+  #
 ##
 #  IO.popen("gnuplot -persist -raise", "w") do |io|
 #    io.printf( "reset\n" )
