@@ -30,6 +30,9 @@ require 'Extensions.rb'                                 # Deep_Clone hack
 # From MotionX - FIXME: Use MotionX's XYAML interface
 require 'ADT.rb'
 
+# Local
+require 'PCA.rb'
+
 # Change Namespace
 include GSL
 
@@ -71,6 +74,115 @@ class BodyComponents # {{{
 
   end # of initialize }}}
 
+
+
+  # = do_pca_reduction returns a set of PCA reduced components
+  # takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for
+  # @param segment1 Name of segment which together with segment2 builds a body component
+  # @param segment2 Name of segment which together with segment1 builds a body component
+  # @param segment3 Name of segment which together with segment4 builds a body component
+  # @param segment4 Name of segment which together with segment3 builds a body component
+  # @param center Name of segment which is our coordinate center for measurement and projection
+  # @param from Expects a number indicating to start from which time frame
+  # @param to Expects a number indicating to end on which time frame
+  # @returns Array, containing the points after the calculation
+  def do_pca_reduction segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = nil, to = nil # {{{
+
+    #####
+    #
+    # Reference case
+    # e.g. S. Kudoh Thesis, Page 109, VPM File used "Aizu_Female.vpm"
+    #
+    # Center of Coordinate System:  p30
+    # Right Arm:                    p27 and p9 ("relb")
+    # Left Arm:                     p26 and p5 ("lelb")
+    #
+    ###########
+
+    # FIXME: Substitudte eval through the proper method which exists now in ruby core
+    # Easy handling method internal
+    center  = eval( "@adt.#{center.to_s}" )
+    seg1    = eval( "@adt.#{segment1.to_s}" )
+    seg2    = eval( "@adt.#{segment2.to_s}" )
+    seg3    = eval( "@adt.#{segment3.to_s}" )
+    seg4    = eval( "@adt.#{segment4.to_s}" )
+
+    # Make coords relative to p30 not global -- not normalized
+    seg1new           = seg1 - center
+    seg2new           = seg2 - center
+    seg3new           = seg3 - center
+    seg4new           = seg4 - center
+
+    # Modify our array if we want only a certain range
+    # FIXME: Array.slice only supports start, length not from,to. Reimplement this properly.
+    if( from.nil? )
+      if( to.nil? )
+        # from && to == nil
+        # do nothing, we have already all resuts
+        #puts "From and To Nil"
+        seg1newCoord  = seg1new.getCoordinates!
+        seg2newCoord  = seg2new.getCoordinates!
+        seg3newCoord  = seg3new.getCoordinates!
+        seg4newCoord  = seg4new.getCoordinates!
+      else
+        # from == nil ; to != nil
+        # we start from 0 upto to
+        #puts "From nil to not nil"
+        seg1newCoord  = seg1new.getCoordinates![ eval( "0..#{to}" ) ]
+        seg2newCoord  = seg2new.getCoordinates![ eval( "0..#{to}" ) ]
+        seg3newCoord  = seg3new.getCoordinates![ eval( "0..#{to}" ) ]
+        seg4newCoord  = seg4new.getCoordinates![ eval( "0..#{to}" ) ]
+      end
+    else
+      if( to.nil? )
+        # from != nil ; to == nil
+        # e.g. from = 250 
+        # totalLength - from = x
+        #puts "From not nil to is nil"
+        length = seg1new.getCoordinates!.length
+        seg1newCoord  = seg1new.getCoordinates![ eval( "#{from}..#{length-from}" ) ]
+        seg2newCoord  = seg2new.getCoordinates![ eval( "#{from}..#{length-from}" ) ]
+        seg3newCoord  = seg3new.getCoordinates![ eval( "#{from}..#{length-from}" ) ]
+        seg4newCoord  = seg4new.getCoordinates![ eval( "#{from}..#{length-from}" ) ]
+      else
+        # from && to != nil
+        #puts "From (#{from.to_s}) not nil and to (#{to.to_s}) not nil"
+        seg1newCoord  = seg1new.getCoordinates![ eval( "#{from}..#{to}" ) ]
+        seg2newCoord  = seg2new.getCoordinates![ eval( "#{from}..#{to}" ) ]
+        seg3newCoord  = seg3new.getCoordinates![ eval( "#{from}..#{to}" ) ]
+        seg4newCoord  = seg4new.getCoordinates![ eval( "#{from}..#{to}" ) ]
+      end
+    end
+
+    pca = PCA.new
+
+    s1 = pca.reshape_data( seg1newCoord, true, false )
+    s2 = pca.reshape_data( seg2newCoord, true, false )
+    s3 = pca.reshape_data( seg3newCoord, true, false )
+    s4 = pca.reshape_data( seg4newCoord, true, false )
+
+
+    # FIXME
+    #
+    # Actually this approach is wrong
+    # 1.) 3D line arm1 & 3D line arm2  --> CPA (3D Points)
+    # 2.) all other components? 
+    # 3.) All together via PCA into 3D ?
+
+    # reduce 6D to 3D via PCA
+    arm1, eigen_values1, eigen_vectors1   = pca.do_pca( (s1+s2), 3 )
+    arm1_final                            = pca.clean_data( pca.transform_basis( arm1, eigen_values1, eigen_vectors1 ) )
+    arm2, eigen_values2, eigen_vectors2   = pca.do_pca( (s3+s4), 3 )
+    arm2_final                            = pca.clean_data( pca.transform_basis( arm2, eigen_values2, eigen_vectors2 ) )
+
+    # ptP  = distance_of_line_to_line( pt9, pt27, pt5, pt26 )
+
+    #pca.covariance_matrix_gnuplot( new, "cov.gp" )
+    #pca.eigenvalue_energy_gnuplot( new, "energy.gp" )
+
+    pca.interactive_gnuplot( pca.reshape_data( arm1_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values1, eigen_vectors2 )
+
+  end # end of do_pca_reduction }}}
 
 
   # = getTurningPoints returns a set of values after turning point calculation (B. Rennhak's Method '09)
@@ -199,10 +311,10 @@ class BodyComponents # {{{
 
   # Distance between Lines and Segments with their Closest Point of Approach
   # http://softsurfer.com/Archive/algorithm_0106/algorithm_0106.htm
-  # @param line1_pt0 Segment class
-  # @param line1_pt1 Segment
-  # @param line2_pt0 Segment
-  # @param line2_pt1 Segment
+  # @param line1_pt0 Segment class (MotionX vpm plugin)
+  # @param line1_pt1 Segment class (MotionX vpm plugin)
+  # @param line2_pt0 Segment class (MotionX vpm plugin)
+  # @param line2_pt1 Segment class (MotionX vpm plugin)
   # Deprec: @returns Array of scalars with the distances between line1(a,b) and line2(c,d)
   # @returns Segment dP which is the new closest point for all frames f
   def distance_of_line_to_line line1_pt0, line1_pt1, line2_pt0, line2_pt1
@@ -256,7 +368,7 @@ class BodyComponents # {{{
   # @param direction Expects a string of either "xy", "xz" or "yz" (direction of extraction)
   # @returns Array, containing the points after the calculation
   # @warning FIXME: This thing is too slow, speed it up
-  def getTrianglePatch segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "p30", direction = "xy", from = nil, to = nil # {{{
+  def getTrianglePatch segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", direction = "xy", from = nil, to = nil # {{{
 
     #####
     #
@@ -269,13 +381,29 @@ class BodyComponents # {{{
     #
     ###########
 
-    # Easy handling
-    pt30 = @adt.pt30
-    pt27 = @adt.pt27
-    pt9  = @adt.relb
-    pt26 = @adt.pt26
-    pt5  = @adt.lelb
-    ptP  = distance_of_line_to_line( pt9, pt27, pt5, pt26 )
+    ## Easy handling
+    #pt30 = @adt.pt30
+    #pt27 = @adt.pt27
+    #pt9  = @adt.relb
+    #pt26 = @adt.pt26
+    #pt5  = @adt.lelb
+
+    # FIXME: Substitudte eval through the proper method which exists now in ruby core
+    # Easy handling method internal
+    center  = eval( "@adt.#{center.to_s}" )
+    seg1    = eval( "@adt.#{segment1.to_s}" )
+    seg2    = eval( "@adt.#{segment2.to_s}" )
+    seg3    = eval( "@adt.#{segment3.to_s}" )
+    seg4    = eval( "@adt.#{segment4.to_s}" )
+
+    # Make coords relative to p30 not global -- not normalized
+    seg1new           = seg1 - center
+    seg2new           = seg2 - center
+    seg3new           = seg3 - center
+    seg4new           = seg4 - center
+
+
+    ptP  = distance_of_line_to_line( seg1new, seg2new, seg3new, seg4new )
 
     # Point l1_1 :   pt9  (right elbow)
     # Point l1_2 :   pt27 (right wrist)
@@ -283,10 +411,29 @@ class BodyComponents # {{{
     # Point l2_2 :   pt26 (left wrist)
     # Point P    :   Intersection of L1 & L2 (CPA Approach)
 
+    pca = PCA.new
+
+    s1 = pca.reshape_data( ptP.getCoordinates!, true, false )
+
+    arms, eigen_values, eigen_vectors     = pca.do_pca( s1, 0 )
+    arms_final                            = pca.clean_data( pca.transform_basis( arms, eigen_values, eigen_vectors ), 3 )
+
+    #pca.covariance_matrix_gnuplot( new, "cov.gp" )
+    #pca.eigenvalue_energy_gnuplot( new, "energy.gp" )
+
+    pca.interactive_gnuplot( pca.reshape_data( arms_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values, eigen_vectors )
+
+   
+
+
+    return arms_final
+    # --- 
+
+
+
     # Area of triangle:   line0( pt5, pt9 )  line1( pt9, pt27 )   line2( pt5, pt26 )
     arms = pt5.area_of_triangle( pt9, ptP )
     
-
     # Lower body via Tibia
     # Area of triangle:   line0( pt14, pt20 )   line1( pt20, pt21 )   line2( pt14, pt15  )
     pt14  = @adt.lkne
@@ -303,6 +450,9 @@ class BodyComponents # {{{
       result << ( arm * leg ) # / ( Math.sqrt( (arm*arm) ))
     end
     result
+
+
+
 
 
 #    [ pt27new.getCoordinates!.zip( pt9new.getCoordinates! ) ].each do |array|
@@ -483,14 +633,15 @@ class BodyComponents # {{{
 
 
   # = getSlopeForm returns a solution of the following:
-  #   Two points p1 (x,y,z) and p2 (x2,y2,z2) span a line in 2D space.
-  #   The slope form also known as f(x) =>  y = m*x + t 
-  #   m = DeltaY / DeltaX  ; where DeltaY is the Y2 - Y1 ("steigung")
+  #   Two points p1 (x,y,z) and p2 (x2,y2,z2) span a line in 3D space.
+  #   One plane is eliminated by zero'ing the factor.
+  #   The slope form also known as f(x) =>  y = m*x + t  (2D)
+  #   m = DeltaY / DeltaX  ; where DeltaY is the Y2 - Y1 ("steigung/increase")
   # @param array1 Set of coordinates Point A
   # @param array2 Set of coordinates Point B
   # @param direction String which is either "xy", "xz", "yz"
   # @returns Array, containing m and t for the slope form equasion
-  # @warning FIXME: Z coordinate is only neglegted and this needs to be normally compensated
+  # @warning FIXME: Z coordinate is only neglegted and this needs to be normally compensated - use PCA/ICA instead.
   def getSlopeForm array1, array2, direction = "xy" # {{{
     x1, y1, z1      = *array1
     x2, y2, z2      = *array2
@@ -573,27 +724,34 @@ if __FILE__ == $0 # {{{
 
   file    = ARGV.first
   bc      = BodyComponents.new( file )
-  
-  f = File.open( "weigths.csv" ).readlines
-  weights = []
-  f.each do |l|
-    w, i, v = l.split(",")
-    v.chomp!
-    weights << v.to_f
-  end  
 
-  tri = bc.getTrianglePatch
-  totalNorm = 0
-  tri.each { |area| totalNorm += Math.sqrt( area.to_f * area.to_f )  }
-  totalNorm / tri.length
+  #result  = bc.do_pca_reduction( "pt27", "relb", "pt26", "lelb", "pt30", 0, 1150 )
+  #result  = bc.do_pca_reduction( "pt27", "relb", "pt26", "lelb", "pt30", 0, 250 )
+  #p result
+  #def do_pca_reduction segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = nil, to = nil # {{{
 
-  [tri, weights].transpose.each do |area, weight|
-    #puts "Tri: #{area.to_s}   Weight: #{weight.to_s}"
-    puts ( area.to_f  ) * weight.to_f
-    # puts area.to_f / totalNorm
-    # puts area.to_f
-  end
 
+#  f = File.open( "weigths.csv" ).readlines
+#  weights = []
+#  f.each do |l|
+#    w, i, v = l.split(",")
+#    v.chomp!
+#    weights << v.to_f
+#  end  
+#
+   tri = bc.getTrianglePatch
+
+#  totalNorm = 0
+#  tri.each { |area| totalNorm += Math.sqrt( area.to_f * area.to_f )  }
+#  totalNorm / tri.length
+#
+#  [tri, weights].transpose.each do |area, weight|
+#    #puts "Tri: #{area.to_s}   Weight: #{weight.to_s}"
+#    puts ( area.to_f  ) * weight.to_f
+#    # puts area.to_f / totalNorm
+#    # puts area.to_f
+#  end
+#
   #bc.getTrianglePatch.each do |line|
   #  index, area = line.to_s.split(",")
   #  puts "#{index.to_s}, #{area.to_s}" # if( area.to_i <= 600 )

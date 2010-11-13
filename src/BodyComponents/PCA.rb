@@ -163,6 +163,8 @@ class PCA # {{{
     # Since x denotes the input dimensions (n) our covariance matrix will be of rank n x n
     y, x    = input.shape      # determine rank
 
+    puts "covariance_matrix -> input size #{input.shape.join(", ").to_s}"
+
     result  = GSL::Matrix.alloc( x, x )
 
     # Fill the covariance matrix according to the schema of page 8
@@ -213,28 +215,40 @@ class PCA # {{{
   end # of def graph }}}
 
   # = Function pca takes input of arbitrary numbers (array containing arrays) and does a PCA extraction of the required dimensions
-  # @param input Array of arrays. Each sub-array contains integers or floats.
+  # @param input Array of arrays. Each sub-array contains integers or floats. e.g. [ [x1, x2, x3,...], [y1,y2,y3,....], [z1,z2,....]] 
   # @param reduce_dimensions Integer, number of dimension which to reduce from the original. Resulting dimensions are n-p in total (n = orign. dimensions, p = dimensions to reduce).
-  # @returns Array of arrays. Returns the dimensionaly reduced data.
+  # @returns An array containing "Array of arrays" with data as first, eigen_values as second and finally eigen_vectors as last element.
   def do_pca input, reduce_dimensions # {{{
 
     original                      = input.dup
 
+    puts "do_pca -> Size of input #{original.size.to_s}"
+
     # substract mean from input data
     input.collect! { |subarray| substract_mean( subarray ) }
+
+    puts "input:"
+    p input 
 
     # Convert the subarrys into a GSL matrix
     matrix                        = GSL::Matrix.alloc( *input ).transpose
 
+    puts "Matrix:"
+    p matrix
     # Determine the covariance matrix from the mean reduced input
     cov_matrix                    = covariance_matrix( matrix )
 
+    p cov_matrix
+
+    puts "do_pca -> Size of covariance matrix #{cov_matrix.size.to_s}"
+    puts "do_pca -> Doing eigne system calculation"
     # Extract eigen-values and -vectors via GSL
     eigen_values, eigen_vectors   = cov_matrix.eigen_symmv
 
     p eigen_values
     p eigen_vectors
 
+    puts "do_pca -> Sorting eigen values and vectors now"
     # Sort in-place the eigen-vectors or importance (most to least)
     GSL::Eigen.symmv_sort eigen_values, eigen_vectors, GSL::Eigen::SORT_VAL_DESC
 
@@ -246,12 +260,14 @@ class PCA # {{{
 
     # Calculate the finaldata with all eigenvectors
     if( reduce_dimensions <= 0 )
+      puts "Using all dimensions"
       row_feature_vector            = eigen_vectors
     else
       # reduce 1 or more
       if( eigen_vectors.size.first <= reduce_dimensions )
         raise ArgumentError, "You cannot reduce the dimensions of the eigen vector matrix by #{reduce_dimensions.to_s} because the matrix is only of size #{eigen_vectors.size.join(",").to_s}."
       else
+        puts "Reducing dimension by #{reduce_dimensions.to_s}"
         x_size, y_size                = eigen_vectors.size
         y_size                       -= reduce_dimensions
 
@@ -275,7 +291,7 @@ class PCA # {{{
       result << array
     end
 
-    result
+    [ result, eigen_values, eigen_vectors ]
   end # of def do_pca }}}
 
 
@@ -286,20 +302,20 @@ class PCA # {{{
     # Convert the subarrys into a GSL matrix
     matrix                        = GSL::Matrix.alloc( *data ).transpose
     cov_matrix                    = covariance_matrix( matrix )
-    
+    #p cov_matrix
     # Extract eigen-values and -vectors via GSL
     eigen_values, eigen_vectors   = cov_matrix.eigen_symmv
 
-    if( sort ) 
+    if( sort )
       # Sort in-place the eigen-vectors or importance (most to least)
       GSL::Eigen.symmv_sort eigen_values, eigen_vectors, GSL::Eigen::SORT_VAL_DESC
     end
 
-    # eigen_values.to_a.each_index do |i|
-    #   printf "l = %.3f\n", eigen_values.get(i)
-    #   eigen_vectors.get_col(i).printf "%.3f"
-    #   puts
-    # end
+     #eigen_values.to_a.each_index do |i|
+     #  printf "l = %.3f\n", eigen_values.get(i)
+     #  eigen_vectors.get_col(i).printf "%.3f"
+     #  puts
+     #end
     [ eigen_values, eigen_vectors ]
   end
 
@@ -365,6 +381,105 @@ class PCA # {{{
   end # def normalize data, new_min = 0, new_max = 1 }}}
  
 
+  # = The function transform_basis changes the data from a standard basis to a basis with the prinicipal components as u,v,w
+  #   "Change of basis to principal axis"
+  # 
+  # @param pca_result Output from the do_pca function - the pca transformed data
+  # @param eigen_values Output from the do_pca function - the extracted eigen_values of the pca input data
+  # @param eigen_vectors Output from the do_pca function - the extracted eigen_vectors (principle components) of the pca processed data
+  # @returns Array of arrays - Transformed data to the new principle component based basis ready for use with the gnuplot functions.
+  def transform_basis pca_result, eigen_values, eigen_vectors # {{{
+
+    # establish identity matrix "C"
+    original_basis          = GSL::Matrix.identity( eigen_vectors.size1 )
+
+    # create matrix with all eigen_vectors and invert it
+    new_basis               = eigen_vectors             # "D"
+    new_basis_inv           = eigen_vectors.invert      # "D^{-1}"
+
+    # T = D^{-1} * C 
+    transformation_matrix   = new_basis_inv * original_basis
+
+    # Transform data
+    result_final            = ( transformation_matrix * GSL::Matrix.alloc( *pca_result ) )
+
+    # You could verify that this is correct by =>  T^{-1} * result_final = result
+    result_final            = result_final.to_na.to_a
+
+    
+    result_final
+  end # of def transform_basis }}}
+
+  # = The function clean_data looks through the data after pca and pc basis transform and trys to clean out the [0,0,0...]'s everywhere.
+  #   The 0's are created due to numerical errors which are 10^{-15} etc.
+  #
+  # @param transform_basis_result Array of arrays - Output of the transform_basis function.
+  # @param result_dimensions Accepts Integer with the amount of desired output dimensions (e.g. 3 for a 3D plot (even if e.g. Z coords are zero). or 2 for 2D plot)
+  # @returns Array of arrays - Cleaned up data where 0 vectors have been removed.
+  def clean_data transform_basis_result, result_dimensions # {{{
+
+    # Cleanup data from the very small values 10^{-15} etc. (numerical errors)
+    transform_basis_result.collect! do |array| 
+      array.collect! { |i| ( i.abs <= 10**-12 ) ? ( nil ) : ( i ) }
+      array
+    end
+
+    # Check desired output dimensions size and e.g. create an empty z field
+    if( result_dimensions == 3 ) # we want 3D even if z's are all 0.0
+      new    = []
+      0.upto( transform_basis_result[2].length - 1 ) { |n| new << 0.0 }
+
+      zero = transform_basis_result[2]
+      zero.compact!
+      transform_basis_result[2] = new if( zero.empty? )
+    end
+
+    # purge nil's and delete empty arrays
+    transform_basis_result.collect!   { |x| x.compact }
+    transform_basis_result.delete_if  { |x| x.empty? }
+
+    transform_basis_result
+  end # of def clean_data }}}
+
+
+
+  # = The function reshape_data takes input of the long or the short form and reshapes it into the other
+  #   long form:   [ [x1,x2,x3,...], [y1,y2,y3,....], [z1,z2,z3,....] ] 
+  #   short form:  [ [x1,y1,z1], [x2,y2,z2], [x3,y3,z3],.... ]
+  #  
+  # @param to_long   Accepts Boolean
+  # @param to_short  Accepts Boolean
+  # @returns Array in the shape as described in the function description
+  def reshape_data data, to_long, to_short # {{{
+    raise ArgumentError, "Not both equal true allowed" if( to_long and to_short )
+    raise ArgumentError, "Not both equal false allowed" if( not to_long and not to_short )
+    raise ArgumentError, "Not both equal nil allowed" if( to_long.nil? and to_short.nil? )
+
+    result = []
+
+    if( to_long )
+      # we expect data to be in short form
+      result << []
+      result << []
+      result << []
+
+      data.each do |x,y,z|
+        result[0] << x
+        result[1] << y
+        result[2] << z
+      end
+    end
+
+    if( to_short )
+      # we expect data to be in long form
+      tmp = data.shift
+      result = tmp.zip( *data )
+    end
+
+    result
+  end # of def reshape_data }}}
+
+
   # = The function eigenvalue_energy_gnuplot plots the accumulated energy of all eigenvalues to a gnuplot script.
   # @param data Array of arrays. Each sub-array contains integers or floats.
   # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext) of where to store the gnuplot script.
@@ -412,10 +527,12 @@ class PCA # {{{
 
   # = The function interactive_gnuplot opens an X11 window in persist mode to view the data with the mouse.
   # @param data Accepts array of arrays. Each subarray is filled with integers or floats (needs to be uniform/of same length)
+  #             Expects the data to be of form: [ [x1, y1, z1], [x2, y2, z2], ....]
   # @param data_printf Accepts a formatting instruction like printf does, e.g. "%e, %e, %e\n" etc.
   # @param labels Accepts an array containing strings with the labels for each subarray of data, e.g. %w[Foo Bar Baz]
   # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext)
-  def interactive_gnuplot data, data_printf, labels, filename = "/tmp/tmp.plot.gp" # {{{
+  def interactive_gnuplot data, data_printf, labels, filename = "/tmp/tmp.plot.gp", eigen_values = nil, eigen_vectors = nil # {{{
+
     File.open( filename.to_s, "w" ) do |f|
       f.write( "reset\n" )
       f.write( "set ticslevel 0\n" )
@@ -433,18 +550,40 @@ class PCA # {{{
       f.write( "set hidden3d\n" )
       f.write( "set output\n" )
       f.write( "set terminal x11 persist\n" )
+      f.write( "set title 'Graph'\n" )
+
+      unless( eigen_values.nil? and eigen_vectors.nil? )
+        # Add information about PC axis
+        # set arrow 1 from  1.9,-1.0 to 2.01,1.8
+        0.upto( eigen_vectors.size1 - 1 ) do |n|
+          i          = (eigen_values.to_na.to_a)[n]
+          x1, y1, z1 = eigen_vectors.get_col( n ).to_a
+          x2, y2, z2 = (x1*i), (y1*i), (z1*i)
+          #f.write( "set arrow #{(n+1).to_s} from #{x1},#{y1},#{z1} to #{x2},#{y2},#{z2}\n" )
+        end
+
+        #f.write( "set arrow 1 from \n" )
+      end
+
 
       f.write( "splot '-' w line\n" )
 
       # TODO: Rewrite - this is too messy
       # Construct data array call string. We have -> data (array of arrays) but we want -> data[0][i], ... etc.
       d = []
+
       0.upto( data.length - 1 ) { |n| d << "data[#{n.to_s}][i]" }
-      data.first.each_index do |i|
-        nd = d.collect{|item| eval( item ).to_f }
-        content = sprintf( data_printf.to_s, *nd ) 
-        f.write( content )
-      end # of age.each_index
+
+      data.each do |array|
+        #data.first.each_index do |i|
+        #  nd = d.collect{|item| eval( item ).to_f }
+        #  content = sprintf( data_printf.to_s, *nd ) 
+        #  f.write( content )
+        #end # of data.first.each_index
+
+        f.write( array.join( " " ) + "\n" )
+      end # of data.each do |array|
+
     end # of File.open
   end # of def interactive_gnuplot }}}
 
@@ -454,7 +593,7 @@ end # of class PCA }}}
 # Direct invocation
 if __FILE__ == $0 # {{{
 
-  pca = PCA.new
+   pca = PCA.new
 
 #  # test of example page 4
 #  x1 = [1, 2, 4, 6, 12, 15, 25, 45, 68, 67, 65, 98]
@@ -511,7 +650,16 @@ if __FILE__ == $0 # {{{
   #pca.covariance_matrix_gnuplot( [x,y], "cov.gp" )
   #pca.eigenvalue_energy_gnuplot( [x,y], "energy.gp" )
 
-#  new = pca.do_pca( [ x, y ], 1 )
+
+  # Change Basis to new Principal Axis
+  # http://www.khanacademy.org/video/lin-alg--changing-coordinate-systems-to-help-find-a-transformation-matrix?playlist=Linear%20Algebra
+
+###  input                                 = [x, y, z]
+###  result, eigen_values, eigen_vectors   = pca.do_pca( input, 1 )
+###  result_final                          = pca.transform_basis( result, eigen_values, eigen_vectors )
+###
+###  pca.interactive_gnuplot( pca.reshape_data( result_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values, eigen_vectors )
+###
 #  #pca.graph( GSL::Vector.alloc(x), GSL::Vector.alloc(y)      , "graph.png" )
 #  #pca.graph( GSL::Vector.alloc(new.first), GSL::Vector.alloc(new.last), "graph2.png" )
 #
@@ -524,16 +672,16 @@ if __FILE__ == $0 # {{{
 #  # doPCA works as expected
 #  # http://docs.google.com/viewer?a=v&q=cache:rsPO4yD6T40J:www.miislita.com/information-retrieval-tutorial/pca-spca-tutorial.pdf+PCA+example&hl=en&pid=bl&srcid=ADGEEShfP_ke-gMSOF1Ab9vwPiGTgk75e9u186SDGvLLE6fvS8HkDFGAQt3qE3RHWkJm7moEu7--MDg5AGPOOk2oaRLTK_haAe8IvcmxTGgFN_8IV-UW3JA6bDuHfwVi9RSCK_WwZjT_&sig=AHIEtbSXlE4I4iFiwkSkoD2pBr1eNKuuyQ
 #
-  age     = [  8, 10,  6, 11,  8,  7, 10,  9, 10,  6, 12,  9 ]
-  weight  = [ 64, 71, 53, 67, 55, 58, 77, 57, 56, 51, 76, 68 ]
-  height  = [ 57, 59, 49, 62, 51, 50, 55, 48, 42, 42, 61, 57 ]
+#  age     = [  8, 10,  6, 11,  8,  7, 10,  9, 10,  6, 12,  9 ]
+#  weight  = [ 64, 71, 53, 67, 55, 58, 77, 57, 56, 51, 76, 68 ]
+#  height  = [ 57, 59, 49, 62, 51, 50, 55, 48, 42, 42, 61, 57 ]
 #
-  new = pca.do_pca( [ age, weight, height ], 0 )
+#  new = pca.do_pca( [ age, weight, height ], 0 )
  
   #pca.covariance_matrix_gnuplot( [age,weight,height], "cov.gp" )
   #pca.eigenvalue_energy_gnuplot( [age,weight,height], "energy.gp" )
-  pca.covariance_matrix_gnuplot( new, "cov.gp" )
-  pca.eigenvalue_energy_gnuplot( new, "energy.gp" )
+#  pca.covariance_matrix_gnuplot( new, "cov.gp" )
+#  pca.eigenvalue_energy_gnuplot( new, "energy.gp" )
 
   #
 ##
