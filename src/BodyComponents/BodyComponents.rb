@@ -185,6 +185,63 @@ class BodyComponents # {{{
   end # end of do_pca_reduction }}}
 
 
+  # = Osculating plane or Frenet Frame Method. Calculates the osculating place which is useful for
+  #   determining the curvature, tangent and torsion of a 3D poly line. (finite difference based method)
+  #
+  #   More details see the "Frenet-Serret formula".
+  #
+  #   http://en.wikipedia.org/wiki/Osculating_plane
+  #   http://en.wikipedia.org/wiki/Frenet%E2%80%93Serret_formulas
+  #   http://newsgroups.derkeiler.com/Archive/Comp/comp.soft-sys.matlab/2008-04/msg03221.html
+  #   Very good read: http://www.cs.sjsu.edu/faculty/rucker/kaptaudoc/ktpaper.htm
+  #
+  # @param data Accepts array of arrays. Polyline X = [x1,y1,z2; x2,y2,z2; ....; xN,yN,zN]
+  #
+  # @returns Array, containing [kappa,tau,T,N,B,s,ds]
+  #          Kappa  -> (Unsigned) Curvature
+  #          Tau    -> Torsion
+  #          T      -> is the unit vector tangent to the curve, pointing in the direction of motion.
+  #          N      -> is the derivative of T with respect to the arclength parameter of the curve, divided by its length.
+  #          B      -> is the cross product of T and N.
+  #          s      -> 
+  #          ds     ->
+  #
+  # This function is based on the code found at
+  # http://thedailyreviewer.com/compsys/view/curvature-of-a-curve-in-3d-109234866
+  # - no name of the author was given.
+  #
+  # @warning The frenet frame doesn't always exist, the torsion is not defined when kappa = 0, there it gets interpolated.
+  # @warning This method might not work well with noisy data. For noisy torsions it would be better to use quintic splines.
+  #
+  # Special cases:
+  #
+  #   o If the curvature is always zero then the curve will be a straight line. Here the vectors N, B and the torsion are not well defined.
+  #   o If the torsion is always zero then the curve will lie in a plane. A circle of radius r has zero torsion and curvature equal to 1/r.
+  #   o A helix has constant curvature and constant t
+  def frenet_frame data, threshold = 0.001 # {{{
+
+    # If we only have two points
+    threshold = 0.001 if data.length <=  2
+
+    # f = GSL::Function.alloc { |x|
+    #    pow(x, 1.5)
+    # }
+
+    #   t_result = []
+
+    #   h = 1e-8
+    #   result, abserr = f.deriv_central(x, h)
+
+    # FIXME Use rsruby for this --> do computations in GNU R since ruby is a pain .. or use matlab
+
+    #T = 
+    #T = diff(X); % dX/dt
+    
+    # exit
+
+    []
+  end # of def frenet_frame }}}
+
   # = getTurningPoints returns a set of values after turning point calculation (B. Rennhak's Method '09)
   # takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for
   # @param segment1a Name of segment which together with segment1b builds a 3D line
@@ -355,8 +412,116 @@ class BodyComponents # {{{
   end # of def distance_3D_line_to_line
 
 
+  # = The function eucledian_distance_window takes a given dataset (x1,y1,z1;..) and calculates the
+  # eucleadian distance for given points in both directions like a window function. That means that
+  # with e.g. points = 5 ; 5 points before point X and 5 points after X are measured and summed up.
+  #
+  # @param data Array of arrays, in the form of [ [x,y,z],[..]...] .
+  # @param points Accepts integer of how many points before and after should be included in the calculation
+  # @returns Array, conaining floats. Each index of the array corresponds to the data frame.
+  #
+  # @todo Refactor this code more nicely.
+  def eucledian_distance_window data, points # {{{
+    distances = []
 
-  # = getTrianglePatch returns a set of values after turning point calculation (B. Rennhak's Method '10)
+    data = PCA.new.reshape_data( data.dup, false, true )
+
+    data.each_index do |index|
+      from  = nil
+      to    = nil
+      sum   = 0
+
+      if( (index.to_i - points.to_i) < 0 ) 
+        # we are at the beginning of the frames - just include the first points
+        from  = index
+        to    = index + points
+        ( eval( "#{from.to_s}...#{to.to_s}" ) ).each { |n| sum += eucledian_distance( data[n], data[n+1] ) }
+        distances[ index ] = sum
+        next
+      end
+
+      if( (index.to_i + points.to_i > (data.length-1)) )
+        # we are at the end of the frames - just include the last points
+        from  = index - points
+        to    = index
+        ( eval( "#{from.to_s}...#{to.to_s}" ) ).each { |n| sum += eucledian_distance( data[n], data[n+1] ) }
+        distances[ index ] = sum
+        next
+      end
+
+      from  = index - points
+      to    = index + points
+
+      ( eval( "#{from.to_s}...#{to.to_s}" ) ).each { |n| sum += eucledian_distance( data[n], data[n+1] ) }
+
+      distances[ index ] = sum
+    end
+
+    distances
+  end # of def eucledian_distance_window data, points }}}
+
+
+  # = The eucledian_distance function takes two points in R^3 (x,y,z) and calculates the distance between them.
+  #   You can easily derive this function via Pythagoras formula.
+  # 
+  #   P1,P2 \elem R^3
+  #
+  #   d(P1, P2) = \sqrt{ (x_2 - x_1)^2 + (y_2 - y_1)^2 + (z_2 - z_1)^2 }
+  # 
+  #   Further reading:
+  #   http://en.wikipedia.org/wiki/Distance
+  #   http://en.wikipedia.org/wiki/Euclidean_distance
+  #
+  # @param point1 Accepts array containing floats or integers (x,y,z)
+  # @param point2 Accepts array containing floats or integers (x,y,z)
+  # @returns Float, the distance between point 1 and point 2
+  #
+  # @todo Write a check that if 2D coords are passed only 2D eucleadian distance is performed
+  def eucledian_distance point1, point2 # {{{
+    raise ArgumentError, "Eucledian distance for 2D points is currently not implemented." if( (point1.length <= 2) or (point2.length <= 2) )
+
+    x1, y1, z1 = *point1
+    x2, y2, z2 = *point2
+
+    Math.sqrt( ((x2-x1)**2) + ((y2-y1)**2) + ((z2-z2)**2) )
+  end # of def eucledian_distance point1, point2 }}}
+
+
+  # = The function interactive_gnuplot_eucledian_distances opens an X11 window in persist mode to view the data with the mouse.
+  # @param data Accepts array of data with distances where each index is one frame (2D)
+  # @param data_printf Accepts a formatting instruction like printf does, e.g. "%e, %e\n" etc.
+  # @param labels Accepts an array containing strings with the labels for each subarray of data, e.g. %w[Frames Eucledian Distance Window Value]
+  # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext)
+  def interactive_gnuplot_eucledian_distances data, data_printf, labels, filename = "/tmp/tmp.plot.gp" # {{{
+
+    File.open( filename.to_s, "w" ) do |f|
+      f.write( "reset\n" )
+      f.write( "set ticslevel 0\n" )
+      f.write( "set style line 1 lw 3\n" )
+      f.write( "set grid\n" )
+      f.write( "set border\n" )
+      f.write( "set pointsize 3\n" )
+
+      f.write( "set xlabel '#{labels.shift.to_s}'\n" )
+      f.write( "set ylabel '#{labels.shift.to_s}'\n" )
+      f.write( "set autoscale\n" )
+      f.write( "set font 'arial'\n" )
+      f.write( "set key left box\n" )
+      f.write( "set output\n" )
+      f.write( "set terminal x11 persist\n" )
+      f.write( "set title 'Eucledian Distance Window Graph'\n" )
+
+      f.write( "plot '-' w line\n" )
+
+      data.each_with_index do |d, i|
+        f.write( "#{i.to_s} #{d.to_s}\n" )
+      end # of data.each_with_index do |d,i|
+
+    end # of File.open
+  end # of def interactive_gnuplot }}}
+
+
+  # = getTrianglePatch returns a set of values after turning point calculation
   # takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for
   # @param segment1a Name of segment which together with segment1b builds a 3D line
   # @param segment1b Name of segment which together with segment1a builds a 3D line
@@ -365,10 +530,8 @@ class BodyComponents # {{{
   # @param center Name of segment which is our coordinate center for measurement and projection (3D->2D)
   # @param from Expects a number indicating to start from which time frame
   # @param to Expects a number indicating to end on which time frame
-  # @param direction Expects a string of either "xy", "xz" or "yz" (direction of extraction)
   # @returns Array, containing the points after the calculation
-  # @warning FIXME: This thing is too slow, speed it up
-  def getTrianglePatch segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", direction = "xy", from = nil, to = nil # {{{
+  def getTrianglePatch segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = nil, to = nil # {{{
 
     #####
     #
@@ -402,55 +565,104 @@ class BodyComponents # {{{
     seg3new           = seg3 - center
     seg4new           = seg4 - center
 
+    # Get CPA from the two 3D lines
+    ptPnew            = distance_of_line_to_line( seg1new, seg2new, seg3new, seg4new )
 
-    ptP  = distance_of_line_to_line( seg1new, seg2new, seg3new, seg4new )
+    # Modify our array if we want only a certain range
+    # FIXME: Array.slice only supports start, length not from,to. Reimplement this properly.
+    if( from.nil? )
+      if( to.nil? )
+        # from && to == nil
+        # do nothing, we have already all resuts
+        #puts "From and To Nil"
+        seg1newCoord  = seg1new.getCoordinates!
+        seg2newCoord  = seg2new.getCoordinates!
+        seg3newCoord  = seg3new.getCoordinates!
+        seg4newCoord  = seg4new.getCoordinates!
+        ptPnewCoord   = ptPnew.getCoordinates!
+      else
+        # from == nil ; to != nil
+        # we start from 0 upto to
+        #puts "From nil to not nil"
+        seg1newCoord  = seg1new.getCoordinates![ eval( "0..#{to}" ) ]
+        seg2newCoord  = seg2new.getCoordinates![ eval( "0..#{to}" ) ]
+        seg3newCoord  = seg3new.getCoordinates![ eval( "0..#{to}" ) ]
+        seg4newCoord  = seg4new.getCoordinates![ eval( "0..#{to}" ) ]
+        ptPnewCoord   = ptPnew.getCoordinates![ eval( "0..#{to}" ) ]
+      end
+    else
+      if( to.nil? )
+        # from != nil ; to == nil
+        # e.g. from = 250 
+        # totalLength - from = x
+        #puts "From not nil to is nil"
+        length = seg1new.getCoordinates!.length
+        seg1newCoord  = seg1new.getCoordinates![ eval( "#{from}..#{length-from}" ) ]
+        seg2newCoord  = seg2new.getCoordinates![ eval( "#{from}..#{length-from}" ) ]
+        seg3newCoord  = seg3new.getCoordinates![ eval( "#{from}..#{length-from}" ) ]
+        seg4newCoord  = seg4new.getCoordinates![ eval( "#{from}..#{length-from}" ) ]
+        ptPnewCoord   = ptPnew.getCoordinates![ eval( "#{from}..#{length-from}" ) ]
+      else
+        # from && to != nil
+        #puts "From (#{from.to_s}) not nil and to (#{to.to_s}) not nil"
+        seg1newCoord  = seg1new.getCoordinates![ eval( "#{from}..#{to}" ) ]
+        seg2newCoord  = seg2new.getCoordinates![ eval( "#{from}..#{to}" ) ]
+        seg3newCoord  = seg3new.getCoordinates![ eval( "#{from}..#{to}" ) ]
+        seg4newCoord  = seg4new.getCoordinates![ eval( "#{from}..#{to}" ) ]
+        ptPnewCoord   = ptPnew.getCoordinates![ eval( "#{from}..#{to}" ) ]
+      end
+    end
 
+    # e.g.
     # Point l1_1 :   pt9  (right elbow)
     # Point l1_2 :   pt27 (right wrist)
     # Point l2_1 :   pt5  (left elbow)
     # Point l2_2 :   pt26 (left wrist)
     # Point P    :   Intersection of L1 & L2 (CPA Approach)
 
+    return ptPnewCoord
+    exit
+
     pca = PCA.new
 
-    s1 = pca.reshape_data( ptP.getCoordinates!, true, false )
+    s1 = pca.reshape_data( ptPnewCoord, true, false )
 
     arms, eigen_values, eigen_vectors     = pca.do_pca( s1, 0 )
     arms_final                            = pca.clean_data( pca.transform_basis( arms, eigen_values, eigen_vectors ), 3 )
+    distances                             = eucledian_distance_window( arms_final, 5 )
 
-    #pca.covariance_matrix_gnuplot( new, "cov.gp" )
-    #pca.eigenvalue_energy_gnuplot( new, "energy.gp" )
-
+    # Plots
+    # pca.covariance_matrix_gnuplot( arms, "cov.gp" )
+    # pca.eigenvalue_energy_gnuplot( arms, "energy.gp" )
+    # interactive_gnuplot_eucledian_distances( pca.normalize( distances ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "eucledian_distances_window_plot.gp" )
     pca.interactive_gnuplot( pca.reshape_data( arms_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values, eigen_vectors )
-
-   
 
 
     return arms_final
     # --- 
 
-
-
-    # Area of triangle:   line0( pt5, pt9 )  line1( pt9, pt27 )   line2( pt5, pt26 )
-    arms = pt5.area_of_triangle( pt9, ptP )
-    
-    # Lower body via Tibia
-    # Area of triangle:   line0( pt14, pt20 )   line1( pt20, pt21 )   line2( pt14, pt15  )
-    pt14  = @adt.lkne
-    pt20  = @adt.rkne
-    pt21  = @adt.rank
-    pt15  = @adt.lank
-    ptP  = distance_of_line_to_line( pt20, pt21, pt14, pt15 )
-    legs = pt14.area_of_triangle( pt20, ptP )
-
-    result = []
-    [arms, legs].transpose.each do |array|
-      arm, leg = *array
-      #result << ( arm * leg ) / ( Math.sqrt( (arm*arm) + (leg*leg)) )
-      result << ( arm * leg ) # / ( Math.sqrt( (arm*arm) ))
-    end
-    result
-
+#    # OLD deprecated CPA triangle patch method below... --- refactor or delete
+#
+#    # Area of triangle:   line0( pt5, pt9 )  line1( pt9, pt27 )   line2( pt5, pt26 )
+#    arms = pt5.area_of_triangle( pt9, ptP )
+#    
+#    # Lower body via Tibia
+#    # Area of triangle:   line0( pt14, pt20 )   line1( pt20, pt21 )   line2( pt14, pt15  )
+#    pt14  = @adt.lkne
+#    pt20  = @adt.rkne
+#    pt21  = @adt.rank
+#    pt15  = @adt.lank
+#    ptP  = distance_of_line_to_line( pt20, pt21, pt14, pt15 )
+#    legs = pt14.area_of_triangle( pt20, ptP )
+#
+#    result = []
+#    [arms, legs].transpose.each do |array|
+#      arm, leg = *array
+#      #result << ( arm * leg ) / ( Math.sqrt( (arm*arm) + (leg*leg)) )
+#      result << ( arm * leg ) # / ( Math.sqrt( (arm*arm) ))
+#    end
+#    result
+#
 
 
 
@@ -739,7 +951,33 @@ if __FILE__ == $0 # {{{
 #    weights << v.to_f
 #  end  
 #
-   tri = bc.getTrianglePatch
+
+
+  pca = PCA.new
+
+  # get CPA points for all components
+  from, to      = 0, 250
+
+  forearms                          = bc.getTrianglePatch( "pt27", "relb", "pt26", "lelb", "pt30", from, to )
+  forearms_pca, fp_eval, fp_evec    = pca.do_pca( forearms, 0 )
+  forearms_final                    = pca.clean_data( pca.transform_basis( forearms_pca, fp_eval, fp_evec ), 3 )
+  forearms_distances                = bc.eucledian_distance_window( forearms_final )
+
+  #hands                             = bc.getTrianglePatch( "rfin", "pt27", "lfin", "pt26", "pt30", from, to )
+  #hands_pca, hp_eval, hp_evec       = pca.do_pca( hands, 0 )
+  #hands_final                       = pca.clean_data( pca.transform_basis( hands_pca, hp_eval, hp_evec ), 3 )
+  #hands_distances                   = bc.eucledian_distance_window( hands_final )
+
+###    distances                             = eucledian_distance_window( arms_final, 5 )
+###
+###    # Plots
+###    # pca.covariance_matrix_gnuplot( arms, "cov.gp" )
+###    # pca.eigenvalue_energy_gnuplot( arms, "energy.gp" )
+###    # interactive_gnuplot_eucledian_distances( pca.normalize( distances ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "eucledian_distances_window_plot.gp" )
+  
+  pca.interactive_gnuplot( pca.reshape_data( forearms, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values, eigen_vectors )
+###
+
 
 #  totalNorm = 0
 #  tri.each { |area| totalNorm += Math.sqrt( area.to_f * area.to_f )  }
