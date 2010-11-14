@@ -537,10 +537,12 @@ class PCA # {{{
     File.open( filename.to_s, "w" ) do |f|
       f.write( "reset\n" )
       f.write( "set ticslevel 0\n" )
+      f.write( "set mxtics 2\n" )
+      f.write( "set mytics 2\n" )
       f.write( "set style line 1 lw 3\n" )
       f.write( "set grid\n" )
       f.write( "set border\n" )
-      f.write( "set pointsize 3\n" )
+      f.write( "set pointsize 1\n" )
 
       f.write( "set xlabel '#{labels.shift.to_s}'\n" )
       f.write( "set ylabel '#{labels.shift.to_s}'\n" ) if( labels.length != 0 )
@@ -567,7 +569,7 @@ class PCA # {{{
       end
 
 
-      f.write( "splot '-' w line\n" )
+      f.write( "splot '-' w linespoints lt 1 pt 6\n" )
 
       # TODO: Rewrite - this is too messy
       # Construct data array call string. We have -> data (array of arrays) but we want -> data[0][i], ... etc.

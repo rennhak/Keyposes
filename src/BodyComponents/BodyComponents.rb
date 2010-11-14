@@ -773,6 +773,48 @@ class BodyComponents # {{{
   end # end of getTrianglePatch }}}
 
 
+  # = The function velocity calculates the phyiscal velocity at each point for the data
+  # @param data Accepts array of arrays in the shape of [ [x1,x2,x3,..], [y1,y2,...], [..] ]
+  # @param capturingIntervall Accepts float, representing the capture intervall of the motion capture equipment
+  # @returns Array containing corresponding velocity values for the frames n and n+1
+  def velocity data, points, capturingIntervall = 0.08333 # {{{
+    result        = []
+    d             = PCA.new.reshape_data( data.dup, false, true )
+    all_distances = eucledian_distance_window( data, points ) 
+
+    d.each_index do |i|
+      if( i <= (d.length - 2) )
+        result[ i ]     = all_distances[ i ].to_f / ( capturingIntervall.to_f * points )
+      end
+    end
+
+    result
+  end # of def velocity data }}}
+
+
+  # = The function energy calculates the phyiscal energy at each point for the data
+  # @param data Accepts array of arrays in the shape of [ [x1,x2,x3,..], [y1,y2,...], [..] ]
+  # @param capturingIntervall Accepts float, representing the capture intervall of the motion capture equipment
+  # @param points Accepts integer of how many points should be included in the calculation (e.g. 20 points), 10 points before and 10 after the current point
+  # @returns Array containing corresponding energy values for the frames n and n+1
+  def energy data, mass, points # {{{
+    result    = []
+    d         = PCA.new.reshape_data( data.dup, false, true )
+    v         = velocity( data, points )
+
+    d.each_index do |i|
+      if( i <= (d.length - 2) )
+        # Kinetic energy    E_kin = 0.5 * m * v^2
+        e_kin = 0.5 * mass * ( v[ i ].to_f ** 2 )
+        result[ i ] = e_kin
+      end
+    end
+
+    result
+  end # of def energy data }}}
+
+
+
   # = maxDensePoints takes 
   def maxDensePoints # {{{
 
@@ -956,7 +998,7 @@ if __FILE__ == $0 # {{{
   pca = PCA.new
 
   # get CPA points for all components
-  from, to      = 0, 400
+  from, to      = 0, 1100
 
   forearms                           = bc.getTrianglePatch( "pt27", "relb", "pt26", "lelb", "pt30", from, to )
   #forearms_pca, fp_eval, fp_evec    = pca.do_pca( pca.reshape_data( forearms.dup, true, false ), 0 )
@@ -977,6 +1019,7 @@ if __FILE__ == $0 # {{{
   back_feet                         = bc.getTrianglePatch( "rhee", "rank", "lhee", "lank", "pt30", from, to )
   front_feet                        = bc.getTrianglePatch( "rtoe", "rhee", "ltoe", "lhee", "pt30", from, to )
 
+
   all   = []
   count = 0
   [ forearms, hands, upper_arms, thighs, shanks, back_feet, front_feet ].each do |c|
@@ -984,23 +1027,51 @@ if __FILE__ == $0 # {{{
     count += 1
   end
 
+  mass = {
+   #   "head"      => 7.0,
+   #   "chest"     => 25.8,
+   #   "loins"     => 17.2,
+    "upper arm" => 3.6,
+    "fore arm"  => 2.2,
+    "hand"      => 0.7,
+    "thigh"     => 11.4,
+    "shank"     => 5.3,
+    "foot"      => 1.8
+  }
+
+  m = 0; mass.each_value { |v| m += v }
 
   all_pca, all_eval, all_evec       = pca.do_pca( all, ((count*3)-3) )
   all_final                         = pca.clean_data( pca.transform_basis( all_pca, all_eval, all_evec ), 3 )
-  all_distances                     = bc.eucledian_distance_window( all_final, 5 )
+
+  spread                            = 20
+
+  all_distances                     = bc.eucledian_distance_window( all_final, spread )
+  all_energy                        = bc.energy( all_final, m, spread )
+  
+  ### deleteme ##
+  c                                 = []
+  all_energy.each_index do |i| 
+    c[i] = (1/all_distances[i]) * (1/all_energy[i])
+  end
+  ### deleteme end ##
+
 
   pca.covariance_matrix_gnuplot( all, "cov.gp" )
   pca.eigenvalue_energy_gnuplot( all, "energy.gp" )
-
-
-
 
   dis   = all_distances
   plot  = all_final
 
   bc.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "eucledian_distances_window_plot.gp" )
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v (1 <= e <= 1)"], "ekin.gp" )
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( c ), "%e %e\n", ["Frames", "Normalized Weight (1 <= e <= 1)"], "weight.gp" )
 # pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp" )
   pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
+
+
+
+
 
 
 #  totalNorm = 0
