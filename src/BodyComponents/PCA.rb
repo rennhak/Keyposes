@@ -163,7 +163,7 @@ class PCA # {{{
     # Since x denotes the input dimensions (n) our covariance matrix will be of rank n x n
     y, x    = input.shape      # determine rank
 
-    puts "covariance_matrix -> input size #{input.shape.join(", ").to_s}"
+    # puts "covariance_matrix -> input size #{input.shape.join(", ").to_s}"
 
     result  = GSL::Matrix.alloc( x, x )
 
@@ -222,52 +222,52 @@ class PCA # {{{
 
     original                      = input.dup
 
-    puts "do_pca -> Size of input #{original.size.to_s}"
+    # puts "do_pca -> Size of input #{original.size.to_s}"
 
     # substract mean from input data
     input.collect! { |subarray| substract_mean( subarray ) }
 
-    puts "input:"
-    p input 
+    # puts "input:"
+    # p input 
 
     # Convert the subarrys into a GSL matrix
     matrix                        = GSL::Matrix.alloc( *input ).transpose
 
-    puts "Matrix:"
-    p matrix
+    # puts "Matrix:"
+    # p matrix
     # Determine the covariance matrix from the mean reduced input
     cov_matrix                    = covariance_matrix( matrix )
 
-    p cov_matrix
+    # p cov_matrix
 
-    puts "do_pca -> Size of covariance matrix #{cov_matrix.size.to_s}"
-    puts "do_pca -> Doing eigne system calculation"
+    # puts "do_pca -> Size of covariance matrix #{cov_matrix.size.to_s}"
+    # puts "do_pca -> Doing eigne system calculation"
     # Extract eigen-values and -vectors via GSL
     eigen_values, eigen_vectors   = cov_matrix.eigen_symmv
 
-    p eigen_values
-    p eigen_vectors
+    # p eigen_values
+    # p eigen_vectors
 
-    puts "do_pca -> Sorting eigen values and vectors now"
+    # puts "do_pca -> Sorting eigen values and vectors now"
     # Sort in-place the eigen-vectors or importance (most to least)
     GSL::Eigen.symmv_sort eigen_values, eigen_vectors, GSL::Eigen::SORT_VAL_DESC
 
-    eigen_values.to_a.each_index do |i|
-      printf "l = %.3f\n", eigen_values.get(i)
-      eigen_vectors.get_col(i).printf "%.3f"
-      puts
-    end
+    #eigen_values.to_a.each_index do |i|
+    #  printf "l = %.3f\n", eigen_values.get(i)
+    #  eigen_vectors.get_col(i).printf "%.3f"
+    #  puts
+    #end
 
     # Calculate the finaldata with all eigenvectors
     if( reduce_dimensions <= 0 )
-      puts "Using all dimensions"
+      #puts "Using all dimensions"
       row_feature_vector            = eigen_vectors
     else
       # reduce 1 or more
       if( eigen_vectors.size.first <= reduce_dimensions )
         raise ArgumentError, "You cannot reduce the dimensions of the eigen vector matrix by #{reduce_dimensions.to_s} because the matrix is only of size #{eigen_vectors.size.join(",").to_s}."
       else
-        puts "Reducing dimension by #{reduce_dimensions.to_s}"
+        #puts "Reducing dimension by #{reduce_dimensions.to_s}"
         x_size, y_size                = eigen_vectors.size
         y_size                       -= reduce_dimensions
 

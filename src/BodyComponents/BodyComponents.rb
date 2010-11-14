@@ -956,27 +956,51 @@ if __FILE__ == $0 # {{{
   pca = PCA.new
 
   # get CPA points for all components
-  from, to      = 0, 250
+  from, to      = 0, 400
 
-  forearms                          = bc.getTrianglePatch( "pt27", "relb", "pt26", "lelb", "pt30", from, to )
-  forearms_pca, fp_eval, fp_evec    = pca.do_pca( forearms, 0 )
-  forearms_final                    = pca.clean_data( pca.transform_basis( forearms_pca, fp_eval, fp_evec ), 3 )
-  forearms_distances                = bc.eucledian_distance_window( forearms_final )
+  forearms                           = bc.getTrianglePatch( "pt27", "relb", "pt26", "lelb", "pt30", from, to )
+  #forearms_pca, fp_eval, fp_evec    = pca.do_pca( pca.reshape_data( forearms.dup, true, false ), 0 )
+  #forearms_tb                       = pca.transform_basis( forearms_pca, fp_eval, fp_evec )
+  #forearms_final                    = pca.clean_data( forearms_tb, 3 )
+  #forearms_distances                = bc.eucledian_distance_window( forearms_final, 5 )
 
-  #hands                             = bc.getTrianglePatch( "rfin", "pt27", "lfin", "pt26", "pt30", from, to )
-  #hands_pca, hp_eval, hp_evec       = pca.do_pca( hands, 0 )
+  hands                             = bc.getTrianglePatch( "rfin", "pt27", "lfin", "pt26", "pt30", from, to )
+  #hands_pca, hp_eval, hp_evec       = pca.do_pca( pca.reshape_data( hands, true, false ), 0 )
   #hands_final                       = pca.clean_data( pca.transform_basis( hands_pca, hp_eval, hp_evec ), 3 )
-  #hands_distances                   = bc.eucledian_distance_window( hands_final )
+  #hands_distances                   = bc.eucledian_distance_window( hands_final, 5 )
 
-###    distances                             = eucledian_distance_window( arms_final, 5 )
-###
-###    # Plots
-###    # pca.covariance_matrix_gnuplot( arms, "cov.gp" )
-###    # pca.eigenvalue_energy_gnuplot( arms, "energy.gp" )
-###    # interactive_gnuplot_eucledian_distances( pca.normalize( distances ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "eucledian_distances_window_plot.gp" )
-  
-  pca.interactive_gnuplot( pca.reshape_data( forearms, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values, eigen_vectors )
-###
+  upper_arms                        = bc.getTrianglePatch( "relb", "rsho", "lelb", "lsho", "pt30", from, to )
+
+  # lower body
+  thighs                            = bc.getTrianglePatch( "rkne", "pt29", "lkne", "pt28", "pt30", from, to )
+  shanks                            = bc.getTrianglePatch( "rank", "rkne", "lank", "lkne", "pt30", from, to )
+  back_feet                         = bc.getTrianglePatch( "rhee", "rank", "lhee", "lank", "pt30", from, to )
+  front_feet                        = bc.getTrianglePatch( "rtoe", "rhee", "ltoe", "lhee", "pt30", from, to )
+
+  all   = []
+  count = 0
+  [ forearms, hands, upper_arms, thighs, shanks, back_feet, front_feet ].each do |c|
+    all   += pca.reshape_data( c, true, false )
+    count += 1
+  end
+
+
+  all_pca, all_eval, all_evec       = pca.do_pca( all, ((count*3)-3) )
+  all_final                         = pca.clean_data( pca.transform_basis( all_pca, all_eval, all_evec ), 3 )
+  all_distances                     = bc.eucledian_distance_window( all_final, 5 )
+
+  pca.covariance_matrix_gnuplot( all, "cov.gp" )
+  pca.eigenvalue_energy_gnuplot( all, "energy.gp" )
+
+
+
+
+  dis   = all_distances
+  plot  = all_final
+
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "eucledian_distances_window_plot.gp" )
+# pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp" )
+  pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
 
 
 #  totalNorm = 0
