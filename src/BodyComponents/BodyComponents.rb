@@ -421,12 +421,16 @@ class BodyComponents # {{{
   # @returns Array, conaining floats. Each index of the array corresponds to the data frame.
   #
   # @todo Refactor this code more nicely.
+  #
+  # FIXME: This method is b0rked - infact the whole idea with data short/long type is nonsense
   def eucledian_distance_window data, points # {{{
     distances = []
+    
+    raise ArgumentError, "Data has not the right shape should be  [ [x,y,z],[..]...]" if( data.length == 3 )
 
-    data = PCA.new.reshape_data( data.dup, false, true )
+    d = data
 
-    data.each_index do |index|
+    d.each_index do |index|
       from  = nil
       to    = nil
       sum   = 0
@@ -435,16 +439,35 @@ class BodyComponents # {{{
         # we are at the beginning of the frames - just include the first points
         from  = index
         to    = index + points
-        ( eval( "#{from.to_s}...#{to.to_s}" ) ).each { |n| sum += eucledian_distance( data[n], data[n+1] ) }
+        ( eval( "#{from.to_s}...#{to.to_s}" ) ).each do |n| 
+          if( d[n].length == 3 and d[n+1].length == 3 )
+            #puts "d[n]: #{d[n].join(", ").to_s}"
+            #puts "d[n+1]: #{d[n+1].join(", ").to_s}"
+            sum += eucledian_distance( d[n], d[n+1] )
+          else
+            puts "Data has not the right shape (should be a 3D point) not (from idx: #{from.to_s} to idx: #{to.to_s} -> n: #{n.to_s} n+1: #{(n+1).to_s} -> d[n]: #{d[n].join(",").to_s} d[n+1]: #{d[n+1].join(",").to_s}"
+            raise ArgumentError, "Error"
+          end
+        end
         distances[ index ] = sum
         next
       end
 
-      if( (index.to_i + points.to_i > (data.length-1)) )
+      if( (index.to_i + points.to_i > (d.length-1)) )
         # we are at the end of the frames - just include the last points
         from  = index - points
         to    = index
-        ( eval( "#{from.to_s}...#{to.to_s}" ) ).each { |n| sum += eucledian_distance( data[n], data[n+1] ) }
+        ( eval( "#{from.to_s}...#{to.to_s}" ) ).each do |n|
+          if( d[n].length == 3 and d[n+1].length == 3 )
+            #puts "d[n]: #{d[n].join(", ").to_s}"
+            #puts "d[n+1]: #{d[n+1].join(", ").to_s}"
+
+            sum += eucledian_distance( d[n], d[n+1] ) 
+          else
+            puts "Data has not the right shape (should be a 3D point) not (from idx: #{from.to_s} to idx: #{to.to_s} -> n: #{n.to_s} n+1: #{(n+1).to_s} -> d[n]: #{d[n].join(",").to_s} d[n+1]: #{d[n+1].join(",").to_s}"
+            raise ArgumentError, "Error"
+          end
+        end
         distances[ index ] = sum
         next
       end
@@ -452,7 +475,17 @@ class BodyComponents # {{{
       from  = index - points
       to    = index + points
 
-      ( eval( "#{from.to_s}...#{to.to_s}" ) ).each { |n| sum += eucledian_distance( data[n], data[n+1] ) }
+      ( eval( "#{from.to_s}...#{to.to_s}" ) ).each do |n| 
+        if( d[n].length == 3 and d[n+1].length == 3 )
+          #puts "d[n]: #{d[n].join(", ").to_s}"
+          #puts "d[n+1]: #{d[n+1].join(", ").to_s}"
+
+          sum += eucledian_distance( d[n], d[n+1] )
+        else
+            puts "Data has not the right shape (should be a 3D point) not (from idx: #{from.to_s} to idx: #{to.to_s} -> n: #{n.to_s} n+1: #{(n+1).to_s} -> d[n]: #{d[n].join(",").to_s} d[n+1]: #{d[n+1].join(",").to_s}"
+            raise ArgumentError, "Error"
+        end
+      end
 
       distances[ index ] = sum
     end
@@ -492,7 +525,8 @@ class BodyComponents # {{{
   # @param data_printf Accepts a formatting instruction like printf does, e.g. "%e, %e\n" etc.
   # @param labels Accepts an array containing strings with the labels for each subarray of data, e.g. %w[Frames Eucledian Distance Window Value]
   # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext)
-  def interactive_gnuplot_eucledian_distances data, data_printf, labels, filename = "/tmp/tmp.plot.gp" # {{{
+  # @param from Accepts integer, representing the starting index of the motion sequence. 
+  def interactive_gnuplot_eucledian_distances data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil # {{{
 
     File.open( filename.to_s, "w" ) do |f|
       f.write( "reset\n" )
@@ -509,15 +543,23 @@ class BodyComponents # {{{
       f.write( "set key left box\n" )
       f.write( "set output\n" )
       f.write( "set terminal x11 persist\n" )
-      f.write( "set title 'Eucledian Distance Window Graph'\n" )
+      f.write( "set title '#{title}'\n" )
 
-      f.write( "plot '-' w line\n" )
+      f.write( "plot '#{data_filename}' w line\n" )
 
-      data.each_with_index do |d, i|
-        f.write( "#{i.to_s} #{d.to_s}\n" )
-      end # of data.each_with_index do |d,i|
 
     end # of File.open
+
+    File.open( data_filename.to_s, "w" ) do |f|
+      data.each_with_index do |d, i|
+        if( from.nil? )
+          f.write( "#{i.to_s} #{d.to_s}\n" )
+        else
+          f.write( "#{(i+from).to_s} #{d.to_s}\n" )
+        end
+      end # of data.each_with_index do |d,i|
+    end
+
   end # of def interactive_gnuplot }}}
 
 
@@ -774,16 +816,19 @@ class BodyComponents # {{{
 
 
   # = The function velocity calculates the phyiscal velocity at each point for the data
-  # @param data Accepts array of arrays in the shape of [ [x1,x2,x3,..], [y1,y2,...], [..] ]
+  # @param data Accepts array of arrays in the shape of [ [x1,y1,z1], [...], ...]
   # @param capturingIntervall Accepts float, representing the capture intervall of the motion capture equipment
   # @returns Array containing corresponding velocity values for the frames n and n+1
   def velocity data, points, capturingIntervall = 0.08333 # {{{
     result        = []
-    d             = PCA.new.reshape_data( data.dup, false, true )
-    all_distances = eucledian_distance_window( data, points ) 
 
-    d.each_index do |i|
-      if( i <= (d.length - 2) )
+    raise ArgumentError, "Data must be in the shape [ [x1,y1,z1], [...], ...]" if( data.length == 3 )
+
+    all_distances = eucledian_distance_window( data.dup, points ) 
+
+
+    data.each_index do |i|
+      if( i <= (data.length - 2) )
         result[ i ]     = all_distances[ i ].to_f / ( capturingIntervall.to_f * points )
       end
     end
@@ -791,19 +836,64 @@ class BodyComponents # {{{
     result
   end # of def velocity data }}}
 
+  # = The function acceleration calculates the phyiscal acceleration at each point for the data
+  # @param data Accepts array of arrays in the shape of [ [x1,y1,z1], ...]
+  # @param capturingIntervall Accepts float, representing the capture intervall of the motion capture equipment
+  # @returns Array containing corresponding acceleration values for the frames n and n+1
+  def acceleration data, points, capturingIntervall = 0.08333 # {{{
+    
+    raise ArgumentError, "Data must be in the shape [ [x1,y1,z1], [...], ...]" if( data.length == 3 )   
+
+    result        = []
+    v             = velocity( data, points, capturingIntervall )
+
+    data.each_index do |i|
+      if( i <= (data.length - 2) )
+        result[ i ]     = v[i] / ( capturingIntervall.to_f * points )
+      end
+    end
+
+    result
+  end # of def acceleration data }}}
+
+  # = The function power calculates the phyiscal power at each point for the data
+  # @param data Accepts array of arrays in the shape of [ [x1,y1,z1], [..], ..]
+  # @param mass Mass of the components involved (relative to 100% = full body)
+  # @param capturingIntervall Accepts float, representing the capture intervall of the motion capture equipment
+  # @returns Array containing corresponding power values for the frames n and n+1
+  def power data, mass, points, capturingIntervall = 0.08333 # {{{
+    result        = []
+    raise ArgumentError, "Data must be in the shape [ [x1,y1,z1], [...], ...]" if( data.length == 3 )   
+
+    a             = acceleration( data.dup, points, capturingIntervall )
+    v             = velocity( data.dup, points, capturingIntervall )
+
+    data.each_index do |i|
+      if( i <= (data.length - 2) )
+        result[ i ]     = mass * a[i] * v[i]
+      end
+    end
+
+    result
+  end # of def power data }}}
+
+
+
+
 
   # = The function energy calculates the phyiscal energy at each point for the data
-  # @param data Accepts array of arrays in the shape of [ [x1,x2,x3,..], [y1,y2,...], [..] ]
+  # @param data Accepts array of arrays in the shape of [ [x1,y1,z1], [...], ...]
   # @param capturingIntervall Accepts float, representing the capture intervall of the motion capture equipment
   # @param points Accepts integer of how many points should be included in the calculation (e.g. 20 points), 10 points before and 10 after the current point
   # @returns Array containing corresponding energy values for the frames n and n+1
   def energy data, mass, points # {{{
+    raise ArgumentError, "Data must be in the shape [ [x1,y1,z1], [...], ...]" if( data.length == 3 )
+
     result    = []
-    d         = PCA.new.reshape_data( data.dup, false, true )
     v         = velocity( data, points )
 
-    d.each_index do |i|
-      if( i <= (d.length - 2) )
+    data.each_index do |i|
+      if( i <= (data.length - 2) )
         # Kinetic energy    E_kin = 0.5 * m * v^2
         e_kin = 0.5 * mass * ( v[ i ].to_f ** 2 )
         result[ i ] = e_kin
@@ -998,7 +1088,10 @@ if __FILE__ == $0 # {{{
   pca = PCA.new
 
   # get CPA points for all components
-  from, to      = 0, 1100
+  # from, to      = 1250, 3850 # jongara
+  # from, to      = 0, 1100   # Aizuban
+  # from, to        = 600, 1220  # sasara theodori
+  from, to        = 0, 700      # macarena
 
   forearms                           = bc.getTrianglePatch( "pt27", "relb", "pt26", "lelb", "pt30", from, to )
   #forearms_pca, fp_eval, fp_evec    = pca.do_pca( pca.reshape_data( forearms.dup, true, false ), 0 )
@@ -1016,13 +1109,27 @@ if __FILE__ == $0 # {{{
   # lower body
   thighs                            = bc.getTrianglePatch( "rkne", "pt29", "lkne", "pt28", "pt30", from, to )
   shanks                            = bc.getTrianglePatch( "rank", "rkne", "lank", "lkne", "pt30", from, to )
+  
+
+  #### Dance specific markers
+  
+  # Aizubandaisan + Sasara Theodori Markers
   back_feet                         = bc.getTrianglePatch( "rhee", "rank", "lhee", "lank", "pt30", from, to )
   front_feet                        = bc.getTrianglePatch( "rtoe", "rhee", "ltoe", "lhee", "pt30", from, to )
+
+  # Jongara Markers
+  #front_feet                        = bc.getTrianglePatch( "rtoe", "rank", "ltoe", "lank", "pt30", from, to )
+
+  #####
 
 
   all   = []
   count = 0
-  [ forearms, hands, upper_arms, thighs, shanks, back_feet, front_feet ].each do |c|
+  #[ forearms, hands, upper_arms, thighs, shanks, back_feet, front_feet ].each do |c|    # aizu + sasara theodori
+  [ forearms, hands, upper_arms, thighs, shanks, front_feet ].each do |c|    # jongara
+
+  #[ forearms, hands, upper_arms ].each do |c|
+  #[ thighs, shanks, back_feet, front_feet ].each do |c|
     all   += pca.reshape_data( c, true, false )
     count += 1
   end
@@ -1031,12 +1138,12 @@ if __FILE__ == $0 # {{{
    #   "head"      => 7.0,
    #   "chest"     => 25.8,
    #   "loins"     => 17.2,
-    "upper arm" => 3.6,
-    "fore arm"  => 2.2,
-    "hand"      => 0.7,
-    "thigh"     => 11.4,
-    "shank"     => 5.3,
-    "foot"      => 1.8
+   "upper arm" => 3.6,
+   "fore arm"  => 2.2,
+   "hand"      => 0.7,
+   "thigh"     => 11.4,
+   "shank"     => 5.3,
+   "foot"      => 1.8
   }
 
   m = 0; mass.each_value { |v| m += v }
@@ -1046,16 +1153,90 @@ if __FILE__ == $0 # {{{
 
   spread                            = 20
 
-  all_distances                     = bc.eucledian_distance_window( all_final, spread )
-  all_energy                        = bc.energy( all_final, m, spread )
-  
-  ### deleteme ##
-  c                                 = []
-  all_energy.each_index do |i| 
-    c[i] = (1/all_distances[i]) * (1/all_energy[i])
-  end
-  ### deleteme end ##
+  all_distances                     = bc.eucledian_distance_window( pca.reshape_data( all_final.dup, false, true), spread )
+  all_energy                        = bc.energy( pca.reshape_data( all_final.dup, false, true ), m, spread )
 
+
+
+  #### Messy Mablab interaction
+ 
+
+  # Dump to file for matlab
+  # 
+  # In matlab:
+  #
+  # cd ../work/
+  # pwd
+  # X = csvread( 'data.m' );
+  # [kappa,tau,T,N,B,s,ds] = frenetframe(X,0.1)
+  File.open( "work/data.csv", File::WRONLY|File::TRUNC|File::CREAT, 0667 ) do |f|
+    pd = pca.reshape_data( all_final.dup, false, true  )
+    pd.each do |x,y,z|
+      f.write( "#{x.to_s}, #{y.to_s}, #{z.to_s}\n" )
+    end
+  end
+
+  puts "Do MatLab now (press to continue)"
+  STDIN.gets
+
+  # Read file from matlab processing for frenet frame
+  # kappa index is exacly 2 shorter than the others
+  kappa = File.open( "work/kappa.csv", "r" ).readlines.collect! { |n| n.to_f }
+  # tau   = File.open( "work/tau.csv", "r" ).readlines.collect! { |n| n.to_f }
+
+  v                                 = bc.velocity( pca.reshape_data( all_final.dup, false, true ), 5 )
+  a                                 = bc.acceleration( pca.reshape_data( all_final.dup, false, true), 5 )
+  p                                 = bc.power( pca.reshape_data( all_final.dup, false, true ), m, 5 )
+
+
+  # Smoothing poly - use sth between 50 - 100
+  coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa.length-1).to_s}" )), GSL::Vector.alloc( kappa ), 50)
+  kappa_smooth = []
+  0.upto( kappa.length - 1 ) { |n| kappa_smooth << coef.eval( n ) }
+
+  # kappa_smooth_dx = []
+  # 0.upto( kappa.length - 1 ) { |x| result, abserror = GSL::Deriv.central( GSL::Function.alloc { |x| coef.eval(x) }, x, 1e-8) ; kappa_smooth_dx[x] = result }
+  # p kappa_smooth_dx
+  # bc.interactive_gnuplot_eucledian_distances( kappa_smooth_dx, "%e %e\n", ["Frames", "Kappa Smooth dx/dy Value"], "Kappa Smooth dx/dy Value Graph", "dx_frenet_frame_kappa_plot.gp", "dx_frenet_frame_kappa_plot.gpdata" )a
+  
+  e                                 = []
+  all_energy.each_index do |i|
+    next if( kappa[i].nil? )
+    #e[i] = kappa[i] * 1/all_distances[i] * 1/all_energy[i] * 1/v[i] * 1/a[i] * 1/p[i]
+    #e[i] = kappa_smooth[i] * 1/all_energy[i] * 1/all_distances[i]
+    e[i] = kappa_smooth[i] + 1/all_energy[i] + 1/all_distances[i]
+  end
+
+
+  # Very simple way to determine the turning points without the derivative
+  tp_frames = []
+  0.upto( kappa.length - 1 ) do |n|
+    begin
+#      previous  = kappa_smooth[ n-1 ]
+#      current   = kappa_smooth[ n   ]
+#      nexts     = kappa_smooth[ n+1 ]
+
+      previouss = e[ n-2 ]
+      previous  = e[ n-1 ]
+      current   = e[ n   ]
+      nexts     = e[ n+1 ]
+      nextss    = e[ n+2 ]
+
+      next if previouss.nil?
+      next if previous.nil?
+      next if nexts.nil?
+      next if nextss.nil?
+
+      tp_frames << n if( previous < current and previouss < current and current > nexts and current > nextss )
+    end
+  end
+
+  puts "Turningposes are: #{tp_frames.collect{ |n| n+from.to_i }.join(", ")}"
+
+
+
+
+  #### Messy Mablab interaction end
 
   pca.covariance_matrix_gnuplot( all, "cov.gp" )
   pca.eigenvalue_energy_gnuplot( all, "energy.gp" )
@@ -1063,12 +1244,19 @@ if __FILE__ == $0 # {{{
   dis   = all_distances
   plot  = all_final
 
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "eucledian_distances_window_plot.gp" )
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v (1 <= e <= 1)"], "ekin.gp" )
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( c ), "%e %e\n", ["Frames", "Normalized Weight (1 <= e <= 1)"], "weight.gp" )
-# pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp" )
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Kappa Value (0 <= e <= 1)"], "Normalized Kappa Value Graph", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata" )
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Kappa Value (0 <= e <= 1)"], "Normalized Smoothed Kappa Value Graph", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata" ) 
+  
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity Value (0 <= e <= 1)"], "Normalized Velocity Value Graph", "velocity_plot.gp", "velocity_plot.gpdata" )
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
+  
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "Normalized Eucledian Distance Window Graph", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata" )
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v (1 <= e <= 1)"], "Normalized Kinetic Energy Graph", "ekin.gp", "ekin.gpdata" )
+  bc.interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight (1 <= e <= 1)"], "Normalized Weight Graph", "weight.gp", "weight.gpdata", from )
   pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
 
+  pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[X Y Z],  "forearms_plot.gp" )
 
 
 

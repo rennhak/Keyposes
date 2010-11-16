@@ -4,3 +4,10 @@ Depends:
 
 - http://raa.ruby-lang.org/project/deep-clone/ (copy&pasted)
 - MotionX -> Plugins -> VPM
+
+
+rm -f *.gp; rm -f work/*.csv; rm -f *.gpdata; time ruby -I../../base/MotionX/src/plugins/vpm/src
+                        BodyComponents.rb /home/br/universities/todai/data/DanceData/Aizu_Female.vpm
+
+
+
