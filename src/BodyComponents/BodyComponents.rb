@@ -1088,7 +1088,7 @@ if __FILE__ == $0 # {{{
   pca = PCA.new
 
   # get CPA points for all components
-  # from, to      = 1250, 3850 # jongara
+  #from, to      = 1250, 3850 # jongara
   # from, to      = 0, 1100   # Aizuban
   # from, to        = 600, 1220  # sasara theodori
   from, to        = 0, 700      # macarena
@@ -1125,8 +1125,8 @@ if __FILE__ == $0 # {{{
 
   all   = []
   count = 0
-  #[ forearms, hands, upper_arms, thighs, shanks, back_feet, front_feet ].each do |c|    # aizu + sasara theodori
-  [ forearms, hands, upper_arms, thighs, shanks, front_feet ].each do |c|    # jongara
+  [ forearms, hands, upper_arms, thighs, shanks, back_feet, front_feet ].each do |c|    # aizu + sasara theodori
+  #[ forearms, hands, upper_arms, thighs, shanks, front_feet ].each do |c|    # jongara
 
   #[ forearms, hands, upper_arms ].each do |c|
   #[ thighs, shanks, back_feet, front_feet ].each do |c|
@@ -1147,6 +1147,7 @@ if __FILE__ == $0 # {{{
   }
 
   m = 0; mass.each_value { |v| m += v }
+  m = m*2 # we have each component e.g. left + right arm etc.
 
   all_pca, all_eval, all_evec       = pca.do_pca( all, ((count*3)-3) )
   all_final                         = pca.clean_data( pca.transform_basis( all_pca, all_eval, all_evec ), 3 )
