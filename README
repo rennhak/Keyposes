@@ -1,14 +1,29 @@
-Keypose Segmentation
---------------------
+Poses as shown by the Dance Master Illustrations Segmentation
+-------------------------------------------------------------
 
 This project tries to extract "Keyposes" from Dance Motion Data based on VPM files via the MotionX
 project. (http://github.com/rennhak/MotionX)
 
-The idea of Keyposes is as follows:
+We are dealing with several concepts such as
 
-  A Dance consists of certain turning motions which define a dance. These turning motions are called
-  "Keyposes". In order to program a robot we need to extract these keyposes. Keyposes are basically
-  the essence of a dance.
+  o Keyposes
+
+    This term was coined by T. Shiratori and his collegues to describe important dance motions which
+    occur when the hand and the foot end-effectors stop in conjunction with musical beat [1]. These
+    motions are considered to be the essence of the dance from the viewpoint of importance.
+
+  o Turning poses
+
+    This term was coined by B. Rennhak and his collegues to describe the most important poses as
+    shown in the dance master illustrations. These poses convey temporal importance as well as style
+    and details for a complete dance reconstruction [2]. These motions are considered to be the
+    essence of the dance from the viewpoint of a dance teacher.
+
+  o Turning motions
+
+    This term was coined by B. Rennhak and his collegues to describe the most characteristic
+    trajectory representations of state to state intervalls of a given dance.
+
 
 
 Subprojects:
@@ -30,7 +45,22 @@ They are not submodules but simple clones from the original source. Submodules s
 right solution.
 
 
+References
+----------
+
+[1]   Detecting Dance Motion Structure using Motion Capture and Musical Information
+      Takaaki Shiratori, Atsushi Nakazawa, Katsushi Ikeuchi
+      In Proc. International Conference on Virtual Systems and Multimedia (VSMM 2004), November 2004
+      URL: http://www.cs.cmu.edu/~siratori/pub/VSMM2004shiratori.pdf
+
+[2]   Detecting Dance Motion Structure Using Body Components and Turning Motions
+      Bjoern Rennhak, Takaaki Shiratori, Shunsuke Kudoh, Phongtharin Vinayavekhin, Katsushi Ikeuchi
+      In Proc. IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS 2010), October 2010
+
+
+
 License
 -------
 
-(C) 2009, Bjoern Rennhak, under a dual license of GPLv2 and MIT ( http://www.opensource.org/licenses/mit-license.php )
+(c) 2009-2010, Bjoern Rennhak, under a dual license of GPLv2 and MIT ( http://www.opensource.org/licenses/mit-license.php )
+
