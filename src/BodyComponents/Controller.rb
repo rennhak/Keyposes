@@ -192,18 +192,45 @@ class Controller # {{{
               turning_data << [ [ configurations_dir, domain, name, pattern, speed, cycle, filename ], @turning.get_data ]
             end
 
-
             @log.message :success, "Finished processing of #{motion_config_filename.to_s}"
 
         end # of process.each do |configurations_dir, domain, name, pattern, speed, cycle, filename| 
 
         final = []
         turning_data.collect!{ |description, data| data }.each { |array| final.concat( array ) }
-        clustering  = Clustering.new( @options )
-        kmeans      = clustering.kmeans( final, 8 )
-        # get_dot_graph( kmeans )
+
+        total_squared = []
+
+        1.upto( 50 ).each do |k|
+          @log.message :info, "Calculating K-Means for k=#{k.to_s}"
+
+          clustering          = Clustering.new( @options )
+          kmeans, centroids   = clustering.kmeans( final, k )
+          distances           = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
+          closest_centroids   = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
+          distortions         = clustering.distortions( closest_centroids )
+          tcss                = clustering.total_within_cluster_sum_of_squares( closest_centroids )
+          tss                 = clustering.total_sum_of_squares( closest_centroids )
+          tss2                = clustering.tss( distances ) 
+
+          puts "[ smaller ] DISTORTIONS: #{distortions.to_s}"
+          print "[ smaller ] Total within Cluster sum of squared: #{tcss.to_s}\n"
+          print "[ const ] Total sum of squares: #{tss.to_s} or tss2: #{tss2.to_s}\n"
+          
+          # This caluclation is b0redk
+          between = tss2 - tcss
+          puts "In between cluster sum of squares for all clusters: #{between.to_s}"
+          variance = ( between /  ( tss2 * 100 ) ).abs
+          total_squared << [ k, variance ]
+          puts "Variance explained: #{(variance).to_s}"
+        end
 
         @plot       = Plotter.new( 0, 0 )
+        @plot.easy_gnuplot( total_squared, "%e %e\n", [ "Clusters", "Percentage of Variance Explained" ], "Total Variance Plot", "graphs/total_variance.gp", "graphs/total_variance.gpdata" )
+ 
+        exit
+        @turning.get_dot_graph( kmeans )
+
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kmeans )
         
 

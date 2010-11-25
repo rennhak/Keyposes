@@ -939,8 +939,8 @@ EOS
     pd = pca.reshape_data( all_final.dup, false, true  )
     
     # octants = get_octants( pd.dup, components_sav )
-    clustering  = Clustering.new( @options )
-    kmeans      = clustering.kmeans( pd, 8 )
+    clustering            = Clustering.new( @options )
+    kmeans, centroids     = clustering.kmeans( pd, 8 )
     
     get_dot_graph( kmeans )
 
