@@ -1,6 +1,12 @@
 #!/usr/bin/ruby
 #
 
+# Get keys of openstruct
+class OpenStruct
+  def fields
+    @table.keys.map{|k| k.to_s}
+  end
+end
 
 # require_relative was introduced in 1.9.2. This makes it
 # available to younger rubies.

@@ -143,52 +143,115 @@ class Controller # {{{
       # Main Control Flow
       ##########
 
-      # Reuse if desired
-      use_cache     if( @options.cache )
+      if( @options.use_all_of_domain ) # if this is given we want to summarize all the dances of this domain
+          # We mix only the same domain with the same speed
+          %w[domain speed].each { |i| raise ArgumentError, "You didn't provide a #{i} via CLI!" if( eval( "@options.#{i} == \"\"" ) ) }
 
-      @log.message :error, "No processing name given via --name '#{@options.process}'" if( @options.process == "" )
+          process = []
+          @yamls.each do |configurations_dir, domain, name, pattern, speed, cycle, filename|
+            process << [ configurations_dir, domain, name, pattern, speed, cycle, filename ] if( ( domain =~ %r{#{@options.domain}}i ) and ( speed =~ %r{#{@options.speed}}i ) )
+          end
 
-      unless( @options.process == "" )
+          turning_data = []
+          process.each do |configurations_dir, domain, name, pattern, speed, cycle, filename|
 
-        %w[domain name pattern speed cycle].each { |i| raise ArgumentError, "You didn't provide a #{i} via CLI!" if( eval( "@options.#{i} == \"\"" ) ) }
-        @log.message :success, "Using domain #{@options.domain} with process #{@options.process} with pattern #{@options.pattern}, speed #{@options.speed} and cycle #{@options.cycle} (YAML: #{@options.yaml})"
-        motion_config             = eval( "@motions.#{@options.domain}.#{@options.process}.#{@options.pattern}.speed_#{@options.speed}.cycle_#{@options.cycle}.yaml_#{@options.yaml}" )
+            yaml_var = @fname_table[ filename ]
+            @log.message :success, "Using domain #{domain} with process #{name} with pattern #{pattern}, speed #{speed} and cycle #{cycle} (YAML: #{yaml_var})"
+            motion_config             = eval( "@motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml_var}" )
 
-        raise ArgumentError, "The configuration and/or the data you requested doesn't exist!" if( motion_config.nil? )
+            raise ArgumentError, "The configuration and/or the data you requested doesn't exist!" if( motion_config.nil? )
 
-        motion_config_filename    = motion_config.path + "/" + motion_config.filename
+            motion_config_filename    = motion_config.path + "/" + motion_config.filename
 
-        @log.message :info, "Loading Motion Capture config file (#{motion_config_filename})"
+            @log.message :info, "Loading Motion Capture config file (#{motion_config_filename})"
 
-        @motion_config            = read_motion_config( motion_config_filename )
+            @motion_config            = read_motion_config( motion_config_filename )
 
-        @file                     = @motion_config.filename
-        @from                     = @motion_config.from
-        @to                       = @motion_config.to
-        @name                     = @motion_config.name
-        @dmps                     = @motion_config.dmp
+            @file                     = @motion_config.filename
+            @from                     = @motion_config.from
+            @to                       = @motion_config.to
+            @name                     = @motion_config.name
+            @dmps                     = @motion_config.dmp
 
-        @dance_master_poses       = []
-        @dance_master_poses_range = []
-        @dmps.each { |dmp_array| @dance_master_poses << dmp_array.first; @dance_master_poses_range << dmp_array.last }
+            @dance_master_poses       = []
+            @dance_master_poses_range = []
+            @dmps.each { |dmp_array| @dance_master_poses << dmp_array.first; @dance_master_poses_range << dmp_array.last }
 
-        @log.message :info, "Loading the Motion Capture data (#{@file}) via the MotionX VPM Plugin"
-        @adt                      = ADT.new( @file )
+            @log.message :info, "Loading the Motion Capture data (#{@file}) via the MotionX VPM Plugin"
+            @adt                      = ADT.new( @file )
 
-        if( @options.filter_motion_capture_data )
-          @log.message :info, "Filter Motion Capture data to smooth out outliers"
-          @filter                 = Filter.new( @options, @from, @to )
-          @adt                    = @filter.filter_motion_capture_data( @adt )
-        end
+            if( @options.filter_motion_capture_data )
+              @log.message :info, "Filter Motion Capture data to smooth out outliers"
+              @filter                 = Filter.new( @options, @from, @to )
+              @adt                    = @filter.filter_motion_capture_data( @adt )
+            end
 
-        if( @options.turning_pose_extraction )
-          @log.message :info, "Performing CPA-PCA Turning pose extraction"
-          @turning                = Turning.new( @options, @adt, @dance_master_poses, @dance_master_poses_range, @from, @to )
-          @turning.get_data
-        end
+            if( @options.turning_pose_extraction )
+              @log.message :info, "Performing CPA-PCA Turning pose extraction"
+              @turning                = Turning.new( @options, @adt, @dance_master_poses, @dance_master_poses_range, @from, @to )
+              turning_data << [ [ configurations_dir, domain, name, pattern, speed, cycle, filename ], @turning.get_data ]
+            end
 
-        @log.message :success, "Finished processing of #{motion_config_filename.to_s}"
-      end # of unless( @options.process.empty? )
+
+            @log.message :success, "Finished processing of #{motion_config_filename.to_s}"
+
+        end # of process.each do |configurations_dir, domain, name, pattern, speed, cycle, filename| 
+
+        final = []
+        turning_data.collect!{ |description, data| data }.each { |array| final.concat( array ) }
+        clustering  = Clustering.new( @options )
+        kmeans      = clustering.kmeans( final, 8 )
+        # get_dot_graph( kmeans )
+
+        @plot       = Plotter.new( 0, 0 )
+        @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kmeans )
+        
+
+      else # if this is given we want to analyse only one dance
+        @log.message :error, "No processing name given via --name '#{@options.process}'" if( @options.process == "" )
+
+        unless( @options.process == "" )
+
+          %w[domain name pattern speed cycle].each { |i| raise ArgumentError, "You didn't provide a #{i} via CLI!" if( eval( "@options.#{i} == \"\"" ) ) }
+          @log.message :success, "Using domain #{@options.domain} with process #{@options.process} with pattern #{@options.pattern}, speed #{@options.speed} and cycle #{@options.cycle} (YAML: #{@options.yaml})"
+          motion_config             = eval( "@motions.#{@options.domain}.#{@options.process}.#{@options.pattern}.speed_#{@options.speed}.cycle_#{@options.cycle}.yaml_#{@options.yaml}" )
+
+          raise ArgumentError, "The configuration and/or the data you requested doesn't exist!" if( motion_config.nil? )
+
+          motion_config_filename    = motion_config.path + "/" + motion_config.filename
+
+          @log.message :info, "Loading Motion Capture config file (#{motion_config_filename})"
+
+          @motion_config            = read_motion_config( motion_config_filename )
+
+          @file                     = @motion_config.filename
+          @from                     = @motion_config.from
+          @to                       = @motion_config.to
+          @name                     = @motion_config.name
+          @dmps                     = @motion_config.dmp
+
+          @dance_master_poses       = []
+          @dance_master_poses_range = []
+          @dmps.each { |dmp_array| @dance_master_poses << dmp_array.first; @dance_master_poses_range << dmp_array.last }
+
+          @log.message :info, "Loading the Motion Capture data (#{@file}) via the MotionX VPM Plugin"
+          @adt                      = ADT.new( @file )
+
+          if( @options.filter_motion_capture_data )
+            @log.message :info, "Filter Motion Capture data to smooth out outliers"
+            @filter                 = Filter.new( @options, @from, @to )
+            @adt                    = @filter.filter_motion_capture_data( @adt )
+          end
+
+          if( @options.turning_pose_extraction )
+            @log.message :info, "Performing CPA-PCA Turning pose extraction"
+            @turning                = Turning.new( @options, @adt, @dance_master_poses, @dance_master_poses_range, @from, @to )
+            turning_data = @turning.get_data
+          end
+
+          @log.message :success, "Finished processing of #{motion_config_filename.to_s}"
+        end # of unless( @options.process.empty? )
+      end # of if( @options.use_all_of_domain )
 
 
       if( @options.profiling )

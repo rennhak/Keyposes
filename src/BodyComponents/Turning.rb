@@ -777,6 +777,7 @@ EOS
 
   # @fn def get_data # {{{
   # @brief Perform calculations and extract data
+  # @returns Returns the calculated data for the desired components and calculation method
   def get_data
     pca     = PCA.new
 
@@ -934,7 +935,7 @@ EOS
 
     end # of if( ext_calc )
 
-
+    # This is also returned by the function
     pd = pca.reshape_data( all_final.dup, false, true  )
     
     # octants = get_octants( pd.dup, components_sav )
@@ -1165,8 +1166,6 @@ EOS
 
 
     # http://users.rowan.edu/~polikar/WAVELETS/WTpart1.html
-
-    @log.message :info, "Performing polynomial fitting of data"
     # OLD METHOD
     # Smoothing poly - use sth between 50 - 100
     # coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa.length-1).to_s}" )), GSL::Vector.alloc( kappa ), 100)
@@ -1323,6 +1322,7 @@ EOS
     #pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
     @plot.interactive_gnuplot( pd, "%e %e %e\n", %w[X Y Z],  "graphs/3d_plot.gp", nil, nil, kmeans )
 
+    return pd
   end # of getData }}}
 
 end # of class Turning }}}

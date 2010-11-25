@@ -137,7 +137,7 @@ class Plotter # {{{
 
       # f.write( "splot '-' w linespoints lt 1 pt 6\n" )
       # f.write( "splot '-' using 1:2:3:4 w labels\n" )
-      f.write( "splot '-' using 1:2:3:4 with points pt 5 ps 1 lt palette\n" )
+      f.write( "splot '-' using 1:2:3:4 with points pt 14 ps 1 lt palette\n" )
       # splot '-' using 1:2:3:4 with lines lw 5 pt 5 ps 1 lt palette
 
       # TODO: Rewrite - this is too messy
