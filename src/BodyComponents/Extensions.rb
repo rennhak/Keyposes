@@ -54,6 +54,58 @@ class Object
   end
 
 
+# Override some default YAML Behavior and create OpenStructs instead of Hashes when called
+# http://rubyquiz.com/quiz81.html
+class << YAML::DefaultResolver
+    alias_method :_node_import, :node_import
+    def node_import(node)
+        o = _node_import(node)
+        o.is_a?(Hash) ? OpenStruct.new(o) : o
+    end
+end
+
+
+# Create new features for the OStruct class
+# http://snippets.dzone.com/tag/hash
+# This class provides a few new capabilities in addition to what is provided by
+# the OpenStruct class.  The method _to_hash will return a hash representation of
+# the struct, including nested structs.  The method _table will return a hash
+# representation, but will not resolve any nested structs.  The method
+# _manual_set takes a hash and adds it to the struct. This is similar to
+# OpenStruct's ability to take a hash as an initial argument to create a struct,
+# this method allows the struct to be modifed post instantiation.  The method
+# names start with an _ (underscore) to avoid any conflicts between these methods
+# and struct assignments.  Implementation note: I created a new class rather than
+# extending the existing OpenStruct class due to my personal preference of not
+# changing the behavior for standard library classes. However, one could just as
+# easily extend the OpenStruct class with these behaviors as well.
+class OpenStruct
+  def _to_hash
+    h = @table
+    #handles nested structures
+    h.each do |k,v|
+      if v.class == OpenStruct
+        h[k] = v._to_hash
+      end
+    end
+    return h
+  end
+  
+  def _table
+    @table   #table is the hash structure used in OpenStruct
+  end
+  
+  def _manual_set(hash)
+    if hash && (hash.class == Hash)
+      for k,v in hash
+        @table[k.to_sym] = v
+        new_ostruct_member(k)
+      end
+    end
+  end
+end
+
+
 
 #  # http://doc.okkez.net/191/view/method/Object/i/initialize_copy
 #  def check(obj)

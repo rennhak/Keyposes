@@ -1,0 +1,21 @@
+---
+
+type: Dance
+name: Macarena
+filename: ../../../../experiments/Macarena_-_CMU_Database_-_28_06_2010/143_35.vpm
+from: 0
+to: 700
+
+# Dance Master Poses
+# - [ exact, [ approx. from, approx. to ] ]
+dmp: [
+   [  159, [  0, 0 ] ],
+   [  226, [  0, 0 ] ],
+   [  314, [  0, 0 ] ],
+   [  408, [  0, 0 ] ],
+   [  509, [  0, 0 ] ],
+   [  512, [  0, 0 ] ],
+   [  526, [  526, 593 ] ],
+   [  623, [  623, 660 ] ]
+]
+

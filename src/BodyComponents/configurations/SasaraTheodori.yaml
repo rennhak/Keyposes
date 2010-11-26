@@ -1,0 +1,22 @@
+---
+
+type: Dance
+name: Sasara Theodori
+filename: ../../../../data/DanceData/Manoj/FilterSasara.vpm
+from: 600
+to: 1220
+
+# Dance Master Poses
+# - [ exact, [ approx. from, approx. to ] ]
+dmp: [
+   [  622, [ 0, 0 ] ],
+   [  675, [ 0, 0 ] ],
+   [  733, [ 0, 0 ] ],
+   [  767, [ 0, 0 ] ],
+   [  810, [ 0, 0 ] ],
+   [ 1023, [ 0, 0 ] ],
+   [ 1089, [ 0, 0 ] ],
+   [ 1116, [ 0, 0 ] ],
+   [ 1171, [ 0, 0 ] ],
+   [ 1205, [ 0, 0 ] ]
+]

@@ -48,12 +48,15 @@ include GSL
 #######
 class BodyComponents # {{{
 
-  def initialize file # {{{
-    @file = file
+  def initialize motion_config_file # {{{
+    @config = read_motion_config( motion_config_file )
+    @file   = @config.filename
+    @from   = @config.from
+    @to     = @config.to
+    @name   = @config.name
+    @dmps   = @config.dmp
 
-    puts "Loading file..."
-    @adt = ADT.new( file )
-    puts "Finished loading file..."
+    @adt    = ADT.new( @file )
 
     ## b0rked! Singleton methods - but where??! (?? http://doc.okkez.net/191/view/method/Object/i/initialize_copy )
     ## Speedup by loading a Marshalled object from /tmp/ if previously run
@@ -1012,6 +1015,173 @@ class BodyComponents # {{{
   end # end of getSlopeForm }}}
 
 
+  # = Perform calculations and extract data
+  def get_data
+    pca     = PCA.new
+
+    forearms                           = getTrianglePatch( "pt27", "relb", "pt26", "lelb", "pt30", @from, @to )
+    #forearms_pca, fp_eval, fp_evec    = pca.do_pca( pca.reshape_data( forearms.dup, true, false ), 0 )
+    #forearms_tb                       = pca.transform_basis( forearms_pca, fp_eval, fp_evec )
+    #forearms_final                    = pca.clean_data( forearms_tb, 3 )
+    #forearms_distances                = eucledian_distance_window( forearms_final, 5 )
+
+    hands                              = getTrianglePatch( "rfin", "pt27", "lfin", "pt26", "pt30", @from, @to )
+    #hands_pca, hp_eval, hp_evec       = pca.do_pca( pca.reshape_data( hands, true, false ), 0 )
+    #hands_final                       = pca.clean_data( pca.transform_basis( hands_pca, hp_eval, hp_evec ), 3 )
+    #hands_distances                   = eucledian_distance_window( hands_final, 5 )
+
+    upper_arms                        = getTrianglePatch( "relb", "rsho", "lelb", "lsho", "pt30", @from, @to )
+
+    # lower body
+    thighs                            = getTrianglePatch( "rkne", "pt29", "lkne", "pt28", "pt30", @from, @to )
+    shanks                            = getTrianglePatch( "rank", "rkne", "lank", "lkne", "pt30", @from, @to )
+    
+
+    #### Dance specific markers
+    
+    # Aizubandaisan + Sasara Theodori Markers
+
+    # Some dance data doesn't have e.g. rhee markers (e.g. jongara)
+    if( @adt.methods.include?( "rhee" ) )
+      back_feet                         = getTrianglePatch( "rhee", "rank", "lhee", "lank", "pt30", @from, @to )
+      front_feet                        = getTrianglePatch( "rtoe", "rhee", "ltoe", "lhee", "pt30", @from, @to )
+      components                        = [ forearms, hands, upper_arms, thighs, shanks, back_feet, front_feet ]
+
+    else
+      front_feet                        = getTrianglePatch( "rtoe", "rank", "ltoe", "lank", "pt30", @from, @to )
+      components                        = [ forearms, hands, upper_arms, thighs, shanks, front_feet ]
+    end
+
+    
+
+
+    all   = []
+    count = 0
+    components.each do |c|
+      all   += pca.reshape_data( c, true, false )
+      count += 1
+    end
+
+    mass = {
+     #   "head"      => 7.0,
+     #   "chest"     => 25.8,
+     #   "loins"     => 17.2,
+     "upper arm" => 3.6,
+     "fore arm"  => 2.2,
+     "hand"      => 0.7,
+     "thigh"     => 11.4,
+     "shank"     => 5.3,
+     "foot"      => 1.8
+    }
+
+    m = 0; mass.each_value { |v| m += v }
+    m = m*2 # we have each component e.g. left + right arm etc.
+
+    all_pca, all_eval, all_evec       = pca.do_pca( all, ((count*3)-3) )
+    all_final                         = pca.clean_data( pca.transform_basis( all_pca, all_eval, all_evec ), 3 )
+
+    spread                            = 20
+
+    all_distances                     = eucledian_distance_window( pca.reshape_data( all_final.dup, false, true), spread )
+    all_energy                        = energy( pca.reshape_data( all_final.dup, false, true ), m, spread )
+
+
+
+    #### Messy Mablab interaction
+    # Dump to file for matlab
+    File.open( "work/data.csv", File::WRONLY|File::TRUNC|File::CREAT, 0667 ) do |f|
+      pd = pca.reshape_data( all_final.dup, false, true  )
+      pd.each do |x,y,z|
+        f.write( "#{x.to_s}, #{y.to_s}, #{z.to_s}\n" )
+      end
+    end
+
+    puts "Calling MATLAB via chroot"
+    `sudo su -c "chroot /export/temp2/MatLAB_7_Linux/matlab /home/mh/ml/bin/matlab_call.sh"`
+
+    # Read file @from matlab processing for frenet frame
+    # kappa index is exacly 2 shorter than the others
+    kappa = File.open( "work/kappa.csv", "r" ).readlines.collect! { |n| n.to_f }
+
+    v                                 = velocity( pca.reshape_data( all_final.dup, false, true ), 5 )
+    a                                 = acceleration( pca.reshape_data( all_final.dup, false, true), 5 )
+    p                                 = power( pca.reshape_data( all_final.dup, false, true ), m, 5 )
+
+
+    # Smoothing poly - use sth between 50 - 100
+    coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa.length-1).to_s}" )), GSL::Vector.alloc( kappa ), 50)
+    kappa_smooth = []
+    0.upto( kappa.length - 1 ) { |n| kappa_smooth << coef.eval( n ) }
+
+    # kappa_smooth_dx = []
+    # 0.upto( kappa.length - 1 ) { |x| result, abserror = GSL::Deriv.central( GSL::Function.alloc { |x| coef.eval(x) }, x, 1e-8) ; kappa_smooth_dx[x] = result }
+    # p kappa_smooth_dx
+    # interactive_gnuplot_eucledian_distances( kappa_smooth_dx, "%e %e\n", ["Frames", "Kappa Smooth dx/dy Value"], "Kappa Smooth dx/dy Value Graph", "dx_frenet_frame_kappa_plot.gp", "dx_frenet_frame_kappa_plot.gpdata" )a
+
+    e                                 = []
+    all_energy.each_index do |i|
+      next if( kappa[i].nil? )
+      #e[i] = kappa[i] * 1/all_distances[i] * 1/all_energy[i] * 1/v[i] * 1/a[i] * 1/p[i]
+      #e[i] = kappa_smooth[i] * 1/all_energy[i] * 1/all_distances[i]
+      e[i] = kappa_smooth[i] + 1/all_energy[i] + 1/all_distances[i]
+    end
+
+
+    # Very simple way to determine the turning points without the derivative
+    tp_frames = []
+    0.upto( kappa.length - 1 ) do |n|
+      begin
+  #      previous  = kappa_smooth[ n-1 ]
+  #      current   = kappa_smooth[ n   ]
+  #      nexts     = kappa_smooth[ n+1 ]
+
+        previouss = e[ n-2 ]
+        previous  = e[ n-1 ]
+        current   = e[ n   ]
+        nexts     = e[ n+1 ]
+        nextss    = e[ n+2 ]
+
+        next if previouss.nil?
+        next if previous.nil?
+        next if nexts.nil?
+        next if nextss.nil?
+
+        tp_frames << n if( previous < current and previouss < current and current > nexts and current > nextss )
+      end
+    end
+
+    #print "Dance Master Illustrations are: " 
+    #@dmps.each { |a| print a.first.to_s+", " } ; puts
+    puts "Turningposes are: #{tp_frames.collect{ |n| n+@from.to_i }.join(", ")}"
+
+
+
+
+    #### Messy Mablab interaction end
+
+    pca.covariance_matrix_gnuplot( all, "cov.gp" )
+    pca.eigenvalue_energy_gnuplot( all, "energy.gp" )
+
+    dis   = all_distances
+    plot  = all_final
+
+    interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Kappa Value (0 <= e <= 1)"], "Normalized Kappa Value Graph", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata" )
+    interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Kappa Value (0 <= e <= 1)"], "Normalized Smoothed Kappa Value Graph", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata" ) 
+    
+    interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
+    interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity Value (0 <= e <= 1)"], "Normalized Velocity Value Graph", "velocity_plot.gp", "velocity_plot.gpdata" )
+    interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
+    
+    interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "Normalized Eucledian Distance Window Graph", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata" )
+    interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v (1 <= e <= 1)"], "Normalized Kinetic Energy Graph", "ekin.gp", "ekin.gpdata" )
+    interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight (1 <= e <= 1)"], "Normalized Weight Graph", "weight.gp", "weight.gpdata", @from )
+    pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
+
+    pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[X Y Z],  "forearms_plot.gp" )
+
+  end
+
+
   # = getIntersectionPoint returns a solution for the following:
   #   Two lines in slope intersection form f1 y = m*x + t  and f2 ...
   #   intersection in a point (or not -> the intersection with the origin is returned) and this point is returned.
@@ -1047,6 +1217,10 @@ class BodyComponents # {{{
     # FIXME write a class for matrix functionality
   end # end of determinat }}}
 
+  # = Reads a yaml config describing the motion file
+  def read_motion_config filename
+    File.open( filename, "r" ) { |file| YAML.load( file ) }                 # return proc which is in this case a hash
+  end
 
   # == Dynamical method creation at run-time
   # @param method Takes the method header definition
@@ -1068,216 +1242,7 @@ if __FILE__ == $0 # {{{
 
   file    = ARGV.first
   bc      = BodyComponents.new( file )
-
-  #result  = bc.do_pca_reduction( "pt27", "relb", "pt26", "lelb", "pt30", 0, 1150 )
-  #result  = bc.do_pca_reduction( "pt27", "relb", "pt26", "lelb", "pt30", 0, 250 )
-  #p result
-  #def do_pca_reduction segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = nil, to = nil # {{{
-
-
-#  f = File.open( "weigths.csv" ).readlines
-#  weights = []
-#  f.each do |l|
-#    w, i, v = l.split(",")
-#    v.chomp!
-#    weights << v.to_f
-#  end  
-#
-
-
-  pca = PCA.new
-
-  # get CPA points for all components
-  #from, to      = 1250, 3850 # jongara
-  # from, to      = 0, 1100   # Aizuban
-  # from, to        = 600, 1220  # sasara theodori
-  from, to        = 0, 700      # macarena
-
-  forearms                           = bc.getTrianglePatch( "pt27", "relb", "pt26", "lelb", "pt30", from, to )
-  #forearms_pca, fp_eval, fp_evec    = pca.do_pca( pca.reshape_data( forearms.dup, true, false ), 0 )
-  #forearms_tb                       = pca.transform_basis( forearms_pca, fp_eval, fp_evec )
-  #forearms_final                    = pca.clean_data( forearms_tb, 3 )
-  #forearms_distances                = bc.eucledian_distance_window( forearms_final, 5 )
-
-  hands                             = bc.getTrianglePatch( "rfin", "pt27", "lfin", "pt26", "pt30", from, to )
-  #hands_pca, hp_eval, hp_evec       = pca.do_pca( pca.reshape_data( hands, true, false ), 0 )
-  #hands_final                       = pca.clean_data( pca.transform_basis( hands_pca, hp_eval, hp_evec ), 3 )
-  #hands_distances                   = bc.eucledian_distance_window( hands_final, 5 )
-
-  upper_arms                        = bc.getTrianglePatch( "relb", "rsho", "lelb", "lsho", "pt30", from, to )
-
-  # lower body
-  thighs                            = bc.getTrianglePatch( "rkne", "pt29", "lkne", "pt28", "pt30", from, to )
-  shanks                            = bc.getTrianglePatch( "rank", "rkne", "lank", "lkne", "pt30", from, to )
-  
-
-  #### Dance specific markers
-  
-  # Aizubandaisan + Sasara Theodori Markers
-  back_feet                         = bc.getTrianglePatch( "rhee", "rank", "lhee", "lank", "pt30", from, to )
-  front_feet                        = bc.getTrianglePatch( "rtoe", "rhee", "ltoe", "lhee", "pt30", from, to )
-
-  # Jongara Markers
-  #front_feet                        = bc.getTrianglePatch( "rtoe", "rank", "ltoe", "lank", "pt30", from, to )
-
-  #####
-
-
-  all   = []
-  count = 0
-  [ forearms, hands, upper_arms, thighs, shanks, back_feet, front_feet ].each do |c|    # aizu + sasara theodori
-  #[ forearms, hands, upper_arms, thighs, shanks, front_feet ].each do |c|    # jongara
-
-  #[ forearms, hands, upper_arms ].each do |c|
-  #[ thighs, shanks, back_feet, front_feet ].each do |c|
-    all   += pca.reshape_data( c, true, false )
-    count += 1
-  end
-
-  mass = {
-   #   "head"      => 7.0,
-   #   "chest"     => 25.8,
-   #   "loins"     => 17.2,
-   "upper arm" => 3.6,
-   "fore arm"  => 2.2,
-   "hand"      => 0.7,
-   "thigh"     => 11.4,
-   "shank"     => 5.3,
-   "foot"      => 1.8
-  }
-
-  m = 0; mass.each_value { |v| m += v }
-  m = m*2 # we have each component e.g. left + right arm etc.
-
-  all_pca, all_eval, all_evec       = pca.do_pca( all, ((count*3)-3) )
-  all_final                         = pca.clean_data( pca.transform_basis( all_pca, all_eval, all_evec ), 3 )
-
-  spread                            = 20
-
-  all_distances                     = bc.eucledian_distance_window( pca.reshape_data( all_final.dup, false, true), spread )
-  all_energy                        = bc.energy( pca.reshape_data( all_final.dup, false, true ), m, spread )
-
-
-
-  #### Messy Mablab interaction
- 
-
-  # Dump to file for matlab
-  # 
-  # In matlab:
-  #
-  # cd ../work/
-  # pwd
-  # X = csvread( 'data.m' );
-  # [kappa,tau,T,N,B,s,ds] = frenetframe(X,0.1)
-  File.open( "work/data.csv", File::WRONLY|File::TRUNC|File::CREAT, 0667 ) do |f|
-    pd = pca.reshape_data( all_final.dup, false, true  )
-    pd.each do |x,y,z|
-      f.write( "#{x.to_s}, #{y.to_s}, #{z.to_s}\n" )
-    end
-  end
-
-  puts "Do MatLab now (press to continue)"
-  STDIN.gets
-
-  # Read file from matlab processing for frenet frame
-  # kappa index is exacly 2 shorter than the others
-  kappa = File.open( "work/kappa.csv", "r" ).readlines.collect! { |n| n.to_f }
-  # tau   = File.open( "work/tau.csv", "r" ).readlines.collect! { |n| n.to_f }
-
-  v                                 = bc.velocity( pca.reshape_data( all_final.dup, false, true ), 5 )
-  a                                 = bc.acceleration( pca.reshape_data( all_final.dup, false, true), 5 )
-  p                                 = bc.power( pca.reshape_data( all_final.dup, false, true ), m, 5 )
-
-
-  # Smoothing poly - use sth between 50 - 100
-  coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa.length-1).to_s}" )), GSL::Vector.alloc( kappa ), 50)
-  kappa_smooth = []
-  0.upto( kappa.length - 1 ) { |n| kappa_smooth << coef.eval( n ) }
-
-  # kappa_smooth_dx = []
-  # 0.upto( kappa.length - 1 ) { |x| result, abserror = GSL::Deriv.central( GSL::Function.alloc { |x| coef.eval(x) }, x, 1e-8) ; kappa_smooth_dx[x] = result }
-  # p kappa_smooth_dx
-  # bc.interactive_gnuplot_eucledian_distances( kappa_smooth_dx, "%e %e\n", ["Frames", "Kappa Smooth dx/dy Value"], "Kappa Smooth dx/dy Value Graph", "dx_frenet_frame_kappa_plot.gp", "dx_frenet_frame_kappa_plot.gpdata" )a
-  
-  e                                 = []
-  all_energy.each_index do |i|
-    next if( kappa[i].nil? )
-    #e[i] = kappa[i] * 1/all_distances[i] * 1/all_energy[i] * 1/v[i] * 1/a[i] * 1/p[i]
-    #e[i] = kappa_smooth[i] * 1/all_energy[i] * 1/all_distances[i]
-    e[i] = kappa_smooth[i] + 1/all_energy[i] + 1/all_distances[i]
-  end
-
-
-  # Very simple way to determine the turning points without the derivative
-  tp_frames = []
-  0.upto( kappa.length - 1 ) do |n|
-    begin
-#      previous  = kappa_smooth[ n-1 ]
-#      current   = kappa_smooth[ n   ]
-#      nexts     = kappa_smooth[ n+1 ]
-
-      previouss = e[ n-2 ]
-      previous  = e[ n-1 ]
-      current   = e[ n   ]
-      nexts     = e[ n+1 ]
-      nextss    = e[ n+2 ]
-
-      next if previouss.nil?
-      next if previous.nil?
-      next if nexts.nil?
-      next if nextss.nil?
-
-      tp_frames << n if( previous < current and previouss < current and current > nexts and current > nextss )
-    end
-  end
-
-  puts "Turningposes are: #{tp_frames.collect{ |n| n+from.to_i }.join(", ")}"
-
-
-
-
-  #### Messy Mablab interaction end
-
-  pca.covariance_matrix_gnuplot( all, "cov.gp" )
-  pca.eigenvalue_energy_gnuplot( all, "energy.gp" )
-
-  dis   = all_distances
-  plot  = all_final
-
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Kappa Value (0 <= e <= 1)"], "Normalized Kappa Value Graph", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata" )
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Kappa Value (0 <= e <= 1)"], "Normalized Smoothed Kappa Value Graph", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata" ) 
-  
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity Value (0 <= e <= 1)"], "Normalized Velocity Value Graph", "velocity_plot.gp", "velocity_plot.gpdata" )
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
-  
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "Normalized Eucledian Distance Window Graph", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata" )
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v (1 <= e <= 1)"], "Normalized Kinetic Energy Graph", "ekin.gp", "ekin.gpdata" )
-  bc.interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight (1 <= e <= 1)"], "Normalized Weight Graph", "weight.gp", "weight.gpdata", from )
-  pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
-
-  pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[X Y Z],  "forearms_plot.gp" )
-
-
-
-
-
-#  totalNorm = 0
-#  tri.each { |area| totalNorm += Math.sqrt( area.to_f * area.to_f )  }
-#  totalNorm / tri.length
-#
-#  [tri, weights].transpose.each do |area, weight|
-#    #puts "Tri: #{area.to_s}   Weight: #{weight.to_s}"
-#    puts ( area.to_f  ) * weight.to_f
-#    # puts area.to_f / totalNorm
-#    # puts area.to_f
-#  end
-#
-  #bc.getTrianglePatch.each do |line|
-  #  index, area = line.to_s.split(",")
-  #  puts "#{index.to_s}, #{area.to_s}" # if( area.to_i <= 600 )
-  #end
+  bc.get_data
 
 end # }}}
 
