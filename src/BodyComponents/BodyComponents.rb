@@ -56,6 +56,10 @@ class BodyComponents # {{{
     @name   = @config.name
     @dmps   = @config.dmp
 
+    @dance_master_poses  = []
+    @dance_master_poses_range = []
+    @dmps.each { |dmp_array| @dance_master_poses << dmp_array.first; @dance_master_poses_range << dmp_array.last }
+
     @adt    = ADT.new( @file )
 
     ## b0rked! Singleton methods - but where??! (?? http://doc.okkez.net/191/view/method/Object/i/initialize_copy )
@@ -529,7 +533,9 @@ class BodyComponents # {{{
   # @param labels Accepts an array containing strings with the labels for each subarray of data, e.g. %w[Frames Eucledian Distance Window Value]
   # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext)
   # @param from Accepts integer, representing the starting index of the motion sequence. 
-  def interactive_gnuplot_eucledian_distances data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil # {{{
+  # @param pointsOfInterest Accepts array, containing integers. Each integer is a frame where we have a point of interest (e.g. frame of a dance master illustration drawing)
+  def interactive_gnuplot_eucledian_distances data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil, pointsOfInterest = nil, pointsOfInterestRange = nil, pointsOfInterest_filename = nil, tp = nil, tp_filename = nil # {{{
+    oldLabels = labels.dup
 
     File.open( filename.to_s, "w" ) do |f|
       f.write( "reset\n" )
@@ -537,20 +543,22 @@ class BodyComponents # {{{
       f.write( "set style line 1 lw 3\n" )
       f.write( "set grid\n" )
       f.write( "set border\n" )
-      f.write( "set pointsize 3\n" )
+      f.write( "set pointsize 1\n" )
 
-      f.write( "set xlabel '#{labels.shift.to_s}'\n" )
-      f.write( "set ylabel '#{labels.shift.to_s}'\n" )
+      f.write( "set xlabel '#{labels.shift.to_s}' font \"Helvetica,20\"\n" )
+      f.write( "set ylabel '#{labels.shift.to_s}' font \"Helvetica,20\"\n" )
       f.write( "set autoscale\n" )
-      f.write( "set font 'arial'\n" )
+      f.write( "set font 'Helvetica,20'\n" )
       f.write( "set key left box\n" )
       f.write( "set output\n" )
       f.write( "set terminal x11 persist\n" )
-      f.write( "set title '#{title}'\n" )
+      f.write( "set title '#{title}' font \"Helvetica,20\" \n" )
 
-      f.write( "plot '#{data_filename}' w line\n" )
-
-
+      if( pointsOfInterest.nil? )
+        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line\n" )
+      else
+        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars 1 7, '#{tp_filename}' ti \"Turning poses\" w points 0 7\n" )
+      end
     end # of File.open
 
     File.open( data_filename.to_s, "w" ) do |f|
@@ -562,6 +570,23 @@ class BodyComponents # {{{
         end
       end # of data.each_with_index do |d,i|
     end
+
+    unless( pointsOfInterest.nil? )
+      File.open( pointsOfInterest_filename.to_s, "w" ) do |f|
+        pointsOfInterest.each_with_index do |dmp, index|
+            f.write( "#{dmp.to_s} #{data[dmp-@from].to_s} #{pointsOfInterestRange[index].first.to_s} #{pointsOfInterestRange[index].last.to_s}\n" )
+        end # of data.each_with_index do |d,i|
+      end
+    end
+
+    unless( tp.nil? )
+      File.open( tp_filename.to_s, "w" ) do |f|
+        tp.each do |point|
+            f.write( "#{point.to_s} #{data[point-@from].to_s}\n" )
+        end # of data.each_with_index do |d,i|
+      end
+    end
+
 
   end # of def interactive_gnuplot }}}
 
@@ -1035,11 +1060,6 @@ class BodyComponents # {{{
     # lower body
     thighs                            = getTrianglePatch( "rkne", "pt29", "lkne", "pt28", "pt30", @from, @to )
     shanks                            = getTrianglePatch( "rank", "rkne", "lank", "lkne", "pt30", @from, @to )
-    
-
-    #### Dance specific markers
-    
-    # Aizubandaisan + Sasara Theodori Markers
 
     # Some dance data doesn't have e.g. rhee markers (e.g. jongara)
     if( @adt.methods.include?( "rhee" ) )
@@ -1052,9 +1072,6 @@ class BodyComponents # {{{
       components                        = [ forearms, hands, upper_arms, thighs, shanks, front_feet ]
     end
 
-    
-
-
     all   = []
     count = 0
     components.each do |c|
@@ -1062,6 +1079,7 @@ class BodyComponents # {{{
       count += 1
     end
 
+    # Total: 100.0
     mass = {
      #   "head"      => 7.0,
      #   "chest"     => 25.8,
@@ -1126,15 +1144,10 @@ class BodyComponents # {{{
       e[i] = kappa_smooth[i] + 1/all_energy[i] + 1/all_distances[i]
     end
 
-
     # Very simple way to determine the turning points without the derivative
     tp_frames = []
     0.upto( kappa.length - 1 ) do |n|
       begin
-  #      previous  = kappa_smooth[ n-1 ]
-  #      current   = kappa_smooth[ n   ]
-  #      nexts     = kappa_smooth[ n+1 ]
-
         previouss = e[ n-2 ]
         previous  = e[ n-1 ]
         current   = e[ n   ]
@@ -1150,12 +1163,12 @@ class BodyComponents # {{{
       end
     end
 
-    #print "Dance Master Illustrations are: " 
-    #@dmps.each { |a| print a.first.to_s+", " } ; puts
-    puts "Turningposes are: #{tp_frames.collect{ |n| n+@from.to_i }.join(", ")}"
 
+    turning_poses       = tp_frames.collect { |n| n+@from.to_i }
+    turning_poses.shift     # ignore the very first point
 
-
+    puts "DMPs are: #{@dance_master_poses.join(", ")}"
+    puts "Turningposes are: #{turning_poses.join(", ")}"
 
     #### Messy Mablab interaction end
 
@@ -1165,19 +1178,19 @@ class BodyComponents # {{{
     dis   = all_distances
     plot  = all_final
 
-    interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Kappa Value (0 <= e <= 1)"], "Normalized Kappa Value Graph", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata" )
-    interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Kappa Value (0 <= e <= 1)"], "Normalized Smoothed Kappa Value Graph", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata" ) 
+    interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Kappa Value (0 <= e <= 1)"], "Normalized Kappa Value Graph", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_frenet_frame.gpdata", turning_poses, "tp_frenet_frame.gpdata" )
+    interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Kappa Value (0 <= e <= 1)"], "Normalized Smoothed Kappa Value Graph", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_smoothed_frenet_frame.gpdata", turning_poses, "tp_smoothed_frenet_frame.gpdata" ) 
     
-    interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
-    interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity Value (0 <= e <= 1)"], "Normalized Velocity Value Graph", "velocity_plot.gp", "velocity_plot.gpdata" )
-    interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
+    #interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
+    #interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity Value (0 <= e <= 1)"], "Normalized Velocity Value Graph", "velocity_plot.gp", "velocity_plot.gpdata" )
+    #interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
     
-    interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "Normalized Eucledian Distance Window Graph", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata" )
-    interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v (1 <= e <= 1)"], "Normalized Kinetic Energy Graph", "ekin.gp", "ekin.gpdata" )
-    interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight (1 <= e <= 1)"], "Normalized Weight Graph", "weight.gp", "weight.gpdata", @from )
-    pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
+    #interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "Normalized Eucledian Distance Window Graph", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata" )
+    interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v (0 <= e <= 1)"], "Normalized Kinetic Energy Graph", "ekin.gp", "ekin.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_ekin.gpdata", turning_poses, "tp_ekin.gpdata" )
+    interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight (0 <= e <= 1)"], "Normalized Weight Graph", "weight.gp", "weight.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_weight.gpdata", turning_poses, "tp_weight.gpdata" )
+    #pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
 
-    pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[X Y Z],  "forearms_plot.gp" )
+    #pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[X Y Z],  "forearms_plot.gp" )
 
   end
 
