@@ -34,10 +34,17 @@ class Clustering # {{{
   end # of def initialize }}}
 
 
-  def kmeans data, centroids = 8
+  def kmeans data, centroids = 8, centroids_information = nil
     raise ArgumentError, "Data should be of shape [ [x,y,z],...]" if( (data.length == 3) and not (data.first.length == 3 ) )
 
-    km_tmp      = KMeans.new(data, :centroids => centroids)
+    if( centroids_information.nil? )
+      km_tmp      = KMeans.new(data, :centroids => centroids)
+    else
+      cen         = []
+      centroids_information.each { |c| cen << Centroid.new( c ) }
+      km_tmp      = KMeans.new(data, :centroids => centroids, :custom_centroids => cen )
+    end
+
     centroids   = km_tmp.centroids
     km          = eval( km_tmp.inspect.to_s )
 
@@ -114,9 +121,21 @@ class Clustering # {{{
   # The distortion, as far as Kmeans is concerned, is used as a stopping
   # criterion (if the change between two iterations is less than some threshold, we
   # assume convergence)
+  # K-Means tries to minimize distortion, which is defined as the sum of the squared
+  # distances between each observation vector and its dominating centroid.
+  #
   def distortions closest_centroids
     return closest_centroids.collect { |cid, d| d }.to_a.inject( :+ )
   end # of def distortions }}}
+
+
+  # Given a data point v and a set of points X, define the distance rom v to X as d(v,X)
+  # as the (Eucledian) distance from v to the closest point from X
+  # Given a set of n data points V={v_1, ..., v_n} and a set of k points X, define the Squared Error
+  # Distortion d(V,X) = sum( d(v_i, X)^2 ) / n    \forall 1<=i<=n
+  def squared_error_distortion closest_centroids
+    return ( closest_centroids.collect { |cid, d| d**2 }.to_a.inject( :+ ) ) / closest_centroids.length
+  end
 
 
   # @fn {{{
@@ -124,28 +143,55 @@ class Clustering # {{{
   # @returns [Array] Index being cluster id index and total within cluster sum of squares
   # Should become smaller for good clustering results
   def total_within_cluster_sum_of_squares closest_centroids
-    tcss = 0 # index represents cluster id
 
-    closest_centroids.each do |cid, d|
-        tcss += ( d ** 2 )
+    tcss = [] # index represents cluster id
+    closest_centroids.each do |cid, ed|
+
+      if( cid.nil? )
+        p closest_centroids
+        exit
+      end
+
+      tcss[ cid ] = 0 if( tcss[ cid ].nil? )
+      tcss[ cid ] += ( ed ** 2 )
     end
+
+    # Some clusters are not assigned
+    tcss.collect! do |cid|
+      if( cid.nil? )
+        0
+      else
+        # normalize = 1 / ( 2 * closest_centroids.length )
+        # cid * normalize
+        cid / closest_centroids.length
+      end
+    end
+
+    # closest_centroids.each_with_index do |array, index|
+    #   cid, ed = array
+    #  tcss[ cid ] = tcss[ cid ] / cnts[ cid ]
+    # end
+
+    p tcss
 
     return tcss
   end # of def total_within_cluster_sum_of_squares }}}
 
-  
+
   # input: is from distances function ( hash)
   def tss data
     tss = 0
-    
+    cnt = 0
+
     # we get : data-> dists[ dindex ] << [ cindex, ed ]
     data.each_pair do |dindex, array|
       array.each do |ci, ed|
-        tss += ed
+        tss += ed**2
+        cnt += 1
       end
     end
   
-    return tss
+    return tss / cnt
   end
 
 
@@ -179,7 +225,7 @@ class Clustering # {{{
     #    cnt += 1
     #  end 
     #end
-
+ 
     return tss / cnt
   end # of def total_sum_of_squares }}}
  

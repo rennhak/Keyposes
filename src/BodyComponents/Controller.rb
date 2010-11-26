@@ -63,6 +63,7 @@ require_relative 'Filter.rb'
 require_relative 'Plotter.rb'
 require_relative 'Logger.rb'
 
+
 # Change Namespace
 include GSL
 
@@ -199,36 +200,67 @@ class Controller # {{{
         final = []
         turning_data.collect!{ |description, data| data }.each { |array| final.concat( array ) }
 
+        ks = []
         total_squared = []
+        dists = []
+        tcss = []
+        kmeans = nil
 
-        1.upto( 50 ).each do |k|
+        # use rule of thumb to define end value for iteration of kmeans cluster model minimazation (*0.5 to speed up)
+        kmeans_end = ( Math.sqrt( final.length / 2 )  ) * 0.5
+
+        @log.message :info, "Iterating over 1 to #{kmeans_end.to_s}"
+        #k = 4
+        1.upto( 25 ).each do |k|
           @log.message :info, "Calculating K-Means for k=#{k.to_s}"
 
-          clustering          = Clustering.new( @options )
-          kmeans, centroids   = clustering.kmeans( final, k )
-          distances           = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
-          closest_centroids   = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
-          distortions         = clustering.distortions( closest_centroids )
-          tcss                = clustering.total_within_cluster_sum_of_squares( closest_centroids )
-          tss                 = clustering.total_sum_of_squares( closest_centroids )
-          tss2                = clustering.tss( distances ) 
+          ## Hands centroid for entire jp dance domain
+          #centroids = []
+          #centroids << [ -10.142864867478487, -883.1101800742041, 122.43234693122311]
+          #centroids << [ 0.4458929454081469, 3.802035339502351, -0.5390339014069105]
+          #centroids << [ -1317.5185755321188, -347.0076126871563, 87.06296930124779]
+          #centroids << [ -1144.4570020687893, -1216.4800826988233, 261.0467408410053]
 
-          puts "[ smaller ] DISTORTIONS: #{distortions.to_s}"
-          print "[ smaller ] Total within Cluster sum of squared: #{tcss.to_s}\n"
-          print "[ const ] Total sum of squares: #{tss.to_s} or tss2: #{tss2.to_s}\n"
-          
+          clustering                  = Clustering.new( @options )
+          kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
+          # puts "Centroids are:"
+          # p centroids
+          distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
+          closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
+          distortions                 = clustering.distortions( closest_centroids )
+          squared_error_distortions   = clustering.squared_error_distortion( closest_centroids )
+          dists << squared_error_distortions
+          ks << k
+          tcss                        << clustering.total_within_cluster_sum_of_squares( closest_centroids )
+          # tss                       = clustering.total_sum_of_squares( closest_centroids )
+          tss                         = clustering.tss( distances ) 
+
+          #puts "Error inside clusters"
+          #p tcss
+          #puts "Errors total"
+          #p tss
+
+          # puts "[ smaller ] DISTORTIONS: #{distortions.to_s}"
+          # print "[ smaller ] Total within Cluster sum of squared: #{tcss.to_s}\n"
+          # print "[ const ] Total sum of squares: #{tss.to_s} or tss2: #{tss2.to_s}\n"
+
           # This caluclation is b0redk
-          between = tss2 - tcss
-          puts "In between cluster sum of squares for all clusters: #{between.to_s}"
-          variance = ( between /  ( tss2 * 100 ) ).abs
-          total_squared << [ k, variance ]
-          puts "Variance explained: #{(variance).to_s}"
+          # between = tss2 - tcss
+          # puts "In between cluster sum of squares for all clusters: #{between.to_s}"
+          # variance = ( between /  ( tss2 * 100 ) ).abs  
+          # total_squared << variance
+          # ks << k
+          # dists  << distortions
+          # puts "Variance explained: #{(variance).to_s}"
         end
 
+
+        tcss.collect! { |array| array.inject(:+) / array.length } 
+        ks = ks.zip( tcss )
+
         @plot       = Plotter.new( 0, 0 )
-        @plot.easy_gnuplot( total_squared, "%e %e\n", [ "Clusters", "Percentage of Variance Explained" ], "Total Variance Plot", "graphs/total_variance.gp", "graphs/total_variance.gpdata" )
- 
-        exit
+        @plot.easy_gnuplot( ks, "%e %e\n", [ "Clusters", "Total within cluster sum of squares" ], "Total within cluster sum of squares Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
+
         @turning.get_dot_graph( kmeans )
 
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kmeans )

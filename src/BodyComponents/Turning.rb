@@ -747,7 +747,8 @@ EOS
     f.write <<EOS
 digraph states {
     rankdir=LR;
-      size="20,20"
+      dpi="300";
+      size="20,20";
           node [shape = doublecircle]; start end;
         node [shape = circle];
 EOS
@@ -940,7 +941,7 @@ EOS
     
     # octants = get_octants( pd.dup, components_sav )
     clustering            = Clustering.new( @options )
-    kmeans, centroids     = clustering.kmeans( pd, 8 )
+    kmeans, centroids     = clustering.kmeans( pd, 4 )
     
     get_dot_graph( kmeans )
 
