@@ -557,7 +557,7 @@ class BodyComponents # {{{
       if( pointsOfInterest.nil? )
         f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line\n" )
       else
-        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars 1 7, '#{tp_filename}' ti \"Turning poses\" w points 0 7\n" )
+        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'ekin.gpdata' ti \"Kinetic Energy\" w line, 'eucledian_distances_window_plot.gpdata' ti \"Eucledian Distance Window (speed)\" w line\n" )
       end
     end # of File.open
 
@@ -601,7 +601,7 @@ class BodyComponents # {{{
   # @param from Expects a number indicating to start from which time frame
   # @param to Expects a number indicating to end on which time frame
   # @returns Array, containing the points after the calculation
-  def getTrianglePatch segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = nil, to = nil # {{{
+  def getTrianglePatch segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = @from, to = @to # {{{
 
     #####
     #
@@ -1040,6 +1040,35 @@ class BodyComponents # {{{
   end # end of getSlopeForm }}}
 
 
+  # = The function get_turning_motions_cpa takes as input arguments the body component in question and returns the
+  # result from getTrianglePatch
+  # @param component Symbol, describing the name of the components desired. e.g. :forearms, :hands, :upper_arms, :thighs, :shanks, :feet
+  # @param from
+  # @param to
+  # @returns Coordinates of new CPA from the getTrianglePatch method
+  def get_turning_motions_cpa components, from = @from, to = @to # {{{
+
+    center            = "pt30"
+
+    # FIXME: This should go into the VPM plugin of MotionX
+    valid_components  = {
+      :forearms       => [ [ "pt27", "relb" ], [ "pt26", "lelb" ] ],
+      :hands          => [ [ "rfin", "pt27" ], [ "lfin", "pt26" ] ],
+      :upper_arms     => [ [ "relb", "rsho" ], [ "lelb", "lsho" ] ],
+      :thighs         => [ [ "rkne", "pt29" ], [ "lkne", "pt28" ] ],
+      :shanks         => [ [ "rank", "rkne" ], [ "lank", "lkne" ] ],
+      :feet           => [ [ "rtoe", "rank" ]. [ "ltoe", "lank" ] ]
+    }
+
+    #if( @adt.methods.include?( "rhee" ) )
+    #  back_feet                         = getTrianglePatch( "rhee", "rank", "lhee", "lank", "pt30", @from, @to )
+    #  front_feet                        = getTrianglePatch( "rtoe", "rhee", "ltoe", "lhee", "pt30", @from, @to )
+   
+    raise ArgumentError, "NOT IMPLEMENTED ERRROR"
+    # CONTINUE HERE
+
+  end # of def get_cpa }}}
+
   # = Perform calculations and extract data
   def get_data
     pca     = PCA.new
@@ -1061,26 +1090,9 @@ class BodyComponents # {{{
     thighs                            = getTrianglePatch( "rkne", "pt29", "lkne", "pt28", "pt30", @from, @to )
     shanks                            = getTrianglePatch( "rank", "rkne", "lank", "lkne", "pt30", @from, @to )
 
-    # Some dance data doesn't have e.g. rhee markers (e.g. jongara)
-    if( @adt.methods.include?( "rhee" ) )
-      back_feet                         = getTrianglePatch( "rhee", "rank", "lhee", "lank", "pt30", @from, @to )
-      front_feet                        = getTrianglePatch( "rtoe", "rhee", "ltoe", "lhee", "pt30", @from, @to )
-      components                        = [ forearms, hands, upper_arms, thighs, shanks, back_feet, front_feet ]
-
-    else
-      front_feet                        = getTrianglePatch( "rtoe", "rank", "ltoe", "lank", "pt30", @from, @to )
-      components                        = [ forearms, hands, upper_arms, thighs, shanks, front_feet ]
-    end
-
-    all   = []
-    count = 0
-    components.each do |c|
-      all   += pca.reshape_data( c, true, false )
-      count += 1
-    end
 
     # Total: 100.0
-    mass = {
+    mass_total_body = {
      #   "head"      => 7.0,
      #   "chest"     => 25.8,
      #   "loins"     => 17.2,
@@ -1091,6 +1103,56 @@ class BodyComponents # {{{
      "shank"     => 5.3,
      "foot"      => 1.8
     }
+
+    # Total: 100.0
+    mass_upper_body = {
+     "upper arm" => 3.6,
+     "fore arm"  => 2.2,
+     "hand"      => 0.7,
+    }
+
+    # Total: 100.0
+    mass_lower_body = {
+     "thigh"     => 11.4,
+     "shank"     => 5.3,
+     "foot"      => 1.8
+    }
+
+
+
+
+    # Some dance data doesn't have e.g. rhee markers (e.g. jongara)
+    if( @adt.methods.include?( "rhee" ) )
+      back_feet                         = getTrianglePatch( "rhee", "rank", "lhee", "lank", "pt30", @from, @to )
+      front_feet                        = getTrianglePatch( "rtoe", "rhee", "ltoe", "lhee", "pt30", @from, @to )
+      upper                             = [ forearms, hands, upper_arms ]
+      lower                             = [ thighs, shanks, back_feet, front_feet ]
+      #components                        = upper + lower
+      #mass                              = mass_total_body
+      components                        = lower
+      mass                              = mass_lower_body
+      #components                        = [ front_feet, back_feet ]
+      #mass                              = { "xx" => 1.8 }
+    else
+      front_feet                        = getTrianglePatch( "rtoe", "rank", "ltoe", "lank", "pt30", @from, @to )
+      upper                             = [ forearms, hands, upper_arms ]
+      lower                             = [ thighs, shanks, front_feet ]
+      components                        = upper + lower
+      mass                              = mass_total_body
+      #components                        = lower
+      #mass                              = mass_lower_body
+      raise Error, "foo"
+      #components = [ shanks ]
+      #mass      = { "xx" => 5.3 }
+    end
+
+    all   = []
+    count = 0
+    components.each do |c|
+      all   += pca.reshape_data( c, true, false )
+      count += 1
+    end
+
 
     m = 0; mass.each_value { |v| m += v }
     m = m*2 # we have each component e.g. left + right arm etc.
@@ -1172,8 +1234,8 @@ class BodyComponents # {{{
 
     #### Messy Mablab interaction end
 
-    pca.covariance_matrix_gnuplot( all, "cov.gp" )
-    pca.eigenvalue_energy_gnuplot( all, "energy.gp" )
+    #pca.covariance_matrix_gnuplot( all, "cov.gp" )
+    #pca.eigenvalue_energy_gnuplot( all, "energy.gp" )
 
     dis   = all_distances
     plot  = all_final
@@ -1185,7 +1247,7 @@ class BodyComponents # {{{
     #interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity Value (0 <= e <= 1)"], "Normalized Velocity Value Graph", "velocity_plot.gp", "velocity_plot.gpdata" )
     #interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
     
-    #interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "Normalized Eucledian Distance Window Graph", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata" )
+    interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "Normalized Eucledian Distance Window Graph (Speed)", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_eucleadian_distance.gpdata", turning_poses, "tp_eucleadian_distance.gpdata" )
     interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy v (0 <= e <= 1)"], "Normalized Kinetic Energy Graph", "ekin.gp", "ekin.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_ekin.gpdata", turning_poses, "tp_ekin.gpdata" )
     interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight (0 <= e <= 1)"], "Normalized Weight Graph", "weight.gp", "weight.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_weight.gpdata", turning_poses, "tp_weight.gpdata" )
     #pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
