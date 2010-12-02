@@ -201,7 +201,7 @@ class Clustering # {{{
     #  tcss[ cid ] = tcss[ cid ] / cnts[ cid ]
     # end
 
-    p tcss
+    # p tcss
 
     return tcss
   end # of def total_within_cluster_sum_of_squares }}}

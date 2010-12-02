@@ -161,7 +161,7 @@ class Controller # {{{
           process.each do |configurations_dir, domain, name, pattern, speed, cycle, filename|
 
             yaml_var = @fname_table[ filename ]
-            @log.message :success, "Using domain #{domain} with process #{name} with pattern #{pattern}, speed #{speed} and cycle #{cycle} (YAML: #{yaml_var})"
+            @log.message :success, "Using domain '#{domain}' with process '#{name}' with pattern '#{pattern}', speed '#{speed}' and cycle '#{cycle}' (YAML: '#{yaml_var}')"
             motion_config             = eval( "@motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml_var}" )
 
             raise ArgumentError, "The configuration and/or the data you requested doesn't exist!" if( motion_config.nil? )
@@ -201,20 +201,23 @@ class Controller # {{{
 
         end # of process.each do |configurations_dir, domain, name, pattern, speed, cycle, filename| 
 
-        final = []
+        final           = []
         turning_data.collect!{ |description, data| data }.each { |array| final.concat( array ) }
 
-        ks = []
-        total_squared = []
-        dists = []
-        tcss = []
-        kmeans = nil
+        ks              = []
+        kms             = []
+        total_squared   = []
+        dists           = []
+        tcss            = []
 
         if( @options.clustering_k_search )
           ( @options.clustering_k_from ).upto( @options.clustering_k_to ) do |k|
 
+            @log.message :info, "Performing K-Means for k = #{k.to_s}"
+
             clustering                  = Clustering.new( @options )
             kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
+            kms                        << kmeans
             distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
             closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
             distortions                 = clustering.distortions( closest_centroids )
@@ -224,6 +227,25 @@ class Controller # {{{
             tcss                        << clustering.total_within_cluster_sum_of_squares( closest_centroids )
 
           end # of ( @options.clustering_k_from ).upto( @options.clustering_k_to ) do |k|
+        else
+
+          unless( @options.clustering_k_parameter.nil? )
+            k                           = @options.clustering_k_parameter.to_i
+
+            @log.message :info, "Performing K-Means for k = #{k.to_s}"
+
+            clustering                  = Clustering.new( @options )
+            kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
+            kms                        << kmeans
+            distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
+            closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
+            distortions                 = clustering.distortions( closest_centroids )
+            squared_error_distortions   = clustering.squared_error_distortion( closest_centroids )
+            dists << squared_error_distortions
+            ks << k
+            tcss                        << clustering.total_within_cluster_sum_of_squares( closest_centroids )
+          end # unless( @options.clustering_k_parameter.nil? ) 
+
         end # of if( @options.clustering_k_search )
 
         tcss.collect! { |array| array.inject(:+) / array.length } 
@@ -232,9 +254,8 @@ class Controller # {{{
         @plot       = Plotter.new( 0, 0 )
         @plot.easy_gnuplot( ks, "%e %e\n", [ "Clusters", "Total within cluster sum of squares" ], "Total within cluster sum of squares Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
 
-        @turning.get_dot_graph( kmeans )
-
-        @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kmeans )
+        @turning.get_dot_graph( kms.last )
+        @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kms.last )
 
       else # if this is given we want to analyse only one dance
         @log.message :error, "No processing name given via --name '#{@options.process}'" if( @options.process == "" )

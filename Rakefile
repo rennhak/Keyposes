@@ -75,6 +75,8 @@ task :clean do |t|
   `rm -rf src/BodyComponents/graphs/*.gp`
   `rm -rf src/BodyComponents/graphs/*.gpdata`
   `rm -rf src/BodyComponents/graphs/*.eps`
+  `rm -rf src/BodyComponents/graphs/*.dot`
+  `rm -rf src/BodyComponents/graphs/*.png`
   `rm -f  src/BodyComponents/work/*.csv`
 end
 
