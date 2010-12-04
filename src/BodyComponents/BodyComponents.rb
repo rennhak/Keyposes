@@ -557,7 +557,9 @@ class BodyComponents # {{{
       if( pointsOfInterest.nil? )
         f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line\n" )
       else
-        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'ekin.gpdata' ti \"Kinetic Energy\" w line, 'eucledian_distances_window_plot.gpdata' ti \"Eucledian Distance Window (speed)\" w line\n" )
+        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'frenet_frame_kappa_plot.gpdata' ti \"Raw kappa\" w line, 'ekin.gpdata' w line\n" )
+        #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'ekin.gpdata' ti \"Kinetic Energy\" w line, 'eucledian_distances_window_plot.gpdata' ti \"Eucledian Distance Window (speed)\" w line\n" )
+        #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7\n")
       end
     end # of File.open
 
@@ -1057,7 +1059,7 @@ class BodyComponents # {{{
       :upper_arms     => [ [ "relb", "rsho" ], [ "lelb", "lsho" ] ],
       :thighs         => [ [ "rkne", "pt29" ], [ "lkne", "pt28" ] ],
       :shanks         => [ [ "rank", "rkne" ], [ "lank", "lkne" ] ],
-      :feet           => [ [ "rtoe", "rank" ]. [ "ltoe", "lank" ] ]
+      :feet           => [ [ "rtoe", "rank" ], [ "ltoe", "lank" ] ]
     }
 
     #if( @adt.methods.include?( "rhee" ) )
@@ -1125,14 +1127,14 @@ class BodyComponents # {{{
     if( @adt.methods.include?( "rhee" ) )
       back_feet                         = getTrianglePatch( "rhee", "rank", "lhee", "lank", "pt30", @from, @to )
       front_feet                        = getTrianglePatch( "rtoe", "rhee", "ltoe", "lhee", "pt30", @from, @to )
-      upper                             = [ forearms, hands, upper_arms ]
-      lower                             = [ thighs, shanks, back_feet, front_feet ]
+      #upper                             = [ forearms, hands, upper_arms ]
+      #lower                             = [ thighs, shanks, back_feet, front_feet ]
       #components                        = upper + lower
       #mass                              = mass_total_body
-      components                        = lower
-      mass                              = mass_lower_body
-      #components                        = [ front_feet, back_feet ]
-      #mass                              = { "xx" => 1.8 }
+      #components                        = lower
+      #mass                              = mass_lower_body
+      components                        = [ forearms ]
+      mass                              = { "xx" => 2.2 }
     else
       front_feet                        = getTrianglePatch( "rtoe", "rank", "ltoe", "lank", "pt30", @from, @to )
       upper                             = [ forearms, hands, upper_arms ]
@@ -1187,11 +1189,126 @@ class BodyComponents # {{{
     a                                 = acceleration( pca.reshape_data( all_final.dup, false, true), 5 )
     p                                 = power( pca.reshape_data( all_final.dup, false, true ), m, 5 )
 
+  
+    # Kappa needs to be corrected because @from is not nil and not 0
+    #if( @from.to_i > 0 )
+    #  old_kappa = kappa.dup
+    #  n_kappa = Array.new( @from.to_i + kappa.length.to_i, 0.0 )
+    #  kappa.each_with_index do |v, i|
+    #    n_kappa[ @from.to_i + i ] = v
+    #  end
+    #  kappa = n_kappa
+    #end
 
+# EXPERIMENTS- can we extract dmps via fft analysis?
+# result, no but interestingly the low frequency components are most prevalent
+
+###    # @from is a problem here!!!
+###    old_kappa = kappa.dup
+###    new_kappa = Array.new( kappa.length - 1, 0.0 )
+###    thresh    = 10
+###
+###    @dance_master_poses.each do |d|
+###      (d-thresh).upto(d+thresh) do |i|
+###        new_kappa[ i ] = kappa[ i ]
+###      end
+###    end
+###
+###    kappa = new_kappa
+###
+###    # Can we use FFT to find the sinals frequency which interest us?
+###    gsl_kappa       = GSL::Vector.alloc( kappa )
+###    fft_kappa       = gsl_kappa.fft
+###    sampling = 1000
+###    y2 = fft_kappa.subvector(1, kappa.length-2).to_complex2
+###    mag = y2.abs
+###    phase = y2.arg
+###    #f = GSL::Vector.linspace(0, sampling/2, mag.size)
+###    f = GSL::Vector.linspace(0, sampling/2, mag.size)
+###
+###    graph(f, mag, "-C -g 3 -x 0 500 -X 'Frequency [Hz]'")
+### 
+###   # exit
+###
+###    puts "Proceed?"
+###    STDIN.gets
+###
+###    gsl_kappa       = GSL::Vector.alloc( kappa )
+###    rtable          = FFT::Real::Wavetable.alloc( kappa.length )
+###    rwork           = FFT::Real::Workspace.alloc( kappa.length )
+###
+###    fft_kappa       = gsl_kappa.fft
+###
+###    hctable         = FFT::HalfComplex::Wavetable.alloc( kappa.length )
+###
+###    for i in 50...(kappa.length) do
+###      fft_kappa[i] = 0.0
+###    end
+###
+###    ifft_kappa = ( fft_kappa.ifft ).to_na.to_a
+
+
+    # http://users.rowan.edu/~polikar/WAVELETS/WTpart1.html
+
+    # OLD METHOD
     # Smoothing poly - use sth between 50 - 100
     coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa.length-1).to_s}" )), GSL::Vector.alloc( kappa ), 50)
     kappa_smooth = []
     0.upto( kappa.length - 1 ) { |n| kappa_smooth << coef.eval( n ) }
+
+    # NEW METHOD
+    n               = 16
+    nc              = 3
+    iterations      = ( kappa.length / n ) - 1
+    rest            = ( kappa.length % n ) - 1
+    kappa_wavelet   = GSL::Vector.alloc( ( ( iterations + 1 ) * n ) )
+    cycle           = 0
+
+    0.upto( iterations ) do |i|
+
+      k               = GSL::Vector.alloc( n )
+      c               = ( i * n ) - 1
+      0.upto( n - 1 ) { |j|  k.set( j, kappa[ c + j ] ) }
+
+      # daubechies | daubechies_centered
+      # This is the Daubechies wavelet family of maximum phase with k/2 vanishing moments. The
+      # implemented wavelets are k=4, 6, ..., 20, with k even.
+      #
+      # haar | haar_centered
+      # This is the Haar wavelet. The only valid choice of k for the Haar wavelet is k=2. 
+      #
+      # bspline | bspline_centered
+      # This is the biorthogonal B-spline wavelet family of order (i,j). The implemented values
+      # of k = 100*i + j are 103, 105, 202, 204, 206, 208, 301, 303, 305 307, 309. 
+      #
+      # The centered forms of the wavelets align the coefficients of the various sub-bands on
+      # edges. Thus the resulting visualization of the coefficients of the wavelet transform in
+      # the phase plane is easier to understand. 
+      wavelet         = GSL::Wavelet.alloc( "haar", 2 ) 
+      work            = GSL::Wavelet::Workspace.alloc( n )
+      data2           = wavelet.transform( k, GSL::Wavelet::FORWARD, work)
+      perm            = data2.abs.sort_index
+
+
+      cnt = 0
+      while( cnt + nc ) < n
+        data2[ perm[ cnt ] ] = 0.0
+        cnt += 1
+      end
+
+      intermediate    = ( GSL::Wavelet.transform_inverse( wavelet, data2 ) ).to_a
+      cycle          += 1
+
+      0.upto( n - 1 ) { |j| kappa_wavelet.set( ( c + j ), intermediate[ j ] ) }
+      #0.upto( n - 1 ) { |j| kappa_wavelet.set( ( c + j ), data2[ j ] ) }
+    end
+    kappa_wavelet     = kappa_wavelet.to_a
+
+    # Smoothing poly - use sth between 50 - 100
+    coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa_wavelet.length-1).to_s}" )), GSL::Vector.alloc( kappa_wavelet ), 50)
+    wavelet_kappa_smooth = []
+    0.upto( kappa_wavelet.length - 1 ) { |n| wavelet_kappa_smooth << coef.eval( n ) }
+
 
     # kappa_smooth_dx = []
     # 0.upto( kappa.length - 1 ) { |x| result, abserror = GSL::Deriv.central( GSL::Function.alloc { |x| coef.eval(x) }, x, 1e-8) ; kappa_smooth_dx[x] = result }
@@ -1203,7 +1320,12 @@ class BodyComponents # {{{
       next if( kappa[i].nil? )
       #e[i] = kappa[i] * 1/all_distances[i] * 1/all_energy[i] * 1/v[i] * 1/a[i] * 1/p[i]
       #e[i] = kappa_smooth[i] * 1/all_energy[i] * 1/all_distances[i]
-      e[i] = kappa_smooth[i] + 1/all_energy[i] + 1/all_distances[i]
+      ####e[i] = kappa_smooth[i] + 1/all_energy[i] + 1/all_distances[i]
+      
+      next if( kappa_wavelet[i].nil? )
+      #e[i] = kappa_smooth[i] + 1/all_energy[i] + 1/all_distances[i]
+      #e[i] = kappa_wavelet[i] + 1/all_energy[i] + 1/all_distances[i]
+      e[i] = kappa_wavelet[i] - all_energy[i] - all_distances[i]
     end
 
     # Very simple way to determine the turning points without the derivative
@@ -1240,6 +1362,10 @@ class BodyComponents # {{{
     dis   = all_distances
     plot  = all_final
 
+    #kappa = old_kappa
+
+    interactive_gnuplot_eucledian_distances( wavelet_kappa_smooth, "%e %e\n", ["Frames", "Wavelet Smoothed Kappa, then poly fitted Value (0 <= e <= 1)"], "Wavelet Smoothed Kappa then poly fitted Value Graph", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gp", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "poly_wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "poly_wavelet_tp_smoothed_frenet_frame.gpdata" ) 
+    interactive_gnuplot_eucledian_distances( kappa_wavelet, "%e %e\n", ["Frames", "Normalized and Wavelet Smoothed Kappa Value (0 <= e <= 1)"], "Normalized and Wavelet Smoothed Kappa Value Graph", "wavelet_smoothed_frenet_frame_kappa_plot.gp", "wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "wavelet_tp_smoothed_frenet_frame.gpdata" ) 
     interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Kappa Value (0 <= e <= 1)"], "Normalized Kappa Value Graph", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_frenet_frame.gpdata", turning_poses, "tp_frenet_frame.gpdata" )
     interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Kappa Value (0 <= e <= 1)"], "Normalized Smoothed Kappa Value Graph", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_smoothed_frenet_frame.gpdata", turning_poses, "tp_smoothed_frenet_frame.gpdata" ) 
     

@@ -3,7 +3,8 @@
 type: Dance
 name: Sasara Theodori
 filename: ../../../../data/DanceData/Manoj/FilterSasara.vpm
-from: 600
+#from: 600
+from: 0
 to: 1220
 
 # Dance Master Poses

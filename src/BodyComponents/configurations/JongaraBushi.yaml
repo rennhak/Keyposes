@@ -3,7 +3,8 @@
 type: Dance
 name: Jongara Bushi
 filename: ../../../../data/DanceData/Jongara.vpm
-from: 1250
+#from: 1250
+from: 0
 to: 3850
 
 # Dance Master Poses

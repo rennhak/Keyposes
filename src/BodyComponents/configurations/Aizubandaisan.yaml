@@ -3,8 +3,10 @@
 type: Dance
 name: Aizubandaisan
 filename: ../../../../data/DanceData/Aizu_Female.vpm
+#from: 182
 from: 0
-to: 1100
+to: 1150
+
 
 # Dance Master Poses
 # - [ exact, [ approx. from, approx. to ] ]
