@@ -381,7 +381,7 @@ class BodyComponents # {{{
   # @param line2_pt1 Segment class (MotionX vpm plugin)
   # Deprec: @returns Array of scalars with the distances between line1(a,b) and line2(c,d)
   # @returns Segment dP which is the new closest point for all frames f
-  def distance_of_line_to_line line1_pt0, line1_pt1, line2_pt0, line2_pt1
+  def distance_of_line_to_line line1_pt0, line1_pt1, line2_pt0, line2_pt1 # {{{
     # FIXME: Make a line abstration of lines
 
     # segments class -> u, v, w
@@ -416,7 +416,7 @@ class BodyComponents # {{{
     dP  = w + (u*sc) - (v*tc) # L1(sc) - L2(tc)
 
     return dP
-  end # of def distance_3D_line_to_line
+  end # of def distance_3D_line_to_line }}}
 
 
   # = The function eucledian_distance_window takes a given dataset (x1,y1,z1;..) and calculates the
@@ -908,9 +908,6 @@ class BodyComponents # {{{
   end # of def power data }}}
 
 
-
-
-
   # = The function energy calculates the phyiscal energy at each point for the data
   # @param data Accepts array of arrays in the shape of [ [x1,y1,z1], [...], ...]
   # @param capturingIntervall Accepts float, representing the capture intervall of the motion capture equipment
@@ -933,13 +930,6 @@ class BodyComponents # {{{
     result
   end # of def energy data }}}
 
-
-
-  # = maxDensePoints takes 
-  def maxDensePoints # {{{
-
-  end # }}}
-  
 
   # = eucleadianDistance takes 
   def eucleadianDistance x1, y1, x2, y2 # {{{
@@ -1072,7 +1062,7 @@ class BodyComponents # {{{
   end # of def get_cpa }}}
 
   # = Perform calculations and extract data
-  def get_data
+  def get_data # {{{
     pca     = PCA.new
 
     forearms                           = getTrianglePatch( "pt27", "relb", "pt26", "lelb", "pt30", @from, @to )
@@ -1380,7 +1370,7 @@ class BodyComponents # {{{
 
     #pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[X Y Z],  "forearms_plot.gp" )
 
-  end
+  end # of getData }}}
 
 
   # = getIntersectionPoint returns a solution for the following:
@@ -1418,10 +1408,11 @@ class BodyComponents # {{{
     # FIXME write a class for matrix functionality
   end # end of determinat }}}
 
+
   # = Reads a yaml config describing the motion file
-  def read_motion_config filename
+  def read_motion_config filename # {{{
     File.open( filename, "r" ) { |file| YAML.load( file ) }                 # return proc which is in this case a hash
-  end
+  end # }}}
 
   # == Dynamical method creation at run-time
   # @param method Takes the method header definition
@@ -1438,7 +1429,7 @@ class BodyComponents # {{{
 end # of class BodyComponents }}}
 
 
-# Direct invocation, for manual testing beside rspec
+# = Direct invocation, for manual testing beside rspec
 if __FILE__ == $0 # {{{
 
   file    = ARGV.first
@@ -1449,4 +1440,3 @@ end # }}}
 
 
 # vim=ts:2
-

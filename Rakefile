@@ -91,6 +91,13 @@ task :yardoc do |t|
   `yardoc -o doc/yardoc`
 end
 
+desc "Commit data to github.com"
+task :commit do |c|
+    `rake clean`
+    `git add *`
+    system "git commit -a"
+    `git push`
+end 
 
 # cucumber --format usage
 # cucover
