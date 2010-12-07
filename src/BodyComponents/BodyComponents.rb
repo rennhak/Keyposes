@@ -64,49 +64,86 @@ class BodyComponents # {{{
     @options = options
 
     # Minimal configuration
-    @config               = OpenStruct.new
-    @config.os            = "Unknown"
-    @config.platform      = "Unknown"
-    @config.build_dir     = "build"
-    @config.encoding      = "UTF-8"
-    @config.archive_dir   = "archive"
-    @config.cache_dir     = "cache"
+    @config                       = OpenStruct.new
+    @config.os                    = "Unknown"
+    @config.platform              = "Unknown"
+    @config.build_dir             = "build"
+    @config.encoding              = "UTF-8"
+    @config.archive_dir           = "archive"
+    @config.config_dir            = "configurations"
+    @config.cache_dir             = "cache"
 
-unless( options.nil? )
-    # FIXME: Make sure we get the motion config file via CLI opts
-    @config = read_motion_config( motion_config_file )
-    
-    
-    @file   = @config.filename
-    @from   = @config.from
-    @to     = @config.to
-    @name   = @config.name
-    @dmps   = @config.dmp
+    # Determine which configs are available
+    @configurations       = Dir[ "#{@config.config_dir}/*.yaml" ].collect { |d| d.gsub( "#{@config.config_dir}/", "" ).gsub( ".yaml", "" ) }
 
-    @dance_master_poses  = []
-    @dance_master_poses_range = []
-    @dmps.each { |dmp_array| @dance_master_poses << dmp_array.first; @dance_master_poses_range << dmp_array.last }
+    unless( options.nil? )
+      message :success, "Starting #{__FILE__} run"
+      message :info,    "Colorizing output as requested" if( @options.colorize )
 
-    @adt    = ADT.new( @file )
+      ####
+      # Main Control Flow
+      ##########
 
-    ## b0rked! Singleton methods - but where??! (?? http://doc.okkez.net/191/view/method/Object/i/initialize_copy )
-    ## Speedup by loading a Marshalled object from /tmp/ if previously run
-    #if File.exist?( "/tmp/BodyComponents_Marshall_VPM_Data.tmp" )
-    #  puts "Loading Marshal dump I found in /tmp/BodyComponents_Marshall_VPM_Data.tmp for speedup"
-    #  vpm = Marshal.load( File.read("/tmp/BodyComponents_Marshall_VPM_Data.tmp").readlines.to_s )
-    #else
-    #  vpm   = ADT.new( file )
-    #  x = vpm.deep_clone.to_s
+      # Clean and reuse if desired
+      clean         if( @options.clean )
+      #check_directories # create @config.XXXX_dirs if necessary
+      use_cache     if( @options.cache )
 
-    #  puts "Creating Marshal dump for later speedups (/tmp/BodyComponents_Marshall_VPM_Data.tmp)"
-    #  o = Marshal.dump( x )
-    #  File.open( "/tmp/BodyComponents_Marshall_VPM_Data.tmp", File::CREAT|File::TRUNC|File::RDWR, 0644) { |f| f.write( o.to_s ) }
-    #end
+      unless( @options.process.empty? )
+        @options.process.each do |motion_config_file|
+          motion_config_filename    = @config.config_dir + "/" + motion_config_file + ".yaml"
+          message :info, "Loading Motion Capture config file (#{motion_config_filename})"
 
-    # p vpm.segments
-    # See shiratori thesis page 132
+          @motion_config            = read_motion_config( motion_config_filename )
+
+          @file                     = @motion_config.filename
+          @from                     = @motion_config.from
+          @to                       = @motion_config.to
+          @name                     = @motion_config.name
+          @dmps                     = @motion_config.dmp
+
+          @dance_master_poses       = []
+          @dance_master_poses_range = []
+          @dmps.each { |dmp_array| @dance_master_poses << dmp_array.first; @dance_master_poses_range << dmp_array.last }
+
+          message :info, "Loading the Motion Capture data (#{@file}) via the MotionX VPM Plugin"
+          @adt                      = ADT.new( @file )
+
+          message :info, "Performing CPA-PCA Turning pose extraction"
+          get_data
+
+          ## b0rked! Singleton methods - but where??! (?? http://doc.okkez.net/191/view/method/Object/i/initialize_copy )
+          ## Speedup by loading a Marshalled object from /tmp/ if previously run
+          #if File.exist?( "/tmp/BodyComponents_Marshall_VPM_Data.tmp" )
+          #  puts "Loading Marshal dump I found in /tmp/BodyComponents_Marshall_VPM_Data.tmp for speedup"
+          #  vpm = Marshal.load( File.read("/tmp/BodyComponents_Marshall_VPM_Data.tmp").readlines.to_s )
+          #else
+          #  vpm   = ADT.new( file )
+          #  x = vpm.deep_clone.to_s
+
+          #  puts "Creating Marshal dump for later speedups (/tmp/BodyComponents_Marshall_VPM_Data.tmp)"
+          #  o = Marshal.dump( x )
+          #  File.open( "/tmp/BodyComponents_Marshall_VPM_Data.tmp", File::CREAT|File::TRUNC|File::RDWR, 0644) { |f| f.write( o.to_s ) }
+          #end
+
+          # p vpm.segments
+          # See shiratori thesis page 132
+          #
+
+          message :success, "Finished processing of #{motion_config_filename.to_s}"
+        end # of @options.process.each
+      end # of unless( @options.process.empty? )
+    end # of unless( options.nil? )
 
   end # of initialize }}}
+
+
+  # = The function clean will remove clutter which has been generated by the script such as .gp and .gpdata files
+  def clean # {{{
+    message :info, "Cleaning up any old .gp, .gpdata and work/* files"
+    `rm -f *.gp *.gpdata`
+    `rm -f work/*.csv`
+  end # of def clean }}}
 
 
   # = The function 'parse_cmd_arguments' takes a number of arbitrary commandline arguments and parses them into a proper data structure via optparse
@@ -117,34 +154,31 @@ unless( options.nil? )
     options               = OpenStruct.new
 
     # Define default options
-    options.encoding      = "UTF-8"
-    options.proxy_chains  = false
     options.verbose       = false
-    options.standard      = false
     options.clean         = false
     options.cache         = false
     options.colorize      = false
-    options.download      = []
+    options.process       = []
 
     pristine_options      = options.dup
 
     opts = OptionParser.new do |opts|
       opts.banner = "Usage: #{__FILE__.to_s} [options]"
 
-      opts.separator ""
-      opts.separator "General options:"
+      #opts.separator ""
+      #opts.separator "General options:"
 
       # Boolean switch.
-      opts.on("-s", "--standard", "Performs a standard install (Beginner's best choice)") do |s|
-        options.standard = s
-      end
+      #opts.on("-s", "--standard", "Performs a standard install (Beginner's best choice)") do |s|
+      #  options.standard = s
+      #end
 
       opts.separator ""
       opts.separator "Specific options:"
 
       # Set of arguments
-      opts.on("-d", "--download OPT", @applications, "Download a program package from the INTERNET (OPT: #{ @applications.collect { |n| n.to_s }.join(', ') })" ) do |d|
-        options.download << d
+      opts.on("-p", "--process OPT", @configurations, "Process one or more detected configuration (OPT: #{ @configurations.sort.join(', ') })" ) do |d|
+        options.process << d
       end
 
       # Boolean switch.
@@ -184,7 +218,7 @@ unless( options.nil? )
       # Another typical switch to print the version.
       opts.on_tail("--version", "Show version") do
         puts OptionParser::Version.join('.')
-        exit
+        exi.sortt
       end
     end
 
@@ -200,6 +234,85 @@ unless( options.nil? )
     options
   end # of parse_cmd_arguments }}}
 
+  # = The function colorize takes a message and wraps it into standard color commands such as for bash.
+  # @param color String, of the colorname in plain english. e.g. "LightGray", "Gray", "Red", "BrightRed"
+  # @param message String, of the message which should be wrapped
+  # @returns String, colorized message string
+  # WARNING: Might not work for your terminal
+  # FIXME: Implement bold behavior
+  # FIXME: This method is currently b0rked
+  def colorize color, message # {{{
+
+    # Black       0;30     Dark Gray     1;30
+    # Blue        0;34     Light Blue    1;34
+    # Green       0;32     Light Green   1;32
+    # Cyan        0;36     Light Cyan    1;36
+    # Red         0;31     Light Red     1;31
+    # Purple      0;35     Light Purple  1;35
+    # Brown       0;33     Yellow        1;33
+    # Light Gray  0;37     White         1;37
+
+    colors  = { 
+      "Gray"        => "\e[1;30m",
+      "LightGray"   => "\e[0;37m",
+      "Cyan"        => "\e[0;36m",
+      "LightCyan"   => "\e[1;36m",
+      "Blue"        => "\e[0;34m",
+      "LightBlue"   => "\e[1;34m",
+      "Green"       => "\e[0;32m",
+      "LightGreen"  => "\e[1;32m",
+      "Red"         => "\e[0;31m",
+      "LightRed"    => "\e[1;31m",
+      "Purple"      => "\e[0;35m",
+      "LightPurple" => "\e[1;35m",
+      "Brown"       => "\e[0;33m",
+      "Yellow"      => "\e[1;33m",
+      "White"       => "\e[1;37m"
+    }
+    nocolor    = "\e[0m"
+
+    colors[ color ] + message + nocolor
+  end # of def colorize }}}
+
+
+  # = The function message will take a message as argument as well as a level (e.g. "info", "ok", "error", "question", "debug") which then would print 
+  #   ( "(--) msg..", "(II) msg..", "(EE) msg..", "(??) msg..")
+  # @param level Ruby symbol, can either be :info, :success, :error or :question
+  # @param msg String, which represents the message you want to send to stdout (info, ok, question) stderr (error)
+  # Helpers: colorize
+  def message level, msg # {{{
+
+    symbols = {
+      :info      => "(--)",
+      :success   => "(II)",
+      :error     => "(EE)",
+      :question  => "(??)",
+			:debug		 => "(++)"
+    }
+
+    raise ArugmentError, "Can't find the corresponding symbol for this message level (#{level.to_s}) - is the spelling wrong?" unless( symbols.key?( level )  )
+
+    if( @options.colorize )
+      if( level == :error )
+        STDERR.puts colorize( "LightRed", "#{symbols[ level ].to_s} #{msg.to_s}" )
+      else
+        STDOUT.puts colorize( "LightGreen", "#{symbols[ level ].to_s} #{msg.to_s}" ) if( level == :success )
+        STDOUT.puts colorize( "LightCyan", "#{symbols[ level ].to_s} #{msg.to_s}" ) if( level == :question )
+        STDOUT.puts colorize( "Brown", "#{symbols[ level ].to_s} #{msg.to_s}" ) if( level == :info )
+        STDOUT.puts colorize( "LightBlue", "#{symbols[ level ].to_s} #{msg.to_s}" ) if( level == :debug and @options.debug )
+      end
+    else
+      if( level == :error )
+        STDERR.puts "#{symbols[ level ].to_s} #{msg.to_s}" 
+      else
+ 			  STDOUT.puts "#{symbols[ level ].to_s} #{msg.to_s}" if( level == :success )
+        STDOUT.puts "#{symbols[ level ].to_s} #{msg.to_s}" if( level == :question )
+        STDOUT.puts "#{symbols[ level ].to_s} #{msg.to_s}" if( level == :info )
+        STDOUT.puts "#{symbols[ level ].to_s} #{msg.to_s}" if( level == :debug and @options.debug )
+      end
+    end # of if( @config.colorize )
+
+  end # of def message }}}
 
 
 
@@ -1185,6 +1298,8 @@ unless( options.nil? )
   def get_data # {{{
     pca     = PCA.new
 
+    message :info, "CPA Extraction of all body components"
+
     forearms                           = getTrianglePatch( "pt27", "relb", "pt26", "lelb", "pt30", @from, @to )
     #forearms_pca, fp_eval, fp_evec    = pca.do_pca( pca.reshape_data( forearms.dup, true, false ), 0 )
     #forearms_tb                       = pca.transform_basis( forearms_pca, fp_eval, fp_evec )
@@ -1269,6 +1384,8 @@ unless( options.nil? )
     m = 0; mass.each_value { |v| m += v }
     m = m*2 # we have each component e.g. left + right arm etc.
 
+    message :info, "Performing PCA reduction on all body components CPA"
+
     all_pca, all_eval, all_evec       = pca.do_pca( all, ((count*3)-3) )
     all_final                         = pca.clean_data( pca.transform_basis( all_pca, all_eval, all_evec ), 3 )
 
@@ -1288,12 +1405,14 @@ unless( options.nil? )
       end
     end
 
-    puts "Calling MATLAB via chroot"
+    message :info, "Calling MATLAB for some specialized processing"
     `sudo su -c "chroot /export/temp2/MatLAB_7_Linux/matlab /home/mh/ml/bin/matlab_call.sh"`
 
     # Read file @from matlab processing for frenet frame
     # kappa index is exacly 2 shorter than the others
     kappa = File.open( "work/kappa.csv", "r" ).readlines.collect! { |n| n.to_f }
+
+    message :info, "Performing additional calculations (E_k, etc.)" 
 
     v                                 = velocity( pca.reshape_data( all_final.dup, false, true ), 5 )
     a                                 = acceleration( pca.reshape_data( all_final.dup, false, true), 5 )
@@ -1360,6 +1479,7 @@ unless( options.nil? )
 
     # http://users.rowan.edu/~polikar/WAVELETS/WTpart1.html
 
+    message :info, "Performing polynomial fitting of data"
     # OLD METHOD
     # Smoothing poly - use sth between 50 - 100
     coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa.length-1).to_s}" )), GSL::Vector.alloc( kappa ), 50)
@@ -1461,8 +1581,8 @@ unless( options.nil? )
     turning_poses       = tp_frames.collect { |n| n+@from.to_i }
     turning_poses.shift     # ignore the very first point
 
-    puts "DMPs are: #{@dance_master_poses.join(", ")}"
-    puts "Turningposes are: #{turning_poses.join(", ")}"
+    message :info, "DMPs are: #{@dance_master_poses.join(", ")}"
+    message :info, "Turningposes are: #{turning_poses.join(", ")}"
 
     #### Messy Mablab interaction end
 
@@ -1474,6 +1594,8 @@ unless( options.nil? )
 
     #kappa = old_kappa
 
+    message :info, "Preparing data and plot files for gnuplot"
+    
     interactive_gnuplot_eucledian_distances( wavelet_kappa_smooth, "%e %e\n", ["Frames", "Wavelet Smoothed Kappa, then poly fitted Value (0 <= e <= 1)"], "Wavelet Smoothed Kappa then poly fitted Value Graph", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gp", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "poly_wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "poly_wavelet_tp_smoothed_frenet_frame.gpdata" ) 
     interactive_gnuplot_eucledian_distances( kappa_wavelet, "%e %e\n", ["Frames", "Normalized and Wavelet Smoothed Kappa Value (0 <= e <= 1)"], "Normalized and Wavelet Smoothed Kappa Value Graph", "wavelet_smoothed_frenet_frame_kappa_plot.gp", "wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "wavelet_tp_smoothed_frenet_frame.gpdata" ) 
     interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Kappa Value (0 <= e <= 1)"], "Normalized Kappa Value Graph", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_frenet_frame.gpdata", turning_poses, "tp_frenet_frame.gpdata" )
@@ -1552,15 +1674,8 @@ end # of class BodyComponents }}}
 # = Direct invocation, for manual testing beside rspec
 if __FILE__ == $0 # {{{
 
-  #file    = ARGV.first
-  #bc      = BodyComponents.new( file )
-
   options = BodyComponents.new.parse_cmd_arguments( ARGV )
   bc      = BodyComponents.new( options )
-  bc.get_data
-
-
-
 
 end # }}}
 
