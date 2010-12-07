@@ -21,17 +21,29 @@
 #######
 
 
+# = Libraries
+#
+# require 'rubygems'
+#
+# == OptionParser related
+require 'optparse'
+require 'optparse/time'
+require 'ostruct'
+require 'pp'
+#
+#
 # Standard includes
 require 'gsl'
-
-# Custom includes
-require 'Extensions.rb'                                 # Deep_Clone hack
-
+#
+# Custom includes (changes object behaviors)
+require 'Extensions.rb'
+#
 # From MotionX - FIXME: Use MotionX's XYAML interface
 require 'ADT.rb'
-
-# Local
+#
+# Local includes
 require 'PCA.rb'
+
 
 # Change Namespace
 include GSL
@@ -48,8 +60,23 @@ include GSL
 #######
 class BodyComponents # {{{
 
-  def initialize motion_config_file # {{{
+  def initialize options = nil # {{{
+    @options = options
+
+    # Minimal configuration
+    @config               = OpenStruct.new
+    @config.os            = "Unknown"
+    @config.platform      = "Unknown"
+    @config.build_dir     = "build"
+    @config.encoding      = "UTF-8"
+    @config.archive_dir   = "archive"
+    @config.cache_dir     = "cache"
+
+unless( options.nil? )
+    # FIXME: Make sure we get the motion config file via CLI opts
     @config = read_motion_config( motion_config_file )
+    
+    
     @file   = @config.filename
     @from   = @config.from
     @to     = @config.to
@@ -80,6 +107,99 @@ class BodyComponents # {{{
     # See shiratori thesis page 132
 
   end # of initialize }}}
+
+
+  # = The function 'parse_cmd_arguments' takes a number of arbitrary commandline arguments and parses them into a proper data structure via optparse
+  # @param args Ruby's STDIN.ARGS from commandline
+  # @returns Ruby optparse package options hash object
+  def parse_cmd_arguments( args ) # {{{
+
+    options               = OpenStruct.new
+
+    # Define default options
+    options.encoding      = "UTF-8"
+    options.proxy_chains  = false
+    options.verbose       = false
+    options.standard      = false
+    options.clean         = false
+    options.cache         = false
+    options.colorize      = false
+    options.download      = []
+
+    pristine_options      = options.dup
+
+    opts = OptionParser.new do |opts|
+      opts.banner = "Usage: #{__FILE__.to_s} [options]"
+
+      opts.separator ""
+      opts.separator "General options:"
+
+      # Boolean switch.
+      opts.on("-s", "--standard", "Performs a standard install (Beginner's best choice)") do |s|
+        options.standard = s
+      end
+
+      opts.separator ""
+      opts.separator "Specific options:"
+
+      # Set of arguments
+      opts.on("-d", "--download OPT", @applications, "Download a program package from the INTERNET (OPT: #{ @applications.collect { |n| n.to_s }.join(', ') })" ) do |d|
+        options.download << d
+      end
+
+      # Boolean switch.
+      opts.on("-v", "--verbose", "Run verbosely") do |v|
+        options.verbose = v
+      end
+
+      # Boolean switch.
+      opts.on("-q", "--quiet", "Run quietly, don't output much") do |v|
+        options.verbose = v
+      end
+
+      opts.separator ""
+      opts.separator "Common options:"
+
+      
+      # Boolean switch.
+      opts.on("-c", "--colorize", "Colorizes the output of the script for easier reading") do |c|
+        options.colorize = c
+      end
+
+      # Boolean switch.
+      opts.on("-u", "--use-cache", "Use cached/archived files instead of downloading/processing again") do |u|
+        options.cache = u
+      end
+
+      # Boolean switch.
+      opts.on( "--clean", "Cleanup after the script and remove things not needed") do |c|
+        options.clean = c
+      end
+
+      opts.on_tail("-h", "--help", "Show this message") do
+        puts opts
+        exit
+      end
+
+      # Another typical switch to print the version.
+      opts.on_tail("--version", "Show version") do
+        puts OptionParser::Version.join('.')
+        exit
+      end
+    end
+
+    opts.parse!(args)
+
+    # Show opts if we have no cmd arguments
+    if( options == pristine_options )
+      puts opts
+      puts ""
+      message :error, "You need to define at least which install method you want, e.g. 'standard' with './OpenHRP_Box.rb -s'\n\n"
+    end
+
+    options
+  end # of parse_cmd_arguments }}}
+
 
 
 
@@ -1432,9 +1552,15 @@ end # of class BodyComponents }}}
 # = Direct invocation, for manual testing beside rspec
 if __FILE__ == $0 # {{{
 
-  file    = ARGV.first
-  bc      = BodyComponents.new( file )
+  #file    = ARGV.first
+  #bc      = BodyComponents.new( file )
+
+  options = BodyComponents.new.parse_cmd_arguments( ARGV )
+  bc      = BodyComponents.new( options )
   bc.get_data
+
+
+
 
 end # }}}
 
