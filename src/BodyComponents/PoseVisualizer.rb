@@ -463,15 +463,15 @@ class PoseVisualizer # {{{
   # @param      [Numeric]       y                   Float, represeting a point coordinate.
   # @param      [Numeric]       z                   Float, represeting a point coordinate.
   # @param      [Array]         color               Array, filled with three elements [r, g, b] (pass just a @color struct entry)
-  # @param      [Numeric]       line_width          Float, representing a line width (stroke width)
+  # @param      [Numeric]       point_size          Float, representing a point size
   # @param      [Boolean]       normalize_values    Boolean, true if input should be normalized, false if not (leave unchanged)
   def draw_point x = nil, y = nil, z = nil, color = @color.black, point_size = 10, normalize_values = true
 
     # Input verfication {{{
     raise ArgumentError, "All x,y,z input must be non-nil" if( x.nil? or y.nil? or z.nil? )
     raise ArgumentError, "Color needs to be of type array" unless( color.is_a?(Array) )
-    raise ArgumentError, "Line width needs to be of type numeric" unless( line_width.is_a?(Numeric) )
-    raise ArgumentError, "Normalized values needs to be of type bool" unless( normalize_values.is_a?(Boolean) )
+    raise ArgumentError, "Line width needs to be of type numeric" unless( point_size.is_a?(Numeric) )
+    raise ArgumentError, "Normalized values needs to be of type bool" unless( [TrueClass, FalseClass].include?( normalize_values.class ) ) # boolean check
     # }}}
 
     glPointSize( point_size )                                                             # set point size
@@ -504,7 +504,7 @@ class PoseVisualizer # {{{
     raise ArgumentError, "All x,y,z input must be non-nil" if( x1.nil? or y1.nil? or z1.nil? or x2.nil? or y2.nil? or z2.nil? )
     raise ArgumentError, "Color needs to be of type array" unless( color.is_a?(Array) )
     raise ArgumentError, "Line width needs to be of type numeric" unless( line_width.is_a?(Numeric) )
-    raise ArgumentError, "Normalized values needs to be of type bool" unless( normalize_values.is_a?(Boolean) )
+    raise ArgumentError, "Normalized values needs to be of type bool" unless( [TrueClass, FalseClass].include?( normalize_values.class ) )
     # }}}
 
     glLineWidth( line_width )       # set line width
