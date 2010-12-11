@@ -53,12 +53,13 @@ Magick::RVG.dpi = 72
 #######
 class PoseVisualizer # {{{
 
-  def initialize options = nil, kmeans = nil, adts = nil  # {{{
+  def initialize options = nil, kmeans = nil, adts = nil, closest_frame = nil  # {{{
     @options = options
     @log     = Logger.new( options )
 
     # contains hash with hash[frame] => cluster id
     @kmeans           = kmeans
+    @closest_frame    = closest_frame
 
     @lookup_table     = []
 
@@ -223,6 +224,49 @@ class PoseVisualizer # {{{
   def drawgl width = nil, height = nil
     @tmp_cnt          = 0
 
+
+    @clus = Hash.new
+    @kmeans.each_pair do |frame, cluster|
+      @clus[ cluster ] = [] if( @clus[ cluster ].nil? )
+      @clus[ cluster ] << frame
+    end
+
+    @intervals = Hash.new
+    @clus.each_pair do |cluster, frames|
+      @current_interval = []
+      @intervals[ cluster ] = [] if( @intervals[ cluster ].nil? )
+      # puts "Cluster: " + cluster.to_s
+
+      frames.each_with_index do |frame, index|
+        if( @current_interval.empty? )
+          @current_interval << frame.to_i
+          # puts "A: #{frame.to_s}"
+          next
+        end
+
+        # reached end of interval
+        unless( ( frames[ index ].to_i + 1 ) == ( frames[ index + 1 ] )  )
+          @current_interval << frame.to_i
+          @intervals[ cluster ] << @current_interval.dup
+          @current_interval.clear
+          # puts "B: #{frame.to_s}"
+          next
+        end
+
+      end # of frames.each
+    end # of @clus.each_pair
+
+    @final_intervals = Hash.new
+    @intervals.each_pair do |cluster, vals|
+      vals.each do |start_frame, end_frame|
+        @final_intervals[ cluster ] = [] if( @final_intervals[ cluster ].nil? )
+
+        middle_frame = start_frame + ( ( end_frame - start_frame ) * 0.5 ).to_i
+        @final_intervals[ cluster ] << [ start_frame, middle_frame, end_frame ]
+      end
+    end
+
+
     @adts.each do |adt, turning, meta|
 
       config          = turning[0][0]
@@ -305,7 +349,7 @@ class PoseVisualizer # {{{
         @tmp_cnt = 0
 
         @log.message :warning, "Showing *NOW* only CLUSTER #{k.to_s}"
-        sleep( 3 )
+        # sleep( 3 )
 
         0.upto( rfin.length - 1 ) do |i|
 
@@ -479,21 +523,81 @@ class PoseVisualizer # {{{
           #@screen.flip
           #glEnable(GL_DEPTH_TEST)
 
-          screenshot( current_cluster, i )
+          @final_intervals[ current_cluster ].each do |start_frame, middle_frame, end_frame|
+            if( [ start_frame.to_i, middle_frame.to_i, end_frame.to_i ].include?( i ) )
+              screenshot( current_cluster, i )
+            end
+          end
 
           # draw_text( 0, 0, 0.0, 0.0, 0.0, GLUT_BITMAP_TIMES_ROMAN_24, "HELLO WORLD" )
-          sleep( 0.1 )
+          # sleep( 0.1 )
 
           GL.MatrixMode(GL_MODELVIEW) # display the back buffer
           SDL::GL.swap_buffers
 
           @tmp_cnt += 1
 
+
+          # Closest frame to centroid screenshot
+          # screenshot( @closest_frame.index( i ).to_s, i, "graphs/clusters/centroids" )  if( @closest_frame.include?( i ) )
+
+
         end
 
       end
 
+
+
+      # Concat images
+      @cluster_images = Hash.new
+      @final_intervals.each_pair do |cluster, array|
+
+        @cluster_images[ cluster.to_s ] = [] if( @cluster_images[ cluster.to_s ].nil? )
+
+        array.each do |start_frame, middle_frame, end_frame|
+
+          images = []
+          images <<  "graphs/clusters/" + cluster.to_s + "/" + start_frame.to_s + ".png"
+          images <<  "graphs/clusters/" + cluster.to_s + "/" + middle_frame.to_s + ".png"
+          images <<  "graphs/clusters/" + cluster.to_s + "/" + end_frame.to_s + ".png"
+
+          @cluster_images[ cluster.to_s ] << images
+        end
+      end
+
+      @vertical = []
+      cnt = 0
+      @cluster_images.each_pair do |cluster, images|
+        cnt = 0
+        @vertical.clear
+        images.each do |start, middle, last|
+
+          imagelist = Magick::ImageList.new( start, middle, last )
+
+          imagelist.each do |image|
+            image.border!( 5, 5, "black" )
+          end
+
+          im = imagelist.append( false )
+          fn = "/tmp/concat_#{cluster.to_s}_#{cnt.to_s}.png"
+          im.write( fn.to_s )
+          @vertical << fn
+          cnt += 1
+        end # of images.each
+
+        final_fn = "/tmp/final_#{cluster.to_s}.png"
+
+        @log.message :info, "Generating #{final_fn.to_s}"
+
+        final_im = Magick::ImageList.new( *@vertical )
+        final_im = final_im.append( true )
+        final_im.write( final_fn )
+
+      end # of @cluster_images.each_pair
+
     end
+
+
 
     @font.close
     SDL.quit
@@ -521,6 +625,17 @@ class PoseVisualizer # {{{
     data = glReadPixels( 0, 0, @width, @height, GL_RGB, GL_UNSIGNED_SHORT )
     screenbuffer = Magick::Image.new( @width, @height )
     screenbuffer.import_pixels( 0, 0, @width, @height, "RGB", data, Magick::ShortPixel ).flip!
+
+    text_string  = "Cluster: #{cluster.to_s} Frame: #{frame.to_s} Component: #{@options.body_parts.join(" ").to_s}"
+
+    text = Magick::Draw.new
+    text.font_family = 'helvetica'
+    text.pointsize = 25
+    text.gravity = Magick::SouthGravity
+    text.annotate( screenbuffer, 0, 0, 0, 0, text_string ) {
+      self.fill = 'darkred'
+    }
+
     screenbuffer.write( filename )
 
   end # of def screenshot cluster = nil, frame = nil, save_dir = "graphs/clusters" }}}

@@ -77,7 +77,14 @@ task :clean do |t|
   `rm -rf src/BodyComponents/graphs/*.eps`
   `rm -rf src/BodyComponents/graphs/*.dot`
   `rm -rf src/BodyComponents/graphs/*.png`
+  `rm -rf src/BodyComponents/graphs/clusters/*`
+  `rmdir src/BodyComponents/graphs/clusters` if( File.exists?( "src/BodyComponents/graphs/clusters" ) )
   `rm -f  src/BodyComponents/work/*.csv`
+
+  Dir.chdir( "/tmp/" ) do
+    `rm -rf *.png`
+  end
+
 end
 
 desc "Generate eps from gnuplot gp files"

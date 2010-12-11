@@ -281,6 +281,26 @@ class Controller # {{{
             kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
             kms                        << kmeans
             distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
+
+            @closest_distance = []
+            @closest_frame    = []
+            distances.each_pair do |frame, array|
+              array.each do |cluster_id, distance|
+                if( @closest_distance[ cluster_id ].nil? )
+                  @closest_distance[ cluster_id ] = distance 
+                  @closest_frame[ cluster_id ] = frame
+                end
+
+                if( @closest_distance[ cluster_id ] > distance )
+                  @closest_distance[ cluster_id ] = distance 
+                  @closest_frame[ cluster_id ] = frame 
+                end
+              end
+            end
+
+            p @closest_frame.sort
+
+
             closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
             distortions                 = clustering.distortions( closest_centroids )
             squared_error_distortions   = clustering.squared_error_distortion( closest_centroids )
@@ -302,7 +322,9 @@ class Controller # {{{
         @turning.get_dot_graph( kms.last )
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kms.last )
 
-        @pv         = PoseVisualizer.new( @options, kms.last, @adts )
+        unless( @options.clustering_k_search )
+          @pv         = PoseVisualizer.new( @options, kms.last, @adts, @closest_frame )
+        end
 
       else # if this is given we want to analyse only one dance
         @log.message :error, "No processing name given via --name '#{@options.process}'" if( @options.process == "" )
