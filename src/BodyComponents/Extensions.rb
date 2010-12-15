@@ -105,6 +105,45 @@ class OpenStruct
   end
 end
 
+# == Ninjapatching for Ruby
+class Array
+    def delete_unless &block
+        delete_if{ |element| not block.call( element ) }
+    end
+
+    # super nifty way of chunking an Array to n parts
+    # found http://drnicwilliams.com/2007/03/22/meta-magic-in-ruby-presentation/
+    # direct original source at http://redhanded.hobix.com/bits/matchingIntoMultipleAssignment.html
+    def %(len)
+        inject([]) do |array, x|
+            array << [] if [*array.last].nitems % len == 0
+            array.last << x
+            array
+        end
+    end
+
+    # now e.g. this is possible
+    #test = false
+    #if(test)
+    #    array = Array.new
+    #    0.upto(10) {|n| array << "foo"+n.to_s }
+    #    p array%3
+    #end
+
+    # % ./Extensions.rb 
+    # ["foo0", "foo1", "foo2", "foo3", "foo4", "foo5", "foo6", "foo7", "foo8", "foo9", "foo10"]
+    # % ./Extensions.rb
+    #[ ["foo0", "foo1", "foo2"], ["foo3", "foo4", "foo5"], ["foo6", "foo7", "foo8"], ["foo9", "foo10"]]
+
+
+    def sum
+      inject( nil ) { |sum,x| sum ? sum+x : x }
+    end
+
+    def mean
+      sum / size
+    end
+end
 
 
 #  # http://doc.okkez.net/191/view/method/Object/i/initialize_copy

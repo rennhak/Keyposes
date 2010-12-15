@@ -149,74 +149,120 @@ class BodyComponents # {{{
 
   # = The function motion_capture_data_smoothing takes a MotionX ADT Class as input and returns a smoothed version of the input data
   # @param input ADT Class Object of the MotionX package VPM plugin
-  def filter_motion_capture_data input # {{{
-    segment     = input.rkne
-    coordinates = segment.getCoordinates!
+  # @returns ADT Class Object containing the new smoothed version of the input
+  def filter_motion_capture_data input, point_window = 10, polynom_order = 5 # {{{
 
-    pca         = PCA.new
+    message :info, "Starting filtering of all relevant motion segments"
 
-    # Lets get a point sample
-    n           = 10
-    cluster     = []
-    coordinates.each_with_index do |points, index|
-      cluster << points
-      break if( index >= n )
-    end
+    # lets determine which segments we have in adt
+    segments        = input.segments
+    body            = input.body
+    body_segments   = body.segments
 
-    # determine the piecewise linear from p0 to p1 (eucleadian distance)
-    arc_lengths  = []
-    cluster.each_index { |index| arc_lengths << eucledian_distance( cluster[index], cluster[index+1] ) unless( (cluster[ index + 1 ]).nil? ) }
+    pca             = PCA.new
+    # result          = input.dup # we cant deepclone it - why?
 
-    cluster_l           = pca.reshape_data( cluster.dup, true, false )
-    x, y, z             = cluster_l.shift, cluster_l.shift, cluster_l.shift
+    # FIXME why is pt27 skipped?
 
-    t_s         = []
-    arc_lengths.each_index do |i|
-      # t[0] is 0
-      if( i == 0 )
-        t_s << 0
-        next
-      end
+    # Why not on all segments? How long?
+    # FXIME: This should be provided by MotionX VPM
+    # %w[pt27 relb pt26 lelb pt30 rfin lfin rsho lsho rkne pt29 lkne pt28 rank lank rhee lhee rtoe ltoe].each do |s|
+    segments.each do |s|
 
-      # from 2..n
-      t_s << t_s[ i - 1 ] + arc_lengths[ i ]
-    end
+      # we store our calculated chunks here
+      temp_container = []
 
-    result_splines = []
+      # only process if it exists
+      if( segments.include?( s.to_s ) )
+        message :info, "Filtering #{s.to_s} segment"
 
-    # get independent splines through s1 = [ t(i), x(i) ], s2 =[ t(i), y(i) ], s3 = [ t(i), z(i) ]
-    # Should use bsline actually, maybe to wavevy?
-    [ [ t_s, x ], [ t_s, y ], [ t_s, z ] ].each do |array|
-      t, axis = *array
+        segment     = eval( "input.#{s.to_s}" )
+        coordinates = segment.getCoordinates!
 
-      # can we not throw away the last point?
-      if( t.length != axis.length )
-        t_l, a_l = t.length, axis.length
-        if( t_l < a_l )
-          axis.pop
-        end
-      end
+        # FIXME: Don't throw away one point
+        coordinate_chunks = coordinates % point_window
+        coordinate_chunks.each do |cluster|
 
-      gsl_t, gsl_axis           = GSL::Vector.alloc( t ), GSL::Vector.alloc( axis )
-      coef, err, chisq, status  = GSL::MultiFit::polyfit( gsl_t, gsl_axis, 5 )
+          # # Lets get a point sample
+          # n           = point_window
+          # cluster     = []
+          # coordinates.each_with_index do |points, index|
+          #   cluster << points
+          #   break if( index >= n )
+          # end
 
+          # determine the piecewise linear from p0 to p1 (eucleadian distance)
+          arc_lengths  = []
+          cluster.each_index { |index| arc_lengths << eucledian_distance( cluster[index], cluster[index+1] ) unless( (cluster[ index + 1 ]).nil? ) }
 
-      # 0.upto( kappa.length - 1 ) { |n| kappa_smooth << coef.eval( n ) }
-      # result_splines << [ coef, err, chisq, status ]
-      result_splines << coef
-    end
+          cluster_l           = pca.reshape_data( cluster.dup, true, false )
+          x, y, z             = cluster_l.shift, cluster_l.shift, cluster_l.shift
 
-    cluster_smooth  = []
-    s1_coef, s2_coef, s3_coef = *result_splines
+          t_s         = []
+          arc_lengths.each_index do |i|
+            # t[0] is 0
+            if( i == 0 )
+              t_s << 0
+              next
+            end
 
-    t_s.each_index do |i|
-      s1_t, s2_t, s3_t = s1_coef.eval( t_s[i] ), s2_coef.eval( t_s[i] ), s3_coef.eval( t_s[i] )
-      cluster_smooth << [ s1_t, s2_t, s3_t ]
-    end
+            # from 2..n
+            t_s << t_s[ i - 1 ] + arc_lengths[ i ]
+          end
 
-    pca.interactive_gnuplot( cluster, "%e %e %e\n", %w[X Y Z],  "3d_plot.gp" )
-    pca.interactive_gnuplot( cluster_smooth, "%e %e %e\n", %w[X Y Z],  "3d_plot_smooth.gp" )
+          result_splines = []
 
+          # get independent splines through s1 = [ t(i), x(i) ], s2 =[ t(i), y(i) ], s3 = [ t(i), z(i) ]
+          # Should use bsline actually, maybe to wavevy?
+          [ [ t_s, x ], [ t_s, y ], [ t_s, z ] ].each do |array|
+            t, axis = *array
+
+            # can we not throw away the last point?
+            if( t.length != axis.length )
+              t_l, a_l = t.length, axis.length
+              if( t_l < a_l )
+                axis.pop
+              end
+            end
+
+            gsl_t, gsl_axis           = GSL::Vector.alloc( t ), GSL::Vector.alloc( axis )
+            coef, err, chisq, status  = GSL::MultiFit::polyfit( gsl_t, gsl_axis, polynom_order )
+
+            # result_splines << [ coef, err, chisq, status ]
+            result_splines << coef
+          end
+
+          cluster_smooth  = []
+          s1_coef, s2_coef, s3_coef = *result_splines
+
+          t_s.each_index do |i|
+            s1_t, s2_t, s3_t = s1_coef.eval( t_s[i] ), s2_coef.eval( t_s[i] ), s3_coef.eval( t_s[i] )
+            cluster_smooth << [ s1_t, s2_t, s3_t ]
+          end
+
+          temp_container += cluster_smooth
+
+        end # of coordinate_chunks.each do |cluster|
+
+        message :info, "Over-writing new filtered data to output ADT object"
+
+        t_container = pca.reshape_data( temp_container, true, false )
+        xtran, ytran, ztran = t_container.shift, t_container.shift, t_container.shift
+
+        # message :warning, "Size changed (bug in filter) - size of frames is now #{xtran.length.to_s} should be #{input.frames.to_s}"
+        message :warning, "Size changed (bug in filter) - size of frames is now #{xtran.length.to_s} "
+
+        eval( "input.#{s.to_s}.xtran = xtran" )
+        eval( "input.#{s.to_s}.ytran = ytran" )
+        eval( "input.#{s.to_s}.ztran = ztran" )
+
+      end # of if( segments.include?( 
+    end # of %w[pt27...
+
+    # pca.interactive_gnuplot( input.rkne.getCoordinates!, "%e %e %e\n", %w[X Y Z],  "3d_plot.gp" )
+    #pca.interactive_gnuplot( cluster_smooth, "%e %e %e\n", %w[X Y Z],  "3d_plot_smooth.gp" )
+
+    input
   end # of def motion_capture_data_smoothing }}}
 
 
@@ -363,9 +409,9 @@ class BodyComponents # {{{
   end # of def colorize }}}
 
 
-  # = The function message will take a message as argument as well as a level (e.g. "info", "ok", "error", "question", "debug") which then would print 
-  #   ( "(--) msg..", "(II) msg..", "(EE) msg..", "(??) msg..")
-  # @param level Ruby symbol, can either be :info, :success, :error or :question
+  # = The function message will take a message as argument as well as a level (e.g. "info", "ok", "error", "question", "debug", "warning") which then would print 
+  #   ( "(--) msg..", "(II) msg..", "(EE) msg..", "(??) msg.. (WW) msg..")
+  # @param level Ruby symbol, can either be :info, :success, :error or :question, :warning
   # @param msg String, which represents the message you want to send to stdout (info, ok, question) stderr (error)
   # Helpers: colorize
   def message level, msg # {{{
@@ -375,7 +421,8 @@ class BodyComponents # {{{
       :success   => "(II)",
       :error     => "(EE)",
       :question  => "(??)",
-			:debug		 => "(++)"
+			:debug		 => "(++)",
+      :warning   => "(WW)"
     }
 
     raise ArugmentError, "Can't find the corresponding symbol for this message level (#{level.to_s}) - is the spelling wrong?" unless( symbols.key?( level )  )
@@ -388,6 +435,7 @@ class BodyComponents # {{{
         STDOUT.puts colorize( "LightCyan", "#{symbols[ level ].to_s} #{msg.to_s}" ) if( level == :question )
         STDOUT.puts colorize( "Brown", "#{symbols[ level ].to_s} #{msg.to_s}" ) if( level == :info )
         STDOUT.puts colorize( "LightBlue", "#{symbols[ level ].to_s} #{msg.to_s}" ) if( level == :debug and @options.debug )
+        STDOUT.puts colorize( "Yellow", "#{symbols[ level ].to_s} #{msg.to_s}" ) if( level == :warning )
       end
     else
       if( level == :error )
@@ -397,6 +445,7 @@ class BodyComponents # {{{
         STDOUT.puts "#{symbols[ level ].to_s} #{msg.to_s}" if( level == :question )
         STDOUT.puts "#{symbols[ level ].to_s} #{msg.to_s}" if( level == :info )
         STDOUT.puts "#{symbols[ level ].to_s} #{msg.to_s}" if( level == :debug and @options.debug )
+        STDOUT.puts "#{symbols[ level ].to_s} #{msg.to_s}" if( level == :warning )
       end
     end # of if( @config.colorize )
 
