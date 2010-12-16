@@ -35,13 +35,15 @@ class Mathematics # {{{
   end # of def initialize }}}
 
 
-  # The function determines the simple norm of an input vector given by its coordinates x, y and z.
+  # @fn       def getNorm x, y, z # {{{
+  # @brief    The function determines the simple norm of an input vector given by its coordinates x, y and z.
   #
   # @param    [Numeric]   x   X coordinate of the given vector
   # @param    [Numeric]   y   Y coordinate of the given vector
   # @param    [Numeric]   z   Z coordinate of the given vector
+  #
   # @returns  [Numeric]       Result of the norm calculation
-  def getNorm x, y, z # {{{
+  def getNorm x = nil, y = nil, z = nil
 
     # Pre-condition check {{{
     raise ArgumentError, "X coordinate should be of type numeric, but is of (#{x.class.to_s})" unless( x.is_a?(Numeric) )
@@ -58,14 +60,18 @@ class Mathematics # {{{
   end # of def getNorm }}}
 
 
-  # Distance between Lines and Segments with their Closest Point of Approach
+  # @fn       def distance_of_line_to_line line1_pt0, line1_pt1, line2_pt0, line2_pt1 # {{{
+  # @brief    Distance between Lines and Segments with their Closest Point of Approach
+  #
   # @param    [Segment]   line1_pt0   Segment class (MotionX vpm plugin) for line 1 point 0
   # @param    [Segment]   line1_pt1   Segment class (MotionX vpm plugin) for line 1 point 1
   # @param    [Segment]   line2_pt0   Segment class (MotionX vpm plugin) for line 2 point 0
   # @param    [Segment]   line2_pt1   Segment class (MotionX vpm plugin) for line 2 point 1
+  #
   # @returns  [Segment]               Segment dP which is the new closest point for all frames f
+  #
   # @note     http://softsurfer.com/Archive/algorithm_0106/algorithm_0106.htm
-  def distance_of_line_to_line line1_pt0, line1_pt1, line2_pt0, line2_pt1 # {{{
+  def distance_of_line_to_line line1_pt0 = nil, line1_pt1 = nil, line2_pt0 = nil, line2_pt1 = nil
 
     # Pre-condition check {{{
     raise ArgumentError, "The line1_pt0 argument should be of type Segment, but it is (#{line1_pt0.class.to_s})" unless( line1_pt0.is_a?( Segment ) )
@@ -73,7 +79,6 @@ class Mathematics # {{{
     raise ArgumentError, "The line2_pt0 argument should be of type Segment, but it is (#{line2_pt0.class.to_s})" unless( line2_pt0.is_a?( Segment ) )
     raise ArgumentError, "The line2_pt1 argument should be of type Segment, but it is (#{line2_pt1.class.to_s})" unless( line2_pt1.is_a?( Segment ) )
     # }}}
-
 
     # Main
     # FIXME: Make a line abstration of lines
@@ -116,24 +121,27 @@ class Mathematics # {{{
   end # of def distance_3D_line_to_line }}}
 
 
-  # The eucledian_distance function takes two points in R^3 (x,y,z) and calculates the distance between them.
-  # You can easily derive this function via Pythagoras formula. P1,P2 \elem R^3
+  # @fn       def eucledian_distance point1, point2 # {{{
+  # @brief    The eucledian_distance function takes two points in R^3 (x,y,z) and calculates the distance between them.
+  #           You can easily derive this function via Pythagoras formula. P1,P2 \elem R^3
   #
-  # d(P1, P2) = \sqrt{ (x_2 - x_1)^2 + (y_2 - y_1)^2 + (z_2 - z_1)^2 }
+  #           d(P1, P2) = \sqrt{ (x_2 - x_1)^2 + (y_2 - y_1)^2 + (z_2 - z_1)^2 }
   #
-  # Further reading:
-  # http://en.wikipedia.org/wiki/Distance
-  # http://en.wikipedia.org/wiki/Euclidean_distance
+  #           Further reading:
+  #           http://en.wikipedia.org/wiki/Distance
+  #           http://en.wikipedia.org/wiki/Euclidean_distance
   #
   # @param    [Array]   point1  Accepts array containing floats or integers (x,y,z)
   # @param    [Array]   point2  Accepts array containing floats or integers (x,y,z)
-  # @returns  [Float]           Float, the distance between point 1 and point 2
-  def eucledian_distance point1, point2 # {{{
+  #
+  # @returns  [Float]   Float, the distance between point 1 and point 2
+  def eucledian_distance point1 = nil, point2 = nil
 
     # Pre-condition check {{{
     raise Error, "Points can't be nil." if( point1.nil? or point2.nil? )
     raise ArgumentError, "Eucledian distance for nD points for n > 3 is currently not implemented." if( (point1.length > 3) or (point2.length > 3 ) )
     # }}}
+
 
     x1, y1, z1 = *point1
     x2, y2, z2 = *point2
@@ -166,32 +174,24 @@ class Mathematics # {{{
   end # of def eucledian_distance point1, point2 }}}
 
 
-# int ipow(int base, int exp)
-#{
-#    int result = 1;
-#    while (exp)
-#    {
-#        if (exp & 1)
-#            result *= base;
-#        exp >>= 1;
-#        base *= base;
-#    }
-#
-#    return result;
-#}
-
-
-
-  # The function eucledian_distance_window takes a given dataset (x1,y1,z1;..) and calculates the
-  # eucleadian distance for given points in both directions like a window function. That means that
-  # with e.g. points = 5 ; 5 points before point X and 5 points after X are measured and summed up.
+  # @fn       def eucledian_distance_window data = nil, points = nil # {{{
+  # @brief    The function eucledian_distance_window takes a given dataset (x1,y1,z1;..) and calculates the
+  #           eucleadian distance for given points in both directions like a window function. That means that
+  #           with e.g. points = 5 ; 5 points before point X and 5 points after X are measured and summed up.
   #
   # @param   [Array]    data      Array of arrays, in the form of [ [x,y,z],[..]...] .
   # @param   [Integer]  points    Accepts integer of how many points before and after should be included in the calculation
+  #
   # @returns [Array]              Array, conaining floats. Each index of the array corresponds to the data frame.
   #
   # @todo Refactor this code more nicely.
-  def eucledian_distance_window data, points # {{{
+  def eucledian_distance_window data = nil, points = nil
+
+    # Input verification {{{
+    raise ArgumentError, "Data cannot be nil"     if( data.nil? )
+    raise ArgumentError, "Points cannot be nil"   if( points.nil? )
+    # }}}
+
     distances = []
 
     if( data.first.length == 4 )
@@ -284,14 +284,15 @@ class Mathematics # {{{
   end # of def eucledian_distance_window data, points }}}
 
 
-  # The function is a very simple and naive approximation for a real gradient calculation
+  # @fn       def approxGradient x, y # {{{
+  # @brief    The function is a very simple and naive approximation for a real gradient calculation
   #
   # @param    [Float]   x   X-Coordinate of a given point p
   # @param    [Float]   y   Y-Coordinate of a given point p
   # @returns  [Float]       Float, rough and naive approximation of a gradient of point p(x,y)
   #
   # @warning FIXME: This method should be substituted by a real derivative calculation
-  def approxGradient x, y # {{{
+  def approxGradient x = nil, y = nil
 
     # Pre-condition check {{{
     raise ArgumentError, "The argument x should be of type float, but it is of (#{x.class.to_s})" unless( x.is_a?(Float) )
@@ -307,19 +308,21 @@ class Mathematics # {{{
   end # of approxGradient }}}
 
 
-  # The function returns a solution of the following:
-  # Two points p1 (x,y,z) and p2 (x2,y2,z2) span a line in 3D space.
-  # One plane is eliminated by zero'ing the factor.
-  # The slope form also known as f(x) =>  y = m*x + t  (2D)
-  # m = DeltaY / DeltaX  ; where DeltaY is the Y2 - Y1 ("steigung/increase")
+  # @fn       def getSlopeForm array1, array2, direction = "xy" # {{{
+  # @brief    The function returns a solution of the following:
+  #           Two points p1 (x,y,z) and p2 (x2,y2,z2) span a line in 3D space.
+  #           One plane is eliminated by zero'ing the factor.
+  #           The slope form also known as f(x) =>  y = m*x + t  (2D)
+  #           m = DeltaY / DeltaX  ; where DeltaY is the Y2 - Y1 ("steigung/increase")
   #
   # @param    [Array]   array1      Set of coordinates Point A
   # @param    [Array]   array2      Set of coordinates Point B
   # @param    [String]  direction   String which is either "xy", "xz", "yz"
+  #
   # @returns  [Array]               Array, containing m and t for the slope form equasion
   #
   # @warning FIXME: Z coordinate is only neglegted and this needs to be normally compensated - use PCA/ICA instead.
-  def getSlopeForm array1, array2, direction = "xy" # {{{
+  def getSlopeForm array1 = nil, array2 = nil, direction = "xy" # {{{
 
     # Pre-condition check {{{
     raise ArgumentError, "The argument array1 should be of type array, but it is of (#{array1.class.to_s})" unless( array1.is_a?( Array ) )
@@ -478,5 +481,5 @@ end # of class Mathematics }}}
 
 # Direct Invocation
 if __FILE__ == $0 # {{{
-
 end # of if __FILE__ == $0 }}}
+
