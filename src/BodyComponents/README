@@ -9,3 +9,42 @@ Depends:
 rm -f *.gp; rm -f work/*.csv; rm -f *.gpdata; time ruby -I../../base/MotionX/src/plugins/vpm/src
 Controller.rb -tc -p Donpan -b 15 --parts hands --parts fore_arms --parts upper_arms --parts thighs
 --parts shanks --parts feet -f "5 22" ; for i in *.gp; do gnuplot $i; done
+
+
+% rake clean ; ruby19 -I../../base/MotionX/src/plugins/vpm/src Controller.rb -h -tc --parts fore_arms --speed 100 --domain japanese --clustering-k-parameter 8 -a --name "Aizubandaisan" --pattern "circle" --yaml "Aizubandaisan___Cycle_02___Speed_100"
+(in /home/br/universities/todai/projects/Keyposes)
+Usage: Controller.rb [options]
+
+General options:
+    -t, --turning-pose-extraction    Performs a dance master pose extraction (Turning poses: CPA-PCA method)
+    -f OPT OPT2,                     Filter the motion capture data against outliers before proceeding with other calculations (smoothing) with a polynomial of the order OPT with point window size OPT2 (e.g. "5 20")
+        --filter-motion-capture-data
+    -b, --box-car-filter OPT         Filter curvature result through a Finite Impulse Response (FIR) Boxcar filter of order N (15)
+        --parts OPT                  Proces one or more body parts during the computation (OPT: feet, fore_arms, hands, shanks, thighs, upper_arms)
+    -o, --orientation OPT            Choose which side to process (OPT: both, left, right) - Default: both
+    -m, --model OPT                  Determine how many components the body model has 1 (one big component), 4 (two arms/legs), 8 (with upper/lower arms/legs), 12 (with hands/feet)
+    -p, --pattern OPT                Determine which pattern the dance motions have from cycle to cycle (e.g. circle, line, random, square)
+    -z, --cycle NUM                  Determine which dance cycle to use (e.g. 001, 002, 003, 004 - Default: 001)
+    -s, --speed NUM                  Determine which speed to use (080, 100, 120, 150, 180, 200 - Default: 100)
+    -y, --yaml OPT                   Determine which dance to use based on the YAML config name tag (e.g. Aizubandaisan, Aizubandaisan___Cycle_01___Speed_080, Aizubandaisan___Cycle_01___Speed_120, Aizubandaisan___Cycle_01___Speed_150, Aizubandaisan___Cycle_01___Speed_180, Aizubandaisan___Cycle_01___Speed_200, Aizubandaisan___Cycle_02___Speed_080, Aizubandaisan___Cycle_02___Speed_100, Aizubandaisan___Cycle_02___Speed_120, Aizubandaisan___Cycle_02___Speed_150, Aizubandaisan___Cycle_02___Speed_180, Aizubandaisan___Cycle_02___Speed_200, Aizubandaisan___Cycle_03___Speed_080, Aizubandaisan___Cycle_03___Speed_100, Aizubandaisan___Cycle_03___Speed_120, Aizubandaisan___Cycle_03___Speed_150, Aizubandaisan___Cycle_03___Speed_180, Aizubandaisan___Cycle_03___Speed_200, Aizubandaisan___Cycle_04___Speed_100, Aizubandaisan___Cycle_04___Speed_120, Aizubandaisan___Cycle_04___Speed_150, Aizubandaisan___Cycle_04___Speed_180, Aizubandaisan___Cycle_04___Speed_200, Donpan, Jongara_Bushi, Macarena_CMU, Macarena_MovLAB, Pirouette, Sasara_Theodori, Walking)
+    -d, --domain OPT                 Determine which domain to use (e.g. japanese, latin, other, western)
+    -a, --all                        Use all dances of the given domain
+    -g, --clustering-algorithm OPT   Choose which clustering algorithm to apply (e.g. kmeans - default: kmeans)
+    -k, --clustering-k-parameter OPT Choose which clustering model you want to apply (parameter k, e.g. 1, 2, 3, ... etc.)
+        --clustering-k-search-from-to OPT1 OPT2
+                                     Run clustering for OPT1 to OPT2 and make appropriate distortion graphs (e.g. "1 25")
+    -r, --raw-data                   Use raw data for PCA reduction instead of CPA data
+
+Specific options:
+    -n, --name OPT                   Name of motion capture data to be processed (OPT: Aizubandaisan, Donpan, Jongara, Macarena, Pirouette, Sasara_Theodori, Walking)
+    -l, --list                       List avaialble motion capture data with pattern, cycles, speed, etc.
+    -v, --verbose                    Run verbosely
+    -q, --quiet                      Run quietly, don't output much
+        --profiler                   Run profiler alongside the code (see results in tmp/)
+
+Common options:
+    -c, --colorize                   Colorizes the output of the script for easier reading
+    -h, --help                       Show this message
+        --version                    Show version
+
+
