@@ -10,12 +10,10 @@
 
 ###
 #
-# (c) 2009, Copyright, Bjoern Rennhak, The University of Tokyo
+# (c) 2009-2011, Copyright, Bjoern Rennhak, The University of Tokyo
 #
-# @file       BodyComponents.rb
+# @file       Plotter.rb
 # @author     Bjoern Rennhak
-# @since      Wed Apr  7 19:49:27 JST 2010
-# @version    0.0.1
 # @copyright  See COPYRIGHT file for details.
 #
 #######
@@ -30,25 +28,39 @@ require 'Extensions.rb'
 # Change Namespace
 include GSL
 
+
 ###
 #
 # @class   Plotter
 # @author  Bjoern Rennhak
 # @brief   This class helps with generating proper graphs via the GSL library. It is a custom
 #          wrapper to hide away all kind of configuration we don't care about.
-# @details {}
 #
 #######
 class Plotter # {{{
-  def initialize from, to # {{{
+
+  # @fn       def initialize from = nil, to = nil # {{{
+  # @brief    Constructor for the Plotter class.
+  #
+  # @param    [Integer]     from      From frame integer.
+  # @param    [Integer]     to        To frame integer.
+  def initialize from = nil, to = nil
+
+    # Input verifcation {{{
+    raise ArgumentError, "From cannot be nil" if( from.nil? )
+    raise ArgumentError, "To cannot be nil" if( to.nil? )
+    # }}}
+
     @from, @to = from, to
   end # of initialize }}}
 
 
-  # = The function eigenvalue_energy_gnuplot plots the accumulated energy of all eigenvalues to a gnuplot script.
-  # @param data Array of arrays. Each sub-array contains integers or floats.
-  # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext) of where to store the gnuplot script.
-  def eigenvalue_energy_gnuplot data, filename = "/tmp/tmp.plot.gp" # {{{
+  # @fn       def eigenvalue_energy_gnuplot data = nil, filename = "/tmp/tmp.plot.gp" # {{{
+  # @brief    The function eigenvalue_energy_gnuplot plots the accumulated energy of all eigenvalues to a gnuplot script.
+  #
+  # @param    data      Array of arrays. Each sub-array contains integers or floats.
+  # @param    filename  Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext) of where to store the gnuplot script.
+  def eigenvalue_energy_gnuplot data = nil, filename = "/tmp/tmp.plot.gp"
 
     eigen_values, eigen_vectors = array_of_arrays_to_eigensystem( data ) 
 
@@ -90,13 +102,15 @@ class Plotter # {{{
   end # of def interactive_gnuplot }}}
 
 
-  # = The function interactive_gnuplot opens an X11 window in persist mode to view the data with the mouse.
-  # @param data Accepts array of arrays. Each subarray is filled with integers or floats (needs to be uniform/of same length)
-  #             Expects the data to be of form: [ [x1, y1, z1], [x2, y2, z2], ....]
-  # @param data_printf Accepts a formatting instruction like printf does, e.g. "%e, %e, %e\n" etc.
-  # @param labels Accepts an array containing strings with the labels for each subarray of data, e.g. %w[Foo Bar Baz]
-  # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext)
-  def interactive_gnuplot data, data_printf, labels, filename = "/tmp/tmp.plot.gp", eigen_values = nil, eigen_vectors = nil, kmeans = nil # {{{
+  # @fn       def interactive_gnuplot data, data_printf, labels, filename = "/tmp/tmp.plot.gp", eigen_values = nil, eigen_vectors = nil, kmeans = nil # {{{
+  # @brief    The function interactive_gnuplot opens an X11 window in persist mode to view the data with the mouse.
+  #
+  # @param    data          Accepts array of arrays. Each subarray is filled with integers or floats (needs to be uniform/of same length)
+  #                         Expects the data to be of form: [ [x1, y1, z1], [x2, y2, z2], ....]
+  # @param    data_printf   Accepts a formatting instruction like printf does, e.g. "%e, %e, %e\n" etc.
+  # @param    labels        Accepts an array containing strings with the labels for each subarray of data, e.g. %w[Foo Bar Baz]
+  # @param    filename      Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext)
+  def interactive_gnuplot data, data_printf, labels, filename = "/tmp/tmp.plot.gp", eigen_values = nil, eigen_vectors = nil, kmeans = nil
 
     # raise ArgumentError, "Kmeans input can't be nil" if( kmeans.nil? )
 
@@ -161,15 +175,12 @@ class Plotter # {{{
   end # of def interactive_gnuplot }}}
 
 
-  # Imagemagick / opengl?
-  def pose_data_to_image
-  end
-
-
-  # The function covariance_matrix_gnuplot plots the cov. matrix of given data to a gnuplot script file.
-  # @param data Array of arrays. Each sub-array contains integers or floats.
-  # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext) of where to store the gnuplot script.
-  def covariance_matrix_gnuplot data, filename = "/tmp/tmp.plot.gp" # {{{
+  # @fn       def covariance_matrix_gnuplot data = nil, filename = "/tmp/tmp.plot.gp" # {{{
+  # @brief    The function covariance_matrix_gnuplot plots the cov. matrix of given data to a gnuplot script file.
+  #
+  # @param    data      Array of arrays. Each sub-array contains integers or floats.
+  # @param    filename  Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext) of where to store the gnuplot script.
+  def covariance_matrix_gnuplot data = nil, filename = "/tmp/tmp.plot.gp"
     eigen_values, eigen_vectors = array_of_arrays_to_eigensystem( data ) 
 
     File.open( filename.to_s, "w" ) do |f|
@@ -199,20 +210,26 @@ class Plotter # {{{
     end # of File.open
   end # of def interactive_gnuplot }}}
 
-  # Graph creates a plot and dumps it to the defined file of the arguments provided
-  def graph x, y, filename = "/tmp/graph.png" # {{{
+
+  # @fn       def graph x, y, filename = "/tmp/graph.png" # {{{
+  # @brief    Graph creates a plot and dumps it to the defined file of the arguments provided
+  def graph x = nil, y = nil, filename = "/tmp/graph.png"
+
     GSL::graph([ x, y ], "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 2 -m 0 --page-size a4 > #{filename.to_s}") 
+
   end # of def graph }}}
 
 
-  # = The function interactive_gnuplot_eucledian_distances opens an X11 window in persist mode to view the data with the mouse.
-  # @param data Accepts array of data with distances where each index is one frame (2D)
-  # @param data_printf Accepts a formatting instruction like printf does, e.g. "%e, %e\n" etc.
-  # @param labels Accepts an array containing strings with the labels for each subarray of data, e.g. %w[Frames Eucledian Distance Window Value]
-  # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext)
-  # @param from Accepts integer, representing the starting index of the motion sequence. 
-  # @param pointsOfInterest Accepts array, containing integers. Each integer is a frame where we have a point of interest (e.g. frame of a dance master illustration drawing)
-  def interactive_gnuplot_eucledian_distances data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil, pointsOfInterest = nil, pointsOfInterestRange = nil, pointsOfInterest_filename = nil, tp = nil, tp_filename = nil # {{{
+  # @fn       def interactive_gnuplot_eucledian_distances data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil, pointsOfInterest = nil, pointsOfInterestRange = nil, pointsOfInterest_filename = nil, tp = nil, tp_filename = nil # {{{
+  # @brief    The function interactive_gnuplot_eucledian_distances opens an X11 window in persist mode to view the data with the mouse.
+  #
+  # @param    data              Accepts array of data with distances where each index is one frame (2D)
+  # @param    data_printf       Accepts a formatting instruction like printf does, e.g. "%e, %e\n" etc.
+  # @param    labels            Accepts an array containing strings with the labels for each subarray of data, e.g. %w[Frames Eucledian Distance Window Value]
+  # @param    filename          Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext)
+  # @param    from              Accepts integer, representing the starting index of the motion sequence. 
+  # @param    pointsOfInterest  Accepts array, containing integers. Each integer is a frame where we have a point of interest (e.g. frame of a dance master illustration drawing)
+  def interactive_gnuplot_eucledian_distances data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil, pointsOfInterest = nil, pointsOfInterestRange = nil, pointsOfInterest_filename = nil, tp = nil, tp_filename = nil
     oldLabels = labels.dup
 
     File.open( filename.to_s, "w" ) do |f|
@@ -279,7 +296,10 @@ class Plotter # {{{
 
   end # of def interactive_gnuplot }}}
 
-  def easy_gnuplot data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil, pointsOfInterest = nil, pointsOfInterestRange = nil, pointsOfInterest_filename = nil, tp = nil, tp_filename = nil # {{{
+
+  # @fn       def easy_gnuplot data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil, pointsOfInterest = nil, pointsOfInterestRange = nil, pointsOfInterest_filename = nil, tp = nil, tp_filename = nil # {{{
+  # @brief    
+  def easy_gnuplot data, data_printf, labels, title = "Plot", filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", from = nil, pointsOfInterest = nil, pointsOfInterestRange = nil, pointsOfInterest_filename = nil, tp = nil, tp_filename = nil
     oldLabels = labels.dup
 
     File.open( filename.to_s, "w" ) do |f|
@@ -309,12 +329,10 @@ class Plotter # {{{
     end # of File.open
 
     File.open( data_filename.to_s, "w" ) do |f|
-  
       data.each do |frame, value|
         f.write( "#{frame.to_s} #{value.to_s}\n" )
       end
     end
-
 
     unless( pointsOfInterest.nil? )
       File.open( pointsOfInterest_filename.to_s, "w" ) do |f|
@@ -324,21 +342,22 @@ class Plotter # {{{
       end
     end
 
-
   end # of def easy_gnuplot }}}
 
 
-
-  # = The transform function takes an arbitrary object and changes it to a GSL sane equivalent
-  #   This function also takes care of nested substructures. E.g. an array in an array will become a
-  #   GSL::Vector of a GSL::Vector etc.
-  # @param input The data you want to GSL'ify. E.g. an array will become GSL::Vector etc.
-  # @param fromType If empty the type is guessed. If something is given a conversion is forced. This
-  #                 is the type we will input. e.g. "Array" or "String" => Object.class output
-  # @param toType If empty the type is guessed. If something is given a conversion is forced. This
-  #               is the type we will convert the input to. e.g. "GSL::Vector" etc.
-  # @returns An array in this form: [ inputType, outputType, output ]
-  def transform input, fromType = nil, toType = nil
+  # @fn       def transform input = nil, fromType = nil, toType = nil {{{
+  # @brief    The transform function takes an arbitrary object and changes it to a GSL sane equivalent
+  #           This function also takes care of nested substructures. E.g. an array in an array will become a
+  #           GSL::Vector of a GSL::Vector etc.
+  #
+  # @param    input       The data you want to GSL'ify. E.g. an array will become GSL::Vector etc.
+  # @param    fromType    If empty the type is guessed. If something is given a conversion is forced. This
+  #                       is the type we will input. e.g. "Array" or "String" => Object.class output
+  # @param    toType      If empty the type is guessed. If something is given a conversion is forced. This
+  #                       is the type we will convert the input to. e.g. "GSL::Vector" etc.
+  #
+  # @returns  An array in this form: [ inputType, outputType, output ]
+  def transform input = nil, fromType = nil, toType = nil
     result    = []
     fT, tT    = "", ""
 
@@ -357,7 +376,8 @@ class Plotter # {{{
     end
 
     result
-  end
+  end # of def transform }}}
+
 
 end # of class Plotter # }}}
 
