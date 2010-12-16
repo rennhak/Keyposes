@@ -38,7 +38,20 @@ include GSL
 # The class Filter can take input data and provide means to filter out noise and outliers from it.
 class Filter # {{{
 
-  def initialize options, from, to # {{{
+
+  # @fn       def initialize options, from, to # {{{
+  #
+  # @param    [OpenStruct]      options     OpenStruct containing options parsed
+  # @param    [Integer]         from        From frame int
+  # @param    [Integer]         to          To frame int
+  def initialize options = nil, from = nil, to = nil
+
+    # Input verification {{{
+    raise ArgumentError, "Options cannot be nil"  if( options.nil? )
+    raise ArgumentError, "From cannot be nil"     if( from.nil? )
+    raise ArgumentError, "To cannot be nil"       if( to.nil? )
+    # }}}
+
     @options             = options
     @from, @to           = from, to
     @log                 = Logger.new( @options )
@@ -48,12 +61,15 @@ class Filter # {{{
   end # of def initialize }}}
 
 
-  # The function takes a MotionX ADT Class as input and returns a filtered (smoothed) version of the input data via an overlapping sliding point window that uses a polynomial for fitting
+  # @fn       def filter_motion_capture_data input, point_window = @options.filter_point_window_size, polynom_order = @options.filter_polyomial_order # {{{
+  # @brief    The function takes a MotionX ADT Class as input and returns a filtered (smoothed) version of the input data via an overlapping sliding point window that uses a polynomial for fitting
+  #
   # @param    [ADT]     input           ADT Class Object of the MotionX package VPM plugin
   # @param    [Integer] point_window    Integer representing the window size in which the polynomial fitting is applied
   # @param    [Integer] polynom_order   Integer representing the order of the fitting polynomial
+  #
   # @returns  [ADT]                     ADT Class Object containing the new smoothed version of the input
-  def filter_motion_capture_data input, point_window = @options.filter_point_window_size, polynom_order = @options.filter_polyomial_order # {{{
+  def filter_motion_capture_data input, point_window = @options.filter_point_window_size, polynom_order = @options.filter_polyomial_order
 
     @log.message :success, "Smoothing raw data with Polynomial of the order #{polynom_order.to_s} with a point window of #{point_window.to_s}"
 
@@ -214,16 +230,26 @@ class Filter # {{{
   end # of def motion_capture_data_smoothing }}}
 
 
-  # = In order to extract meaningful information easily we utilize a box car or FIR filter known from DSP theory.
-  # @param input Array containing beat [ [ time, energy value ], ...]
-  # @param order N is the filter order; an Nth-order filter has (N + 1) terms on the right-hand
-  #              side. The x[n − i] in these terms are commonly referred to as taps, based on the structure of a
-  #              tapped delay line that in many implementations or block diagrams provides the delayed inputs to
-  #              the multiplication operations. One may speak of a "5th order/6-tap filter", for instance.
-  # @info http://en.wikipedia.org/wiki/Finite_impulse_response
-  # http://groups.google.com/group/comp.dsp/msg/d0d2324de8451878  
-  # @returns Array, containing time t and beat energy e box car'ed. [ [t0,e0], [t1,e1], ... ]
-  def box_car_filter input, order = 5 # {{{
+  # @fn       def box_car_filter input, order = 5 # {{{
+  # @brief    In order to extract meaningful information easily we utilize a box car or FIR filter known from DSP theory.
+  #
+  # @param    input   Array containing beat [ [ time, energy value ], ...]
+  # @param    order   N is the filter order; an Nth-order filter has (N + 1) terms on the right-hand
+  #                   side. The x[n − i] in these terms are commonly referred to as taps, based on the structure of a
+  #                   tapped delay line that in many implementations or block diagrams provides the delayed inputs to
+  #                   the multiplication operations. One may speak of a "5th order/6-tap filter", for instance.
+  #
+  # @info     http://en.wikipedia.org/wiki/Finite_impulse_response
+  #           htttp://groups.google.com/group/comp.dsp/msg/d0d2324de8451878  
+  #
+  # @returns  Array, containing time t and beat energy e box car'ed. [ [t0,e0], [t1,e1], ... ]
+  def box_car_filter input = nil, order = 5
+
+    # Input verification {{{
+    raise ArgumentError, "Input cannot be nil" if( input.nil? )
+    raise ArgumentError, "Order cannot be nil" if( order.nil? )
+    # }}}
+
     # y[n] = \sum_{i=0}^{N} b_i x[n - i]
     #  - x[n] is the input signal,
     #  - y[n] is the output signal,
@@ -286,5 +312,5 @@ end # of class Filter }}}
 
 # Direct Invocation
 if __FILE__ == $0 # {{{
-
 end # of if __FILE__ == $0 }}}
+
