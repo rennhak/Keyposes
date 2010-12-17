@@ -315,14 +315,14 @@ class Controller # {{{
         ks_within     = ks.zip( tcss )
         ks_dists      = ks.zip( dists )
 
-        @plot       = Plotter.new( 0, 0 )
-        @plot.easy_gnuplot( ks_dists, "%e %e\n", [ "Clusters", "Total distortions" ], "Total distortions Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
+        @plot         = Plotter.new( 0, 0 )
+        @plot.easy_gnuplot( ks_dists,  "%e %e\n", [ "Clusters", "Total distortions" ], "Total distortions Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
         @plot.easy_gnuplot( ks_within, "%e %e\n", [ "Clusters", "Total within cluster sum of squares" ], "Total within cluster sum of squares Plot", "graphs/total_within_sum_of_squares.gp", "graphs/total_within_sum_of_squares.gpdata" )
 
         @turning.get_dot_graph( kms.last )
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kms.last )
 
-        unless( @options.clustering_k_search )
+        if( @options.pose_visualizer )
           @pv         = PoseVisualizer.new( @options, kms.last, @adts, @closest_frame )
         end
 
@@ -432,7 +432,7 @@ class Controller # {{{
     options.clustering_k_search             = false # if this is true options.clustering_k_{from, to} are used
     options.clustering_k_from               = 1
     options.clustering_k_to                 = 1
-
+    options.pose_visualizer                 = false
 
     pristine_options                        = options.dup
 
@@ -501,6 +501,10 @@ class Controller # {{{
 
       opts.on("-k", "--clustering-k-parameter OPT", "Choose which clustering model you want to apply (parameter k, e.g. 1, 2, 3, ... etc.)") do |k|
         options.clustering_k_parameter = k
+      end
+
+      opts.on( "--visualize", "Pose Visualizer" ) do |p|
+        options.pose_visualizer = p
       end
 
       opts.on("--clustering-k-search-from-to OPT1 OPT2", "Run clustering for OPT1 to OPT2 and make appropriate distortion graphs (e.g. \"1 25\")") do |f|
