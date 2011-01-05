@@ -207,7 +207,7 @@ class Clustering # {{{
 
     # Output verification {{{
     raise ArgumentError, "Data size must be of type integer"                                        unless( data_size.is_a?(Integer) )
-    raise ArgumentError, "Data size must be larger, cannot estimate k for such a small data size"   if( data_size == 0 )
+    raise ArgumentError, "Data size must be larger, cannot estimate k for such a small data size (currently zero)"   if( data_size == 0 )
     # }}}
 
     return result

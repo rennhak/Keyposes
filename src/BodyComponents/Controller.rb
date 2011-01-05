@@ -225,20 +225,55 @@ class Controller # {{{
             end
 
             if( @options.turning_pose_extraction )
-              @log.message :info, "Performing CPA-PCA Turning pose extraction"
-              @turning                = Turning.new( @options, @adt, @dance_master_poses, @dance_master_poses_range, @from, @to )
-              data                    = @turning.get_data
 
-              turning_data << [ [ configurations_dir, domain, name, pattern, speed, cycle, filename ], data ]
+              if( @options.each_limb_individually )
+                # This option will cause e.g. --part fore_arms --part upper_arms -> to be processed
+                # separaely to yield separate t-data and will then get added together into one large
+                # array for e.g. clustering. This allows the mixing of all part t-data's.
+                @log.message :info, "All given limbs (--part) will be treated separately for T-Data extraction and summed up."
 
-              meta = Hash.new
-              meta[ "total_frames" ]  = @adt.relb.getCoordinates!.length
-              meta[ "from" ]          = @from
-              meta[ "to" ]            = @to
-              meta[ "motion_config" ] = @motion_config
 
-              @adts << [ @adt, turning_data.dup, meta.dup ]
-            end
+                given_body_parts = @options.body_parts.dup    # store for later reuse
+                given_body_parts.each do |part|               # iterate over each limb, reset @options.body_parts to only one limb and calculate
+
+                  @log.message :info, "Calculating T-Data for #{part.to_s}"
+                  @options.body_parts = [ part ]
+
+                  @log.message :info, "Performing CPA-PCA Turning pose extraction"
+                  @turning                = Turning.new( @options, @adt, @dance_master_poses, @dance_master_poses_range, @from, @to )
+                  data                    = @turning.get_data
+
+                  turning_data << [ [ configurations_dir, domain, name, pattern, speed, cycle, filename ], data ]
+
+                  meta = Hash.new
+                  meta[ "total_frames" ]  = @adt.relb.getCoordinates!.length
+                  meta[ "from" ]          = @from
+                  meta[ "to" ]            = @to
+                  meta[ "motion_config" ] = @motion_config
+
+                  @log.message :info, "Summing up T-Data for #{part.to_s}"
+                  @adts << [ @adt, turning_data.dup, meta.dup ]
+
+                end # of given_body_parts.each do |part|
+
+              else # of if( @options.each_limb_individually )
+                @log.message :info, "All given limbs (--part) will get unified together"
+                @log.message :info, "Performing CPA-PCA Turning pose extraction"
+                @turning                = Turning.new( @options, @adt, @dance_master_poses, @dance_master_poses_range, @from, @to )
+                data                    = @turning.get_data
+
+                turning_data << [ [ configurations_dir, domain, name, pattern, speed, cycle, filename ], data ]
+
+                meta = Hash.new
+                meta[ "total_frames" ]  = @adt.relb.getCoordinates!.length
+                meta[ "from" ]          = @from
+                meta[ "to" ]            = @to
+                meta[ "motion_config" ] = @motion_config
+
+                @adts << [ @adt, turning_data.dup, meta.dup ]
+
+              end # of if( @options.each_limb_individually )
+            end # of if( @options.turning_pose_extraction )
 
             @log.message :success, "Finished processing of #{motion_config_filename.to_s}"
 
@@ -433,6 +468,7 @@ class Controller # {{{
     options.clustering_k_from               = 1
     options.clustering_k_to                 = 1
     options.pose_visualizer                 = false
+    options.each_limb_individually          = false
 
     pristine_options                        = options.dup
 
@@ -494,6 +530,11 @@ class Controller # {{{
       opts.on("-a", "--all", "Use all dances of the given domain") do |a|
         options.use_all_of_domain  = a
       end
+
+      opts.on("-e", "--each-limb-individually", "Calculate each limb individually when extracting T-Data. If this option is not set all given components get unified by PCA together.") do |a|
+        options.each_limb_individually = a
+      end
+
 
       opts.on("-g", "--clustering-algorithm OPT", @clustering_algorithms, "Choose which clustering algorithm to apply (e.g. #{@clustering_algorithms.sort.join(", ")} - default: #{options.clustering_algorithm})") do |g|
         options.clustering_algorithm  = g
