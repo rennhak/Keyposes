@@ -53,7 +53,16 @@ class Clustering # {{{
       km_tmp      = KMeans.new(data, :centroids => centroids)
     else
       cen         = []
-      centroids_information.each { |c| cen << Centroid.new( c ) }
+
+      # Either keep centroid objects or turn the input centroid arrays into centroid objects
+      centroids_information.each do |c|
+        if( c.is_a?( Centroid ) )
+          cen << c
+        else
+          cen << Centroid.new( c )
+        end
+      end
+
       km_tmp      = KMeans.new(data, :centroids => centroids, :custom_centroids => cen )
     end
 
@@ -101,6 +110,28 @@ class Clustering # {{{
 
     return dists
   end # of def distances data, centroids # }}}
+
+
+  # @fn       def centroids_to_frames( closest_centroids ) # {{{
+  # @brief    The function takes the output from the closest_centroids function and calculates,
+  #           which frames are the closest frames to each individual centroids. This allows us to
+  #           assign a pose which is the "closest" to a given centroid as a centroid pose based on
+  #           its distance to the given centroid.
+  #
+  # @param    [Array]       closest_centroids       Array, containing subarrays of the structure [ cluster index, eucledian distance ]
+  # 
+  # @returns  [Array]       Array, containing subarrays with [ [ cluster id, frame number ], ..]
+  def centroids_to_frames( closest_centroids )
+    result = []
+
+    closest_centroids.each do |c_id, e_dist|
+      #result[ c_id ] = cnt if( result[ c_id ].nil? )
+
+
+    end # of closest_centroids.each 
+
+    return result
+  end # of def centroids_to_frames( closest_centroids ) # }}}
 
 
   # @fn       def closest_centroids dists, centroids, data # {{{

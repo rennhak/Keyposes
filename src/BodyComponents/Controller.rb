@@ -233,8 +233,8 @@ class Controller # {{{
                 @log.message :info, "All given limbs (--part) will be treated separately for T-Data extraction and summed up."
 
 
-                given_body_parts = @options.body_parts.dup    # store for later reuse
-                given_body_parts.each do |part|               # iterate over each limb, reset @options.body_parts to only one limb and calculate
+                @given_body_parts = @options.body_parts.dup    # store for later reuse
+                @given_body_parts.each do |part|               # iterate over each limb, reset @options.body_parts to only one limb and calculate
 
                   @log.message :info, "Calculating T-Data for #{part.to_s}"
                   @options.body_parts = [ part ]
@@ -315,20 +315,61 @@ class Controller # {{{
 
             @log.message :info, "Performing K-Means for k = #{k.to_s}"
 
+            tmp_distortions   = []
+            tmp_centroids     = []
+
+            # Iterate over kmeans clustering with random initialization to find a better result for
+            # our clustering to avoid local optima
+            100.times do |i|
+
+              clustering                  = Clustering.new( @options )
+              kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
+              kms                        << kmeans
+              distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
+
+              closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
+              distortions                 = clustering.distortions( closest_centroids )
+              tcss                        = clustering.total_within_cluster_sum_of_squares( closest_centroids )
+
+              tmp_distortions << distortions
+              tmp_centroids << centroids
+
+              puts "K-Means iteration #{i.to_s} Distortion: #{distortions.to_s}"
+            end
+
+            tmp_cent_min = tmp_distortions.min 
+            tmp_cent_min_index  = tmp_distortions.index( tmp_cent_min )
+            init_centroids      = tmp_centroids[ tmp_cent_min_index ]
+            puts "Smallest distortions are #{tmp_cent_min.to_s} at index #{tmp_cent_min_index.to_s}"
+            puts "Initializing with these centroids..."
+            kms.clear
+
             clustering                  = Clustering.new( @options )
-            kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
+            kmeans, centroids           = clustering.kmeans( final, k, init_centroids )
             kms                        << kmeans
             distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
 
+            # Determines the closest frame for each cluster center
+            # Array index == cluster id
             @closest_distance = []
             @closest_frame    = []
             distances.each_pair do |frame, array|
+
+              # Each entry is one frame upto all frames.
+              # Each entry contains an array with k-elements, where for this particular frame
+              # we can see the exact distance to each cluster center.
+              # Using this we can caluclate the shortest cluster id for this frame
               array.each do |cluster_id, distance|
+
+                # Executes only the first time a entry is nil and sets it to a value so
+                # that we have something
                 if( @closest_distance[ cluster_id ].nil? )
                   @closest_distance[ cluster_id ] = distance 
                   @closest_frame[ cluster_id ] = frame
                 end
-
+          
+                # The distance we have now is shorter than the one stored
+                # Exchange and store the current as the shortest distance for the c_id
                 if( @closest_distance[ cluster_id ] > distance )
                   @closest_distance[ cluster_id ] = distance 
                   @closest_frame[ cluster_id ] = frame 
@@ -336,7 +377,11 @@ class Controller # {{{
               end
             end
 
+
+            @frame_distance_cluster      = @closest_frame.zip( @closest_distance )
+
             closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
+
             distortions                 = clustering.distortions( closest_centroids )
             squared_error_distortions   = clustering.squared_error_distortion( closest_centroids )
             dists << squared_error_distortions
@@ -346,16 +391,67 @@ class Controller # {{{
 
         end # of if( @options.clustering_k_search )
 
-        tcss.collect! { |array| array.inject(:+) / array.length } 
-        ks_within     = ks.zip( tcss )
-        ks_dists      = ks.zip( dists )
+        # FIXME: This is needed for --seach-k-parameters-from-to
+        #tcss.collect! { |array| array.inject(:+) / array.length } 
+        #ks_within     = ks.zip( tcss )
+        #ks_dists      = ks.zip( dists )
 
         @plot         = Plotter.new( 0, 0 )
-        @plot.easy_gnuplot( ks_dists,  "%e %e\n", [ "Clusters", "Total distortions" ], "Total distortions Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
-        @plot.easy_gnuplot( ks_within, "%e %e\n", [ "Clusters", "Total within cluster sum of squares" ], "Total within cluster sum of squares Plot", "graphs/total_within_sum_of_squares.gp", "graphs/total_within_sum_of_squares.gpdata" )
+        #@plot.easy_gnuplot( ks_dists,  "%e %e\n", [ "Clusters", "Total distortions" ], "Total distortions Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
+        #@plot.easy_gnuplot( ks_within, "%e %e\n", [ "Clusters", "Total within cluster sum of squares" ], "Total within cluster sum of squares Plot", "graphs/total_within_sum_of_squares.gp", "graphs/total_within_sum_of_squares.gpdata" )
 
         @turning.get_dot_graph( kms.last )
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kms.last )
+
+        # Determine lookup table for all frames to which file
+        @lookup_table     = []
+        adt_cnt           = 0
+        @adts.each do |adt, turning_data, meta|
+
+          config          = turning_data[0][0]
+          tp_calc_result  = turning_data[0][1]
+
+          configurations_dir, domain, name, pattern, speed, cycle, filename = config
+
+          raise ArgumentError, "From -> to range needs to include all frames for PoseVisualizer" if( (meta[ "from" ] != 0) or (meta[ "to" ] != meta[ "total_frames" ]) )
+          meta[ "from" ].upto( meta[ "to" ] - 1 ).each { @lookup_table << adt_cnt }
+          adt_cnt        += 1
+        end
+
+        # Associate the cluster id frames with the corresponding file
+        cnt               = 0
+        final_cluster_dmp = []
+        @frame_distance_cluster.each do |frame, distance|
+          number  = @lookup_table[ frame ]
+          adt, turning_data, meta    = @adts[ number ]
+          config          = turning_data[0][0]
+          configurations_dir, domain, name, pattern, speed, cycle, filename = config
+
+          adjust          = meta[ "to" ].to_i * number
+          closest_pose    = []
+
+          @dmps.each_with_index do |dmp, index|
+            pose, pose_range = dmp
+            closest_pose     << ( ( frame.to_i - adjust ) - pose ).abs
+            # puts "index: #{index.to_s} pose frame: #{pose.to_s}"
+          end
+
+          puts "Cluster ID: #{cnt.to_s} Closest frame to this centroid (unadjusted): #{frame.to_s} (part number: #{number.to_s} part: #{@given_body_parts[number.to_i].to_s}) adjusted: #{(frame.to_i - adjust).to_s} -> File: #{filename.to_s}"
+          p_indx = (closest_pose.index( closest_pose.min ).to_i )
+          puts "Index of closest dance master illustration (starting from 1): " + (p_indx + 1).to_s
+
+          final_cluster_dmp[ p_indx ] = [] if( final_cluster_dmp[p_indx].nil? )
+          final_cluster_dmp[ p_indx ] << "Cluster ID ( #{cnt.to_s} ) Frame: #{(frame.to_i - adjust).to_s}"
+          cnt += 1
+        end
+
+        p @dmps
+
+        final_cluster_dmp.each_with_index do |array, index|
+          if( not array.nil? )
+           puts "DMP Pose ##{ (index + 1).to_s} (Frame: #{@dmps[index].first.to_s} (#{@dmps[index].last.join(" , ")})) -> #{array.join( " | " )}"
+          end
+        end
 
         if( @options.pose_visualizer )
           @pv         = PoseVisualizer.new( @options, kms.last, @adts, @closest_frame )
