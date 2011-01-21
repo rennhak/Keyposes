@@ -379,9 +379,9 @@ class PoseVisualizer # {{{
 
           deg2rad = Math::PI / 180.0
 
-          # Turning point
+          # Turning point -- FIXME: This point cannot be correct?
           tp_x, tp_y, tp_z = tp_calc_result[ i ]
-          draw_point( tp_x, tp_y, tp_z, [1,0,0] )
+          # draw_point( tp_x, tp_y, tp_z, [1,0,0] )
 
           # Draw connecting lines
           components_right.each do |type, combo|
@@ -541,12 +541,9 @@ class PoseVisualizer # {{{
           # Closest frame to centroid screenshot
           # screenshot( @closest_frame.index( i ).to_s, i, "graphs/clusters/centroids" )  if( @closest_frame.include?( i ) )
 
-
         end
 
       end
-
-
 
       # Concat images
       @cluster_images = Hash.new

@@ -320,7 +320,7 @@ class Controller # {{{
 
             # Iterate over kmeans clustering with random initialization to find a better result for
             # our clustering to avoid local optima
-            100.times do |i|
+            (@options.clustering_iterations.to_i).times do |i|
 
               clustering                  = Clustering.new( @options )
               kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
@@ -367,7 +367,7 @@ class Controller # {{{
                   @closest_distance[ cluster_id ] = distance 
                   @closest_frame[ cluster_id ] = frame
                 end
-          
+
                 # The distance we have now is shorter than the one stored
                 # Exchange and store the current as the shortest distance for the c_id
                 if( @closest_distance[ cluster_id ] > distance )
@@ -436,7 +436,7 @@ class Controller # {{{
             # puts "index: #{index.to_s} pose frame: #{pose.to_s}"
           end
 
-          puts "Cluster ID: #{cnt.to_s} Closest frame to this centroid (unadjusted): #{frame.to_s} (part number: #{number.to_s} part: #{@given_body_parts[number.to_i].to_s}) adjusted: #{(frame.to_i - adjust).to_s} -> File: #{filename.to_s}"
+          puts "Cluster ID: #{cnt.to_s} Closest frame to this centroid (unadjusted): #{frame.to_s} (part number: #{number.to_s} part: #{@options.body_parts[number.to_i].to_s}) adjusted: #{(frame.to_i - adjust).to_s} -> File: #{filename.to_s}"
           p_indx = (closest_pose.index( closest_pose.min ).to_i )
           puts "Index of closest dance master illustration (starting from 1): " + (p_indx + 1).to_s
 
@@ -565,6 +565,7 @@ class Controller # {{{
     options.clustering_k_to                 = 1
     options.pose_visualizer                 = false
     options.each_limb_individually          = false
+    options.clustering_iterations           = 1000
 
     pristine_options                        = options.dup
 
@@ -638,6 +639,10 @@ class Controller # {{{
 
       opts.on("-k", "--clustering-k-parameter OPT", "Choose which clustering model you want to apply (parameter k, e.g. 1, 2, 3, ... etc.)") do |k|
         options.clustering_k_parameter = k
+      end
+
+      opts.on("-i", "--iterations OPT", "Determines how many times we iterate over the clustering algorithm with Random Initialization to finally pick the best fitting result (Distortion minimization). Current default: '#{options.clustering_iterations.to_s}'" ) do |i|
+        options.clustering_iterations = i
       end
 
       opts.on( "--visualize", "Pose Visualizer" ) do |p|
