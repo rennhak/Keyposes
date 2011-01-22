@@ -379,5 +379,57 @@ class Plotter # {{{
   end # of def transform }}}
 
 
+  def histogram data, filename = "/tmp/tmp.plot.gp", data_filename = "/tmp/tmp/plot.gpdata", title = "Histogram Plot"
+
+    # data is array of arrays, e.g. [ [x,y,z], [x,y,z] ...]
+    # plot each subarray to one index
+
+    labels      = ["Body Points","Value"]
+    oldLabels   = labels.dup
+
+    File.open( filename.to_s, "w" ) do |f|
+      f.write( "reset\n" )
+      f.write( "set ticslevel 0\n" )
+      f.write( "set style line 1 lw 3\n" )
+      f.write( "set grid\n" )
+      f.write( "set border\n" )
+      f.write( "set pointsize 3\n" )
+
+      f.write( "set xlabel '#{labels.shift.to_s}' font \"Helvetica,60\"\n" )
+      f.write( "set ylabel '#{labels.shift.to_s}' font \"Helvetica,60\"\n" )
+      f.write( "set autoscale\n" )
+      f.write( "set font 'Helvetica,60'\n" )
+      f.write( "set key left box\n" )
+      # f.write( "set output\n" )
+      f.write( "set output '#{File.basename(filename, '.gp')}.eps'\n" )
+      f.write( "set terminal postscript eps enhanced color \"Helvetica\" 30\n")
+      # f.write( "set terminal x11 persist\n" )
+      f.write( "set boxwidth 1\n" )
+      f.write( "set style fill solid 0.5\n" )
+      f.write( "set size 3,3\n" )
+      f.write( "set title '#{title}' font \"Helvetica,60\" \n" )
+
+      f.write( "plot '#{File.basename( data_filename )}' using ($1):2 ti \"x-value\" w boxes lc rgb\"red\",\\\n" )
+      f.write( "     '#{File.basename( data_filename )}' using ($1+1):3 ti \"y-value\" w boxes lc rgb\"green\",\\\n" )
+      f.write( "     '#{File.basename( data_filename )}' using ($1+2):4 ti \"z-value\" w boxes lc rgb\"blue\",\\\n" )
+
+      f.write( "     '#{File.basename( data_filename )}' using ($1):2 ti \"x-value\" w lines lc rgb\"red\",\\\n" )
+      f.write( "     '#{File.basename( data_filename )}' using ($1+1):3 ti \"y-value\" w lines lc rgb\"green\",\\\n" )
+      f.write( "     '#{File.basename( data_filename )}' using ($1+2):4 ti \"z-value\" w lines lc rgb\"blue\"\n" )
+    end # of File.open
+
+    File.open( data_filename.to_s, "w" ) do |f|
+      cnt = 0
+      data.each do |x,y,z|
+        f.write( "#{cnt.to_s} #{x.to_s} #{y.to_s} #{z.to_s}\n" )
+        cnt += 3
+      end
+    end
+
+  end # of def easy_gnuplot }}}
+
+
+
+
 end # of class Plotter # }}}
 

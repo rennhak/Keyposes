@@ -83,6 +83,9 @@ task :clean do |t|
 
   Dir.chdir( "/tmp/" ) do
     `rm -rf *.png`
+    `rm -rf *.jpg`
+    `rm -rf *.gp`
+    `rm -rf *.gpdata`
   end
 
 end

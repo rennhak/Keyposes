@@ -334,7 +334,7 @@ class Controller # {{{
               tmp_distortions << distortions
               tmp_centroids << centroids
 
-              puts "K-Means iteration #{i.to_s} Distortion: #{distortions.to_s}"
+              puts "K-Means iteration #{i.to_s} of #{@options.clustering_iterations.to_s} - Distortion: #{distortions.to_s}"
             end
 
             tmp_cent_min = tmp_distortions.min 

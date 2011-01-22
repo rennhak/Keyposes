@@ -363,7 +363,7 @@ class PoseVisualizer # {{{
 
           if( @first_time )
             puts "Press key"
-            STDIN.gets
+            #STDIN.gets
             @first_time = false
           end
 
@@ -457,8 +457,6 @@ class PoseVisualizer # {{{
                 end
               end
 
-
-
               draw_line( x1, y1, z1, x2, y2, z2, color )
             end
           end
@@ -523,8 +521,41 @@ class PoseVisualizer # {{{
           #@screen.flip
           #glEnable(GL_DEPTH_TEST)
 
+          @plot = Plotter.new(0,0)
           @final_intervals[ current_cluster ].each do |start_frame, middle_frame, end_frame|
             if( [ start_frame.to_i, middle_frame.to_i, end_frame.to_i ].include?( i ) )
+
+              # Plot histograms only for bounrary frames we are interested in
+              sf = []
+              mf = []
+              ef = []
+
+              0.upto( rfin.length - 1 ) do |i|
+                components.each do |component|
+                  sf << component[i] if( [ start_frame.to_i ].include?( i ) )
+                  mf << component[i] if( [ middle_frame.to_i ].include?( i ) )
+                  ef << component[i] if( [ end_frame.to_i ].include?( i ) )
+                end
+              end
+
+              @plot.histogram( sf, "/tmp/" + start_frame.to_s + "_start.gp",  "/tmp/" + start_frame.to_s + "_start.gpdata",   "Start Frame (#{start_frame.to_s})" )
+              @plot.histogram( mf, "/tmp/" + middle_frame.to_s + "_middle.gp", "/tmp/" + middle_frame.to_s + "_middle.gpdata",  "Middle Frame (#{middle_frame.to_s})" )
+              @plot.histogram( ef, "/tmp/" + end_frame.to_s + "_end.gp",    "/tmp/" + end_frame.to_s + "_end.gpdata",     "End Frame (#{end_frame.to_s})" )
+
+              Dir.chdir( "/tmp/" ) do
+                `gnuplot #{start_frame.to_s}_start.gp`
+                `convert -background white #{start_frame.to_s}_start.eps #{start_frame.to_s}_start.jpg`
+                `rm -f #{start_frame.to_s}_start.eps`
+
+                `gnuplot #{middle_frame.to_s}_middle.gp`
+                `convert -background white #{middle_frame.to_s}_middle.eps #{middle_frame.to_s}_middle.jpg`
+                `rm -f #{middle_frame.to_s}_middle.eps`
+
+                `gnuplot #{end_frame.to_s}_end.gp`
+                `convert -background white #{end_frame.to_s}_end.eps #{end_frame.to_s}_end.jpg`
+                `rm -f #{end_frame.to_s}_end.eps`
+              end
+
               screenshot( current_cluster, i )
             end
           end
@@ -547,9 +578,11 @@ class PoseVisualizer # {{{
 
       # Concat images
       @cluster_images = Hash.new
+      @cluster_images_histograms = Hash.new
       @final_intervals.each_pair do |cluster, array|
 
         @cluster_images[ cluster.to_s ] = [] if( @cluster_images[ cluster.to_s ].nil? )
+        @cluster_images_histograms[ cluster.to_s ] = [] if( @cluster_images_histograms[ cluster.to_s ].nil? )
 
         array.each do |start_frame, middle_frame, end_frame|
 
@@ -559,9 +592,21 @@ class PoseVisualizer # {{{
           images <<  "graphs/clusters/" + cluster.to_s + "/" + end_frame.to_s + ".png"
 
           @cluster_images[ cluster.to_s ] << images
+
+          histograms = []
+          histograms <<  "/tmp/" + start_frame.to_s + "_start.jpg"
+          histograms <<  "/tmp/" + middle_frame.to_s + "_middle.jpg"
+          histograms <<  "/tmp/" + end_frame.to_s + "_end.jpg"
+
+          @cluster_images_histograms[ cluster.to_s ] << histograms
         end
       end
 
+      Dir.chdir( "/tmp" ) do
+        `rm -f magick*`
+      end
+
+      # Merge the screenshots
       @vertical = []
       cnt = 0
       @cluster_images.each_pair do |cluster, images|
@@ -569,17 +614,21 @@ class PoseVisualizer # {{{
         @vertical.clear
         images.each do |start, middle, last|
 
-          imagelist = Magick::ImageList.new( start, middle, last )
+          begin
+            imagelist = Magick::ImageList.new( start, middle, last )
 
-          imagelist.each do |image|
-            image.border!( 5, 5, "black" )
+            imagelist.each do |image|
+              image.border!( 5, 5, "black" )
+            end
+
+            im = imagelist.append( false )
+            fn = "/tmp/concat_#{cluster.to_s}_#{cnt.to_s}.png"
+            im.write( fn.to_s )
+            @vertical << fn
+            cnt += 1
+          rescue
+            puts "There was a problem in poseviewer with frames (#{start.to_s}, #{middle.to_s}, #{last.to_s})"
           end
-
-          im = imagelist.append( false )
-          fn = "/tmp/concat_#{cluster.to_s}_#{cnt.to_s}.png"
-          im.write( fn.to_s )
-          @vertical << fn
-          cnt += 1
         end # of images.each
 
         final_fn = "/tmp/final_#{cluster.to_s}.png"
@@ -589,12 +638,48 @@ class PoseVisualizer # {{{
         final_im = Magick::ImageList.new( *@vertical )
         final_im = final_im.append( true )
         final_im.write( final_fn )
-
       end # of @cluster_images.each_pair
 
+      Dir.chdir( "/tmp" ) do
+        `rm -f magick*`
+      end
+
+      # Merge the histograms
+      @vertical = []
+      cnt = 0
+      @cluster_images_histograms.each_pair do |cluster, images|
+        cnt = 0
+        @vertical.clear
+        images.each do |start, middle, last|
+
+          begin
+            imagelist = Magick::ImageList.new( start, middle, last )
+
+            imagelist.each do |image|
+              image.border!( 5, 5, "black" )
+              # image.background_color( "white" )
+            end
+
+            im = imagelist.append( false )
+            fn = "/tmp/histograms_concat_#{cluster.to_s}_#{cnt.to_s}.jpg"
+            im.write( fn.to_s )
+            @vertical << fn
+            cnt += 1
+          rescue
+            puts "There was a problem in poseviewer with frames (#{start.to_s}, #{middle.to_s}, #{last.to_s})"
+          end
+        end # of images.each
+
+        final_fn = "/tmp/histograms_final_#{cluster.to_s}.jpg"
+
+        @log.message :info, "Generating #{final_fn.to_s}"
+
+        final_im = Magick::ImageList.new( *@vertical )
+        final_im = final_im.append( true )
+        final_im.write( final_fn )
+
+      end # of @cluster_images.each_pair
     end
-
-
 
     @font.close
     SDL.quit
