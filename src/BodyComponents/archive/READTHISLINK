@@ -1,0 +1,36 @@
+http://thedailyreviewer.com/compsys/view/3d-curve-fitting-109204316
+
+
+for using lsqcurvefit for a curve in 3d, i.e. some thing like
+
+(x(t),y(t),z(t))
+
+  having data (x(i),y(i),z(i)) i=1,.,N you must have a model for the curve:
+  x(t) = FX(param,t)
+  y(t) = FY(param,t)
+  z(t) = FZ(param,t)
+  where param are the parameters to be fitted and the three functions FX,FY andFZ
+  are not neccessarily of the same type. If I understand your problem right,
+  then you have simply those
+  data points and want a curve trough these points, not a specific model.
+  then using splines is a good idea: take an artificial parameter t for
+  your curve points . a natural choice would be the arclength of the interpolating
+  piecewise linear arc. (!! this assumes that you have the order in which the curve
+      goes through the points) so
+  t(1)=0,
+  t(i)=t(i-1)+norm(P(i)-P(i-1)); i=2,...,n with P(i)=[x(i),y(i),z(i)];
+then compute 3 splines (independently) through the data (t(i),x(i))
+  (t(i),y(i)), (t(i),z(i)) and you have your curve
+  in the form
+
+  (x,y,z)=(s1(t),s2(t),s3(t)), 0<=t<= t_end=t(n)
+
+  the normal cubic spline
+  might be somewhat wavy, hence it might be advisable to use a spline under tension
+  instead. this depeds a lot on your data, best try it out on a representative set
+  of examples
+  hth
+  peter
+
+
+  http://www.ics.forth.gr/~lourakis/levmar/faq.html#Q2

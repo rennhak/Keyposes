@@ -1,0 +1,4 @@
+1.) install gsl with dynamic and static binaries
+2.) install narray
+3.) find narray .o's and add them to the ext/Makefile libs line for linking
+4.) install as usual

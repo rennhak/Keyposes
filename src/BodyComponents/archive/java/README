@@ -1,0 +1,34 @@
+These routines may have some of the following dependencies:
+
+0) The routines are in a package "ZS".  This is of course optional,
+you can simply comment out the ZS and use the routine inside
+the default package if desired.
+
+1) zlib.*  This contains some unimportant _assert calls.
+You can either comment these out, or use the zlib.java and zliberror.java
+linked below.
+
+2) ZS.*
+matrix.java contains routines to print matrices for debugging purposes.
+These calls can be commented out, or you can use the matrix.java linked
+below.
+
+zmath.java has various small math routines (binomial and such).
+Use the zmath.java linked below.
+
+3) VisualNumerics.math.*.  
+This ("jnl") was a free matrix library.  It is no longer available 
+from VisualNumerics, but some old copies might be around.
+I like it because it treats matrices as plain java [][] arrays
+rather than inventing a matrix type with its possible overhead.
+
+If you cannot find jnl, you will need to adapt these routines to use 
+your own matrix library (just replace the *Matrix calls with your own).  
+Some free/open source matrix libraries are Jama (search for it) 
+or Matrix Toolkits for Java (http://rs.cipr.uib.no/mtj)
+
+As of March 07, I was able to find the jnl library by searching online for
+"jnl.jar" and "visualnumerics.jar".  It is included in the "synthetica"
+package under the name visualnumerics.jar in the lib folder.
+
+

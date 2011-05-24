@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/10501/trunk/src/astrometry/pylevmar/src
+END
+pylevmar.c
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/10501/trunk/src/astrometry/pylevmar/src/pylevmar.c
+END
+pylevmar.h
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/10500/trunk/src/astrometry/pylevmar/src/pylevmar.h
+END

@@ -4,13 +4,14 @@
 
 # = Libraries: Mathematics
 require 'gsl'
-require 'rbgsl'
+
+#require 'rbgsl'
 require 'narray'
 
 # = Libraries: Plotting
 require 'rubygems'
 require 'gnuplot'
-require 'gsl/gnuplot'
+# require 'gsl/gnuplot'
 
 
 
@@ -227,12 +228,13 @@ class PCA # {{{
     # substract mean from input data
     input.collect! { |subarray| substract_mean( subarray ) }
 
+
     # puts "input:"
     # p input 
 
     # Convert the subarrys into a GSL matrix
     matrix                        = GSL::Matrix.alloc( *input ).transpose
-
+  
     # puts "Matrix:"
     # p matrix
     # Determine the covariance matrix from the mean reduced input
@@ -251,6 +253,7 @@ class PCA # {{{
     # puts "do_pca -> Sorting eigen values and vectors now"
     # Sort in-place the eigen-vectors or importance (most to least)
     GSL::Eigen.symmv_sort eigen_values, eigen_vectors, GSL::Eigen::SORT_VAL_DESC
+
 
     #eigen_values.to_a.each_index do |i|
     #  printf "l = %.3f\n", eigen_values.get(i)
@@ -285,11 +288,24 @@ class PCA # {{{
 
     # Split matrix into subarrays again and add back the substracted mean
     result                        = []
-    0.upto( row_original_data.size.first - 1 ) do |n|
-      array = row_original_data[n].to_a
-      add_original_mean( original[n], array )
-      result << array
+
+    row_cnt                       = 0
+    row_original_data.each_row do |row|
+      tmp = row.to_a
+      add_original_mean( original[row_cnt], tmp )
+      result << tmp
+      row_cnt += 1
     end
+
+    #0.upto( row_original_data.size.first - 1 ) do |n|
+    #  # this was working in prev. rb-gsl -- array = row_original_data[n].to_a
+    #  p n
+    #  array = row_original_data.get_row( n ).to_a
+    #  p array
+    #  exit
+    #  add_original_mean( original[n], array )
+    #  result << array
+    #end
 
     [ result, eigen_values, eigen_vectors ]
   end # of def do_pca }}}
@@ -611,14 +627,14 @@ if __FILE__ == $0 # {{{
 #  # covariance dictates that pupils_study_hours and marks_pupils_got should be positive (both
 #  # increase) -- should be negative with marks_pupils_got2
 #  # page 8
-#  pupils_study_hours      = [9,  15, 25, 14, 10, 18, 0,  16, 5,  19, 16, 20]
-#  marks_pupils_got        = [39, 56, 93, 61, 50, 75, 32, 85, 42, 70, 66, 80]
-#  marks_pupils_got_inv    = [59, 39, 13, 38, 50, 20, 90, 32, 80, 10, 16, 0]     # lets assume the more hours they study the worse their marks
+  pupils_study_hours      = [9,  15, 25, 14, 10, 18, 0,  16, 5,  19, 16, 20]
+  marks_pupils_got        = [39, 56, 93, 61, 50, 75, 32, 85, 42, 70, 66, 80]
+  marks_pupils_got_inv    = [59, 39, 13, 38, 50, 20, 90, 32, 80, 10, 16, 0]     # lets assume the more hours they study the worse their marks
 #
-#  m = GSL::Matrix.alloc( pupils_study_hours, marks_pupils_got ).transpose
-#  # n = GSL::Matrix.alloc( pupils_study_hours, marks_pupils_got_inv ).transpose
-#  # p pca.covariance( pupils_study_hours, marks_pupils_got, true )
-#  # p pca.covariance_matrix( m )
+  # m = GSL::Matrix.alloc( pupils_study_hours, marks_pupils_got ).transpose
+   #m = GSL::Matrix.alloc( pupils_study_hours, marks_pupils_got_inv ).transpose
+   # p pca.covariance( pupils_study_hours, marks_pupils_got, true )
+   #p pca.covariance_matrix( m )
 #  # p pca.covariance_matrix( n )
 #
 #  # test data of page 8
@@ -636,13 +652,13 @@ if __FILE__ == $0 # {{{
 #  # p pca.covariance_matrix( b )
 #
 #  # Check if GSL is sane with example from page 11
-#  c1 = [ 3, 0, 1 ]
-#  c2 = [ -4, 1, 2 ]
-#  c3 = [ -6, 0, -2 ]
-#  c  = GSL::Matrix.alloc( c1, c2, c3 )
-#  # eigen_values, eigen_vectors = c.eigen_symmv
-#  # p eigen_values
-#  # p eigen_vectors 
+  #c1 = [ 3, 0, 1 ]
+  #c2 = [ -4, 1, 2 ]
+  #c3 = [ -6, 0, -2 ]
+  #c  = GSL::Matrix.alloc( c1, c2, c3 )
+  #eigen_values, eigen_vectors = c.eigen_symmv
+  #p eigen_values
+  #p eigen_vectors 
 #
   # === PCA example
   x = [2.5, 0.5, 2.2, 1.9, 3.1, 2.3, 2.0, 1.0, 1.5, 1.1 ]
@@ -657,11 +673,12 @@ if __FILE__ == $0 # {{{
   # Change Basis to new Principal Axis
   # http://www.khanacademy.org/video/lin-alg--changing-coordinate-systems-to-help-find-a-transformation-matrix?playlist=Linear%20Algebra
 
-###  input                                 = [x, y, z]
-###  result, eigen_values, eigen_vectors   = pca.do_pca( input, 1 )
-###  result_final                          = pca.transform_basis( result, eigen_values, eigen_vectors )
+  #input                                 = [x, y, z]
+  #result, eigen_values, eigen_vectors   = pca.do_pca( input, 1 )
+  #result_final                          = pca.transform_basis( result, eigen_values, eigen_vectors )
+
 ###
-###  pca.interactive_gnuplot( pca.reshape_data( result_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values, eigen_vectors )
+  #pca.interactive_gnuplot( pca.reshape_data( result_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values, eigen_vectors )
 ###
 #  #pca.graph( GSL::Vector.alloc(x), GSL::Vector.alloc(y)      , "graph.png" )
 #  #pca.graph( GSL::Vector.alloc(new.first), GSL::Vector.alloc(new.last), "graph2.png" )

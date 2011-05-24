@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/10501/trunk/src/astrometry/pylevmar
+END
+test.py
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/10500/trunk/src/astrometry/pylevmar/test.py
+END
+setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/10500/trunk/src/astrometry/pylevmar/setup.py
+END
