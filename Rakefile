@@ -48,11 +48,8 @@ task :clean do |t|
   `rm coverage.info` if( File.exists?( "coverage.info" ) )
   `rm -rf coverage`  if( File.exists?( "coverage" ) )
   `rm -rf .yardoc`   if( File.exists?( ".yardoc" ) )
-  Dir.chdir( "documentation" ) do 
+  Dir.chdir( "doc" ) do 
     `rm -rf yardoc`  if( File.exists?( "yardoc" ) )
-  end
-  Dir.chdir( "src/BodyComponents" ) do
-    `rm -f *.gp *.gpdata`
   end
 end
 
@@ -91,13 +88,6 @@ task :yardoc do |t|
   `yardoc -o doc/yardoc`
 end
 
-desc "Commit data to github.com"
-task :commit do |c|
-    `rake clean`
-    `git add *`
-    system "git commit -a"
-    `git push`
-end 
 
 # cucumber --format usage
 # cucover

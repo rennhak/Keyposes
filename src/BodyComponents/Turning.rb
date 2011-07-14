@@ -653,7 +653,8 @@ class Turning # {{{
     lower_body              = %w[thighs shanks feet]
     full_body               = ( upper_body.concat( lower_body ) ).flatten
 
-    body_components         = upper_body
+    # body_components         = upper_body
+    body_components         = %w[upper_arms]
 
     components            = []    # here we store our data refs in one place
 
@@ -796,9 +797,13 @@ class Turning # {{{
       if( (r.length > 5) and (tmp <= 0.05) )
         print "#{i.to_s}      |  #{(tmp).to_s}   | " + r +"\n" 
 
-        strength = 1
-        strength += 1 if( tmp <= 0.01 )
-        interesting[i] = [ i, r.length + strength ]
+        strength = kappa[i] + (1 - normed_energy[i]) + (1 - normed_velocity[i] ) 
+        #strength += 1 if( tmp <= 0.01 )
+        #strength += 1 if( tmp <= 0.005 )
+
+        # strength += 1 kappa[i] 
+
+        interesting[i] = [ i, r.length * strength ]
       end
     end
 
@@ -811,7 +816,7 @@ class Turning # {{{
     v_show = (v_prime_frames.zip(  v_prime.dup         ) )
     vv_show = (v_prime_frames.zip( v_prime_prime.dup   ) )
 
-    @plot.easy_gnuplot( v_show, "%e %e\n", ["Frames", "Dance Master Pose"], "Dance Master Pose extraction Graph", "new_weight_plot.gp", "new_weight_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "new_weight_dmp.gpdata" ) 
+    @plot.easy_gnuplot( interesting, "%e %e\n", ["Frames", "Dance Master Pose"], "Dance Master Pose extraction Graph", "new_weight_plot.gp", "new_weight_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "new_weight_dmp.gpdata" ) 
 
     # Kappa needs to be corrected because @from is not nil and not 0
     #if( @from.to_i > 0 )

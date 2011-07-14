@@ -296,8 +296,8 @@ class BodyComponents # {{{
       end # of if( segments.include?( 
     end # of %w[pt27...
 
-    # pca.interactive_gnuplot( input.rkne.getCoordinates!, "%e %e %e\n", %w[X Y Z],  "3d_plot.gp" )
-    #pca.interactive_gnuplot( cluster_smooth, "%e %e %e\n", %w[X Y Z],  "3d_plot_smooth.gp" )
+    pca.interactive_gnuplot( input.rkne.getCoordinates!, "%e %e %e\n", %w[X Y Z],  "3d_plot.gp" )
+    pca.interactive_gnuplot( cluster_smooth, "%e %e %e\n", %w[X Y Z],  "3d_plot_smooth.gp" )
 
     input
   end # of def motion_capture_data_smoothing }}}

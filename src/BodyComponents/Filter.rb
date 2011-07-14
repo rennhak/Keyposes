@@ -44,6 +44,7 @@ class Filter # {{{
     @log                 = Logger.new( @options )
 
     @mathematics         = Mathematics.new
+    @plotter             = Plotter.new( from, to )
   end # of def initialize }}}
 
 
@@ -87,6 +88,11 @@ class Filter # {{{
         coordinates = segment.getCoordinates!
 
         coordinate_chunks = coordinates % point_window
+
+
+        print_one = []
+        print_two = []
+
         coordinate_chunks.each do |cluster|
 
           # # Lets get a point sample
@@ -172,6 +178,15 @@ class Filter # {{{
           end
 
           temp_container += cluster_smooth
+
+          #print_one << cluster
+          #print_two << cluster_smooth 
+
+          #if( print_one.length >= 20 )
+          #  @plotter.interactive_gnuplot( cluster, "%e %e %e\n", %w[X Y Z],  "3d_plot.gp" )
+          #  @plotter.interactive_gnuplot( cluster_smooth, "%e %e %e\n", %w[X Y Z],  "3d_plot_smooth.gp" )
+          #end
+
         end # of coordinate_chunks.each do |cluster|
 
         #err_sum = errors.inject(0) { |r,e| r + e }
@@ -198,8 +213,6 @@ class Filter # {{{
       end # of if( segments.include?( 
     end # of %w[pt27...
 
-    # pca.interactive_gnuplot( input.rkne.getCoordinates!, "%e %e %e\n", %w[X Y Z],  "3d_plot.gp" )
-    # pca.interactive_gnuplot( cluster_smooth, "%e %e %e\n", %w[X Y Z],  "3d_plot_smooth.gp" )
 
     input
   end # of def motion_capture_data_smoothing }}}
