@@ -26,7 +26,7 @@ require 'gsl'
 # Warning: Including this line will cause everything to break.
 # include GSL
 
-require 'c/c_mathematics'
+#require 'c/c_mathematics'
 
 # The class Mathematics provides helpful functions to calculate various things needed throughout this project
 class Mathematics # {{{
@@ -155,8 +155,8 @@ class Mathematics # {{{
       #y = @power_of_two_lookup_table[ y ]
       #z = @power_of_two_lookup_table[ z ]
 
-      # result = Math.sqrt( ((x2-x1)**2) + ((y2-y1)**2) + ((z2-z1)**2) )
-      result = C_mathematics.c_eucledian_distance( x1, y1, z1, x2, y2, z2 )
+      result = Math.sqrt( ((x2-x1)**2) + ((y2-y1)**2) + ((z2-z1)**2) )
+      # result = C_mathematics.c_eucledian_distance( x1, y1, z1, x2, y2, z2 )
     end
 
     # Post-condition check
