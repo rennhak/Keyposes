@@ -31,6 +31,9 @@ require 'rubygems'
 require 'narray'
 require 'gsl'
 
+# Profiler
+require 'ruby-prof'
+
 # Custom includes (changes object behaviors)
 require 'Extensions.rb'
 
@@ -80,6 +83,9 @@ class Controller # {{{
     unless( options.nil? )
       @log.message :success, "Starting #{__FILE__} run"
       @log.message :debug,    "Colorizing output as requested" if( @options.colorize )
+
+
+      RubyProf.start if( @options.profiling )
 
       ####
       # Main Control Flow
@@ -143,6 +149,26 @@ class Controller # {{{
       end # of unless( @options.process.empty? )
 
 
+      if( @options.profiling )
+        results = RubyProf.stop
+        # printer = RubyProf::GraphPrinter.new(result)
+        # printer.print(STDOUT, 0)
+
+        File.open "tmp/profile-graph.html", 'w' do |file|
+          RubyProf::GraphHtmlPrinter.new(results).print(file)
+        end
+
+        File.open "tmp/profile-flat.txt", 'w' do |file|
+          RubyProf::FlatPrinter.new(results).print(file)
+        end
+
+        File.open "tmp/profile-tree.prof", 'w' do |file|
+          RubyProf::CallTreePrinter.new(results).print(file)
+        end
+      end
+
+
+
     end # of unless( options.nil? )
 
   end # of def initialize }}}
@@ -168,6 +194,7 @@ class Controller # {{{
     options.use_raw_data                    = false
     options.filter_point_window_size        = 20
     options.filter_polyomial_order          = 5
+    options.profiling                       = false
 
     pristine_options                        = options.dup
 
@@ -219,6 +246,12 @@ class Controller # {{{
       opts.on("-q", "--quiet", "Run quietly, don't output much") do |v|
         options.verbose = v
       end
+
+      # Boolean switch.
+      opts.on("--profiler", "Run profiler alongside the code (see results in tmp/)") do |p|
+        options.profiling = p
+      end
+
 
       opts.separator ""
       opts.separator "Common options:"
@@ -289,36 +322,11 @@ end # of class Controller }}}
 
 # Direct Invocation
 if __FILE__ == $0 # {{{
-  require 'ruby-prof'
-
-  # Profile the code
-  #RubyProf.start
 
   options = Controller.new.parse_cmd_arguments( ARGV )
   bc      = Controller.new( options )
 
-  exit 
-  results = RubyProf.stop
- # printer = RubyProf::GraphPrinter.new(result)
- # printer.print(STDOUT, 0)
-
- # printer = RubyProf::GraphHtmlPrinter.new(result)
-  #printer.print(STDOUT, :min_percent=>0)
-
-
-  File.open "tmp/profile-graph.html", 'w' do |file|
-    RubyProf::GraphHtmlPrinter.new(results).print(file)
-  end
-
-  File.open "tmp/profile-flat.txt", 'w' do |file|
-    RubyProf::FlatPrinter.new(results).print(file)
-  end
-
-  File.open "tmp/profile-tree.prof", 'w' do |file|
-    RubyProf::CallTreePrinter.new(results).print(file)
-  end
-
-
+  
 end # of if __FILE__ == $0 }}}
 
 # vim=ts:2
