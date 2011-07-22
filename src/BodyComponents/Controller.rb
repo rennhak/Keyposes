@@ -167,8 +167,6 @@ class Controller # {{{
         end
       end
 
-
-
     end # of unless( options.nil? )
 
   end # of def initialize }}}
@@ -326,7 +324,6 @@ if __FILE__ == $0 # {{{
   options = Controller.new.parse_cmd_arguments( ARGV )
   bc      = Controller.new( options )
 
-  
 end # of if __FILE__ == $0 }}}
 
 # vim=ts:2

@@ -40,18 +40,18 @@ include GSL
 class Turning # {{{
 
   def initialize options, adt, dance_master_poses, dance_master_poses_range, from, to # {{{
-    @adt                  = adt
-    @options              = options
-    @dance_master_poses   = dance_master_poses
-    @dance_master_poses_range   = dance_master_poses_range
-    @from, @to            = from, to
+    @adt                          = adt
+    @options                      = options
+    @dance_master_poses           = dance_master_poses
+    @dance_master_poses_range     = dance_master_poses_range
+    @from, @to                    = from, to
 
-    @log                  = Logger.new( @options )
-    @plot                 = Plotter.new( @from, @to )
+    @log                          = Logger.new( @options )
+    @plot                         = Plotter.new( @from, @to )
 
-    @mathematics          = Mathematics.new
-    @physics              = Physics.new
-    @filter               = Filter.new( @options, @from, @to )
+    @mathematics                  = Mathematics.new
+    @physics                      = Physics.new
+    @filter                       = Filter.new( @options, @from, @to )
   end # of def initialize }}}
 
 
@@ -343,9 +343,6 @@ class Turning # {{{
   end # of def frenet_frame }}}
 
 
-
-
-
   # = get_segments_cpa returns a set of values after Closest Point of Approach calculation
   # takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for center
   # @param segments Array in the form of [ [segment1, segment2], [segment3, segment4] ] where seg1 & seg2 form a 3D line and 3,4 respectively
@@ -591,7 +588,6 @@ class Turning # {{{
   end # end of get_segments_cpa }}}
 
 
-
   # = getPhi takes two segements and performs a simple golden ratio calculation for each coordinate pair
   #   A good reference would be \varphi = \frac{1 + \sqrt{5}}{2} \approx 1.61803339 \ldots
   # @param segment1 Expects a valid segment name, e.g. rwft
@@ -642,7 +638,6 @@ class Turning # {{{
     result            = get_segments_cpa( components, center, from, to )
 
   end # of def get_components_cpa }}}
-
 
 
   # = Perform calculations and extract data
@@ -727,22 +722,11 @@ class Turning # {{{
       kappa = boxcar_kappa.collect { |a,b| b }
     end
 
-   # bspline = GSL::BSpline.alloc(10, 50) # order, breakpoints
-   # knots   = bspline.knots_uniform( 0, kappa.length )
-
-   # new_kappa = []
-   # kappa.each do |k|
-   #   res     = bspline.eval( k )
-   #   new_kappa << res.to_a[0]
-   # end
-   # kappa = new_kappa
-
     @log.message :info, "Performing additional calculations (E_k, etc.)" 
 
     v                                 = @physics.velocity( pca.reshape_data( all_final.dup, false, true ), 5 )
     a                                 = @physics.acceleration( pca.reshape_data( all_final.dup, false, true), 5 )
     p                                 = @physics.power( pca.reshape_data( all_final.dup, false, true ), mass, 5 )
-
 
 
     h = 10 ** (-1)
