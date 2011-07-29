@@ -697,7 +697,6 @@ class Turning # {{{
     all_energy                        = @physics.energy( pca.reshape_data( all_final.dup, false, true ), mass, spread )
 
 
-
     #### Messy Mablab interaction
     # Dump to file for matlab
     File.open( "work/data.csv", File::WRONLY|File::TRUNC|File::CREAT, 0667 ) do |f|
@@ -730,24 +729,49 @@ class Turning # {{{
 
 
     h = 10 ** (-1)
-    e_prime       = @mathematics.derivative( all_energy, h )           # slope of the function
+    e_prime       = @mathematics.derivative( all_energy, h )  # slope of the function
     e_prime_prime = @mathematics.derivative( e_prime, h )     # rate of change (or slope of the slope)
 
     v_prime       = @mathematics.derivative( v, h )           # slope of the function
     v_prime_prime = @mathematics.derivative( v_prime, h )     # rate of change (or slope of the slope)
 
 
-    # Get frames where Kappa > 0.02
-    kappa_candidates = []
-    energy_candidates = []
-    velocity_candidates = []
+    # Determine local max & min
+    kappa_sign_graph        = []                              # local max or min
 
-    kappa.each_with_index { |k, i| kappa_candidates << i if( k >= 0.01 ) }
-   #  pca.normalize( v.dup ).each_with_index { |v, i| velocity_candidates << i if( v <= 0.2 ) }
+    kappa_slope             = @mathematics.derivative( kappa, h )       # slope of the function
+    kappa_rate_of_change    = @mathematics.derivative( kappa_slope, h ) # rate of change (slope of the slope)
 
-    v_prime_frames = []
-    0.upto( e_prime.length - 1 ) { |i| v_prime_frames << i }
-    # GSL::graph( [ GSL::Vector.alloc( v_prime_frames ), GSL::Vector.alloc( v_prime ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
+    kappa_slope.each_with_index do |k, i|
+      next if( kappa_slope.length <= i+1 )  # abort if we reached the end
+
+      if( k > 0 )
+        if( kappa_slope[ i+1 ] < 0 )
+          # we have an local maximum
+          kappa_sign_graph[ i ] = "maximum"
+        end
+      end
+    end # of kappa_slope.each_with_index
+
+
+    f = File.open( "slope.gpdata", "w" )
+    kappa_sign_graph.each_with_index { |k,i| f.write("#{i.to_s} #{kappa[i].to_s}\n")  }
+    f.close
+
+    kappa_candidates        = []
+    energy_candidates       = []
+    velocity_candidates     = []
+
+   v_prime_frames = []
+   0.upto( e_prime.length - 1 ) { |i| v_prime_frames << i }
+
+   #GSL::graph( [ GSL::Vector.alloc( v_prime_frames ), GSL::Vector.alloc( kappa ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
+
+ 
+
+
+
+   # GSL::graph( [ GSL::Vector.alloc( v_prime_frames ), GSL::Vector.alloc( kappa_slope ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
 
     v_prime_prime_frames = []
     0.upto( v_prime_prime.length - 1 ) { |i| v_prime_prime_frames << i }
@@ -838,6 +862,11 @@ class Turning # {{{
     v_show = (v_prime_frames.zip(  v_prime.dup         ) )
     vv_show = (v_prime_frames.zip( v_prime_prime.dup   ) )
 
+
+
+
+
+
     # @plot.easy_gnuplot( interesting, "%e %e\n", ["Frames", "Dance Master Pose"], "Dance Master Pose extraction Graph", "new_weight_plot.gp", "new_weight_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "new_weight_dmp.gpdata" ) 
 
     # Kappa needs to be corrected because @from is not nil and not 0
@@ -903,9 +932,9 @@ class Turning # {{{
     @log.message :info, "Performing polynomial fitting of data"
     # OLD METHOD
     # Smoothing poly - use sth between 50 - 100
-    coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa.length-1).to_s}" )), GSL::Vector.alloc( kappa ), 100)
-    kappa_smooth = []
-    0.upto( kappa.length - 1 ) { |n| kappa_smooth << coef.eval( n ) }
+    # coef, err, chisq, status = GSL::MultiFit::polyfit( GSL::Vector.alloc( eval( "0..#{(kappa.length-1).to_s}" )), GSL::Vector.alloc( kappa ), 100)
+    # kappa_smooth = []
+    # 0.upto( kappa.length - 1 ) { |n| kappa_smooth << coef.eval( n ) }
 
 #    # NEW METHOD
 #    n               = 16
@@ -1040,7 +1069,7 @@ class Turning # {{{
     #@plot.interactive_gnuplot_eucledian_distances( wavelet_kappa_smooth, "%e %e\n", ["Frames", "Wavelet Smoothed Curvature, then poly fitted Value (0 <= e <= 1)"], "Wavelet Smoothed Curvature then poly fitted Value Graph", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gp", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "poly_wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "poly_wavelet_tp_smoothed_frenet_frame.gpdata" ) 
     #@plot.interactive_gnuplot_eucledian_distances( kappa_wavelet, "%e %e\n", ["Frames", "Normalized and Wavelet Smoothed Curvature Value (0 <= e <= 1)"], "Normalized and Wavelet Smoothed Curvature Value Graph", "wavelet_smoothed_frenet_frame_kappa_plot.gp", "wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "wavelet_tp_smoothed_frenet_frame.gpdata" ) 
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Curvature"], "", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_frenet_frame.gpdata", turning_poses, "tp_frenet_frame.gpdata" )
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Curvature"], "", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_smoothed_frenet_frame.gpdata", turning_poses, "tp_smoothed_frenet_frame.gpdata" ) 
+    # @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Curvature"], "", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_smoothed_frenet_frame.gpdata", turning_poses, "tp_smoothed_frenet_frame.gpdata" ) 
     
     #@plot.interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity"], "", "velocity_plot.gp", "velocity_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_velocity_plot.gpdata" )
