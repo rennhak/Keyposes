@@ -1134,7 +1134,7 @@ class Turning # {{{
     
     #@plot.interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity"], "", "velocity_plot.gp", "velocity_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_velocity_plot.gpdata" )
-    #@plot.interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
+    # @plot.interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
     
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window"], "", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_eucleadian_distance.gpdata", turning_poses, "tp_eucleadian_distance.gpdata" )
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy"], "", "ekin.gp", "ekin.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_ekin.gpdata", turning_poses, "tp_ekin.gpdata" )
