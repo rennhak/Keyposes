@@ -280,7 +280,7 @@ class Turning # {{{
     #pca.covariance_matrix_gnuplot( new, "cov.gp" )
     #pca.eigenvalue_energy_gnuplot( new, "energy.gp" )
 
-    pca.interactive_gnuplot( pca.reshape_data( arm1_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values1, eigen_vectors2 )
+    pca.interactive_gnuplot( pca.reshape_data( arm1_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "graphs/plot.gp", eigen_values1, eigen_vectors2 )
 
   end # end of do_pca_reduction }}}
 
@@ -450,7 +450,7 @@ class Turning # {{{
     # pca.covariance_matrix_gnuplot( arms, "cov.gp" )
     # pca.eigenvalue_energy_gnuplot( arms, "energy.gp" )
     # interactive_gnuplot_eucledian_distances( pca.normalize( distances ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window Value (0 <= e <= 1)"], "eucledian_distances_window_plot.gp" )
-    pca.interactive_gnuplot( pca.reshape_data( arms_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", eigen_values, eigen_vectors )
+    pca.interactive_gnuplot( pca.reshape_data( arms_final, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "graphs/plot.gp", eigen_values, eigen_vectors )
 
 
     return arms_final
@@ -634,8 +634,12 @@ class Turning # {{{
     @log.message :info, "Calculating CPA of #{components_keyword.to_s}"
 
     center            = @adt.body.center
-    components        = eval( "@adt.body.group_#{model.to_s}_model[ components_keyword ]" )
 
+
+    # FIXME Why is this necessary?
+    # components        = eval( "@adt.body.group_#{model.to_s}_model[ components_keyword ]" )
+    components = (  eval( "@adt.body.group_#{model.to_s}_model_left[ components_keyword ]" ) ).concat(  eval( "@adt.body.group_#{model.to_s}_model_right[ components_keyword ]" ) )
+    p components
     result            = get_segments_cpa( components, center, from, to )
 
   end # of def get_components_cpa }}}
@@ -655,6 +659,7 @@ class Turning # {{{
 
     components            = []    # here we store our data refs in one place
     tmp_components        = []
+
 
     # Get all individual components
     case model
@@ -700,6 +705,8 @@ class Turning # {{{
         case @options.side
           when "both"
             body_components.each { |c| tmp_components << @adt.body.group_12_model[ c.to_sym ] } 
+            # body_components.each { |c| tmp_components << @adt.body.group_12_model_left[ c.to_sym ] } 
+            # body_components.each { |c| tmp_components << @adt.body.group_12_model_right[ c.to_sym ] } 
           when "left"
             body_components.each { |c| tmp_components << @adt.body.group_12_model_left[ c.to_sym ] } 
           when "right"
@@ -815,7 +822,7 @@ class Turning # {{{
     end # of kappa_slope.each_with_index
 
 
-    f = File.open( "slope.gpdata", "w" )
+    f = File.open( "graphs/slope.gpdata", "w" )
     kappa_sign_graph.each_with_index { |k,i| f.write("#{i.to_s} #{kappa[i].to_s}\n")  }
     f.close
 
@@ -1129,16 +1136,16 @@ class Turning # {{{
     
     #@plot.interactive_gnuplot_eucledian_distances( wavelet_kappa_smooth, "%e %e\n", ["Frames", "Wavelet Smoothed Curvature, then poly fitted Value (0 <= e <= 1)"], "Wavelet Smoothed Curvature then poly fitted Value Graph", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gp", "poly_wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "poly_wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "poly_wavelet_tp_smoothed_frenet_frame.gpdata" ) 
     #@plot.interactive_gnuplot_eucledian_distances( kappa_wavelet, "%e %e\n", ["Frames", "Normalized and Wavelet Smoothed Curvature Value (0 <= e <= 1)"], "Normalized and Wavelet Smoothed Curvature Value Graph", "wavelet_smoothed_frenet_frame_kappa_plot.gp", "wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "wavelet_tp_smoothed_frenet_frame.gpdata" ) 
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Curvature"], "", "frenet_frame_kappa_plot.gp", "frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_frenet_frame.gpdata", turning_poses, "tp_frenet_frame.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Curvature"], "", "graphs/frenet_frame_kappa_plot.gp", "graphs/frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmps_frenet_frame.gpdata", turning_poses, "graphs/tp_frenet_frame.gpdata" )
     # @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Curvature"], "", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_smoothed_frenet_frame.gpdata", turning_poses, "tp_smoothed_frenet_frame.gpdata" ) 
     
     #@plot.interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity"], "", "velocity_plot.gp", "velocity_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_velocity_plot.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( v ), "%e %e\n", ["Frames", "Normalized Velocity"], "", "graphs/velocity_plot.gp", "graphs/velocity_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmps_velocity_plot.gpdata" )
     # @plot.interactive_gnuplot_eucledian_distances( pca.normalize( a ), "%e %e\n", ["Frames", "Normalized Acceleration Value (0 <= e <= 1)"], "Normalized Acceleration Value Graph", "acceleration_plot.gp", "acceleration_plot.gpdata" )
     
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window"], "", "eucledian_distances_window_plot.gp", "eucledian_distances_window_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_eucleadian_distance.gpdata", turning_poses, "tp_eucleadian_distance.gpdata" )
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy"], "", "ekin.gp", "ekin.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_ekin.gpdata", turning_poses, "tp_ekin.gpdata" )
-    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight"], "", "weight.gp", "weight.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_weight.gpdata", turning_poses, "tp_weight.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( dis ), "%e %e\n", ["Frames", "Normalized Eucledian Distance Window"], "", "graphs/eucledian_distances_window_plot.gp", "graphs/eucledian_distances_window_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmps_eucleadian_distance.gpdata", turning_poses, "graphs/tp_eucleadian_distance.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( all_energy ), "%e %e\n", ["Frames", "Normalized Kinetic Energy"], "", "graphs/ekin.gp", "graphs/ekin.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmps_ekin.gpdata", turning_poses, "graphs/tp_ekin.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( e ), "%e %e\n", ["Frames", "Normalized Weight"], "", "graphs/weight.gp", "graphs/weight.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmps_weight.gpdata", turning_poses, "graphs/tp_weight.gpdata" )
     #pca.interactive_gnuplot( pca.reshape_data( plot, false, true ), "%e %e %e\n", %w[PC1 PC2 PC3],  "plot.gp", all_eval, all_evec )
     #pca.interactive_gnuplot( forearms, "%e %e %e\n", %w[X Y Z],  "forearms_plot.gp" )
 

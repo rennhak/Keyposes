@@ -229,10 +229,10 @@ class Plotter # {{{
       f.write( "set title '#{title}' font \"Helvetica,60\" \n" )
 
       if( pointsOfInterest.nil? )
-        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3\n" )
+        f.write( "plot '#{File.basename( data_filename )}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3\n" )
       else
         # ORIG; f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 1, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'frenet_frame_kappa_plot.gpdata' ti \"Raw Curvature\" w line\n" )
-        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w lines linestyle 1, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 4\n")
+        f.write( "plot '#{File.basename( data_filename )}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w lines linestyle 1, '#{File.basename( pointsOfInterest_filename )}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 4\n")
         #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'ekin.gpdata' ti \"Kinetic Energy\" w line, 'eucledian_distances_window_plot.gpdata' ti \"Eucledian Distance Window (speed)\" w line\n" )
         #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7\n")
       end
@@ -288,9 +288,9 @@ class Plotter # {{{
       f.write( "set title '#{title}' font \"Helvetica,20\" \n" )
 
       if( pointsOfInterest.nil? )
-        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line\n" )
+        f.write( "plot '#{File.basename( data_filename )}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line\n" )
       else
-        f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 1\n" )
+        f.write( "plot '#{File.basename( data_filename )}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line lt 3, '#{File.basename( pointsOfInterest_filename )}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 1\n" )
         #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7, 'ekin.gpdata' ti \"Kinetic Energy\" w line, 'eucledian_distances_window_plot.gpdata' ti \"Eucledian Distance Window (speed)\" w line\n" )
         #f.write( "plot '#{data_filename}' ti \"#{oldLabels.pop.to_s} per #{oldLabels.pop.to_s}\" w line, '#{pointsOfInterest_filename}' ti \"Poses from Dance Master Illustrations\" w xerrorbars lt 1 pt 7 ps 2, '#{tp_filename}' ti \"Turning poses\" w points 0 7\n")
       end
