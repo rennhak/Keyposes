@@ -1,6 +1,5 @@
                                   Poses
-                              Version 0.2.0
-
+                              Version esyscmd( `git describe --tags' )
 
 
 
@@ -48,26 +47,9 @@ right solution.
 
 
 
+`FEATURES'
+define(FEATURES,esyscmd( `cat FEATURES.in | sed -e "s/#.*//" -e "/^$/d" -e "s/^\*\*/    o /" -e "s/^\*/\n  o /"' ))
 FEATURES
-
-
-  o  Application
-    o  Commandline arguments interface
-    o  Supports flexible templates to handle different dance data
-
-  o  Feature Providing Base Libraries
-    o  MotionX to handle reading/writing VPM
-
-  o  Supported Ressources
-    o  Extraction of Keyposes (with Rennhak/Audio package support)
-    o  Extraction of Turning poses
-
-  o  Development
-
-  o  Development Base Libraries
-
-  o  Code Quality
-
 
 ON WHAT HARDWARE DOES IT RUN?
 

@@ -104,6 +104,12 @@ task :yardoc do |t|
 end
 
 
+desc "Generate proper README via m4"
+task :readme do |t|
+  sh "m4 m4/README.m4 > README"
+end
+
+
 # cucumber --format usage
 # cucover
 # autotest

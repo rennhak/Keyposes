@@ -1,0 +1,27 @@
+# File: Features.in
+#
+
+#####
+#
+# This file lists the features which are currently available in this package.
+#
+############
+
+
+* Application
+** Commandline arguments interface
+** Supports flexible templates to handle different dance data
+
+* Feature Providing Base Libraries
+** MotionX to handle reading/writing VPM
+
+* Supported Ressources
+** Extraction of Keyposes (with Rennhak/Audio package support)
+** Extraction of Turning poses
+
+* Development
+
+* Development Base Libraries
+
+* Code Quality
+
