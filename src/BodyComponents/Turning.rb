@@ -835,10 +835,6 @@ class Turning # {{{
 
    #GSL::graph( [ GSL::Vector.alloc( v_prime_frames ), GSL::Vector.alloc( kappa ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
 
- 
-
-
-
    # GSL::graph( [ GSL::Vector.alloc( v_prime_frames ), GSL::Vector.alloc( kappa_slope ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
 
     v_prime_prime_frames = []
@@ -1151,14 +1147,9 @@ class Turning # {{{
 
   end # of getData }}}
 
-
-
-
-
 end # of class Turning }}}
 
 
 # Direct Invocation
 if __FILE__ == $0 # {{{
-
 end # of if __FILE__ == $0 }}}
