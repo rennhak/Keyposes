@@ -41,15 +41,15 @@ require 'Extensions.rb'
 require 'ADT.rb'
 
 # Local includes
-require 'Mathematics.rb'
-require 'Physics.rb'
+require_relative 'Mathematics.rb'
+require_relative 'Physics.rb'
 
-require 'PCA.rb'
-require 'Turning.rb'
-require 'Filter.rb'
+require_relative 'PCA.rb'
+require_relative 'Turning.rb'
+require_relative 'Filter.rb'
 
-require 'Plotter.rb'
-require 'Logger.rb'
+require_relative 'Plotter.rb'
+require_relative 'Logger.rb'
 
 # Change Namespace
 include GSL
@@ -113,6 +113,9 @@ class Controller # {{{
 
           @log.message :info, "Loading the Motion Capture data (#{@file}) via the MotionX VPM Plugin"
           @adt                      = ADT.new( @file )
+
+
+          o = Marshal.dump( @adt )
 
           if( @options.filter_motion_capture_data )
             @log.message :info, "Filter Motion Capture data to smooth out outliers"
@@ -195,7 +198,6 @@ class Controller # {{{
     options.profiling                       = false
     options.model                           = 12
     options.side                            = "both"
-
 
     pristine_options                        = options.dup
 

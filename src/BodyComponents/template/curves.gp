@@ -48,20 +48,36 @@ set title '' font "Helvetica,30"
 
 set multiplot 
 
-splot 'model_04/left/upper_arms/frenet_frame_kappa_plot.gpdata'   using 1:(($1/$1)*1):2   w lines linestyle 2   ti '(1) Left upper arm (Model 4)',\
-      'model_04/right/upper_arms/frenet_frame_kappa_plot.gpdata'  using 1:(($1/$1)*2):2   w lines linestyle 3   ti '(2) Right upper arm (Model 4)',\
-      'model_04/left/thighs/frenet_frame_kappa_plot.gpdata'       using 1:(($1/$1)*3):2   w lines linestyle 4   ti '(3) Left thigh (Model 4)',\
-      'model_04/right/thighs/frenet_frame_kappa_plot.gpdata'      using 1:(($1/$1)*4):2   w lines linestyle 5   ti '(4) Right thigh (Model 4)',\
-      'model_08/left/fore_arms/frenet_frame_kappa_plot.gpdata'    using 1:(($1/$1)*5):2   w lines linestyle 6   ti '(5) Left forearm (Model 8)',\
-      'model_08/right/fore_arms/frenet_frame_kappa_plot.gpdata'   using 1:(($1/$1)*6):2   w lines linestyle 7   ti '(6) Right forearm (Model 8)',\
-      'model_08/left/shanks/frenet_frame_kappa_plot.gpdata'       using 1:(($1/$1)*7):2   w lines linestyle 8   ti '(7) Left shank (Model 8)',\
-      'model_08/right/shanks/frenet_frame_kappa_plot.gpdata'      using 1:(($1/$1)*8):2   w lines linestyle 9   ti '(8) Right shank (Model 8)',\
-      'model_12/left/hands/frenet_frame_kappa_plot.gpdata'        using 1:(($1/$1)*9):2   w lines linestyle 10  ti '(9) Left hand (Model 12)',\
-      'model_12/right/hands/frenet_frame_kappa_plot.gpdata'       using 1:(($1/$1)*10):2  w lines linestyle 11  ti '(10) Right hand (Model 12)',\
-      'model_12/left/feet/frenet_frame_kappa_plot.gpdata'         using 1:(($1/$1)*11):2  w lines linestyle 12  ti '(11) Left foot (Model 12)',\
-      'model_12/right/feet/frenet_frame_kappa_plot.gpdata'        using 1:(($1/$1)*12):2  w lines linestyle 13  ti '(12) Right foot (Model 12)',\
-      'model_12/right/feet/dmps_frenet_frame.gpdata'              using 1:(0):2           w xerrorbars lt 1 pt 7 ps 8 ti 'Keyposes/Turningposes',\
+splot 'model_04/both/upper_arms/frenet_frame_kappa_plot.gpdata'  using 1:(1):2     w lines linestyle 2   ti '(1)  T-Data upper arms (Model 4)',\
+      'model_04/both/thighs/frenet_frame_kappa_plot.gpdata'      using 1:(2):2     w lines linestyle 3   ti '(2)  T-Data thighs (Model 4)',\
+      'model_08/both/fore_arms/frenet_frame_kappa_plot.gpdata'   using 1:(3):2     w lines linestyle 4   ti '(3)  T-Data forearms (Model 8)',\
+      'model_08/both/upper_arms/frenet_frame_kappa_plot.gpdata'  using 1:(4):2     w lines linestyle 5   ti '(4)  T-Data upper arms (Model 8)',\
+      'model_08/both/shanks/frenet_frame_kappa_plot.gpdata'      using 1:(5):2     w lines linestyle 6   ti '(5)  T-Data shanks (Model 8)',\
+      'model_08/both/thighs/frenet_frame_kappa_plot.gpdata'      using 1:(6):2     w lines linestyle 7   ti '(6)  T-Data thighs (Model 8)',\
+      'model_12/both/hands/frenet_frame_kappa_plot.gpdata'       using 1:(7):2     w lines linestyle 8   ti '(7)  T-Data hands (Model 12)',\
+      'model_12/both/fore_arms/frenet_frame_kappa_plot.gpdata'   using 1:(8):2     w lines linestyle 9   ti '(8)  T-Data forearms (Model 12)',\
+      'model_12/both/thighs/frenet_frame_kappa_plot.gpdata'      using 1:(9):2     w lines linestyle 10  ti '(9)  T-Data thighs (Model 12)',\
+      'model_12/both/feet/frenet_frame_kappa_plot.gpdata'        using 1:(10):2    w lines linestyle 11  ti '(10) T-Data feet (Model 12)',\
+      'model_12/both/shanks/frenet_frame_kappa_plot.gpdata'      using 1:(11):2    w lines linestyle 12  ti '(11) T-Data shanks (Model 12)',\
+      'model_12/both/upper_arms/frenet_frame_kappa_plot.gpdata'  using 1:(12):2    w lines linestyle 13  ti '(12) T-Data upper arms (Model 12)',\
+      'model_12/both/feet/dmps_frenet_frame.gpdata' w xerrorbars lt 1 pt 7 ps 8 ti 'Keyposes/Turningposes',\
       'line.gpdata' w lines linestyle 14 ti 'Current frame'
+
+
+# splot 'model_04/left/upper_arms/frenet_frame_kappa_plot.gpdata'   using 1:(($1/$1)*1):2   w lines linestyle 2   ti '(1) Left upper arm (Model 4)',\
+#       'model_04/right/upper_arms/frenet_frame_kappa_plot.gpdata'  using 1:(($1/$1)*2):2   w lines linestyle 3   ti '(2) Right upper arm (Model 4)',\
+#       'model_04/left/thighs/frenet_frame_kappa_plot.gpdata'       using 1:(($1/$1)*3):2   w lines linestyle 4   ti '(3) Left thigh (Model 4)',\
+#       'model_04/right/thighs/frenet_frame_kappa_plot.gpdata'      using 1:(($1/$1)*4):2   w lines linestyle 5   ti '(4) Right thigh (Model 4)',\
+#       'model_08/left/fore_arms/frenet_frame_kappa_plot.gpdata'    using 1:(($1/$1)*5):2   w lines linestyle 6   ti '(5) Left forearm (Model 8)',\
+#       'model_08/right/fore_arms/frenet_frame_kappa_plot.gpdata'   using 1:(($1/$1)*6):2   w lines linestyle 7   ti '(6) Right forearm (Model 8)',\
+#       'model_08/left/shanks/frenet_frame_kappa_plot.gpdata'       using 1:(($1/$1)*7):2   w lines linestyle 8   ti '(7) Left shank (Model 8)',\
+#       'model_08/right/shanks/frenet_frame_kappa_plot.gpdata'      using 1:(($1/$1)*8):2   w lines linestyle 9   ti '(8) Right shank (Model 8)',\
+#       'model_12/left/hands/frenet_frame_kappa_plot.gpdata'        using 1:(($1/$1)*9):2   w lines linestyle 10  ti '(9) Left hand (Model 12)',\
+#       'model_12/right/hands/frenet_frame_kappa_plot.gpdata'       using 1:(($1/$1)*10):2  w lines linestyle 11  ti '(10) Right hand (Model 12)',\
+#       'model_12/left/feet/frenet_frame_kappa_plot.gpdata'         using 1:(($1/$1)*11):2  w lines linestyle 12  ti '(11) Left foot (Model 12)',\
+#       'model_12/right/feet/frenet_frame_kappa_plot.gpdata'        using 1:(($1/$1)*12):2  w lines linestyle 13  ti '(12) Right foot (Model 12)',\
+#       'model_12/right/feet/dmps_frenet_frame.gpdata'              using 1:(0):2           w xerrorbars lt 1 pt 7 ps 8 ti 'Keyposes/Turningposes',\
+#       'line.gpdata' w lines linestyle 14 ti 'Current frame'
 
 
 

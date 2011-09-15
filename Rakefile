@@ -125,14 +125,22 @@ task :graph, :config_name do |g, args|
     boxcar      = 20
 
     components  = []
-    components << %w[feet 12]
-    components << %w[hands 12]
-
-    components << %w[shanks 8]
-    components << %w[fore_arms 8]
 
     components << %w[upper_arms 4]
     components << %w[thighs 4]
+
+    components << %w[shanks 8]
+    components << %w[fore_arms 8]
+    components << %w[upper_arms  8]
+    components << %w[thighs 8]
+
+    components << %w[feet 12]
+    components << %w[hands 12]
+    components << %w[shanks 12]
+    components << %w[fore_arms 12]
+    components << %w[upper_arms 12]
+    components << %w[thighs 12]
+
 
     # Get rid of previous compilations
     `rm -rf experiment`
@@ -143,12 +151,12 @@ task :graph, :config_name do |g, args|
     # Generate components and shift to experiment folder
     components.each do |part, model|
 
-      %w[left right].each do |side|
+      %w[both].each do |side|
 
         printf( "[%s] Calculating ->  Side: %-6s part: %-10s model: %3s\n", args.config_name.to_s, side.to_s, part.to_s, model.to_s )
 
         `rake clean`
-        `ruby -I../../base/MotionX/src/plugins/vpm/src Controller.rb -tc -p #{args.config_name.to_s} -b #{boxcar.to_s} --parts #{part.to_s} -m #{model.to_s} -v -s #{side.to_s} -r`
+        `ruby -I../../base/MotionX/src/plugins/vpm/src Controller.rb -tc -p #{args.config_name.to_s} -b #{boxcar.to_s} --parts #{part.to_s} -m #{model.to_s} -v -s #{side.to_s}`
         `rake gnuplot`
 
         model_dir   = ( model.to_i < 10 ) ? ( "0" + model.to_s ) : ( model.to_s )
@@ -156,11 +164,16 @@ task :graph, :config_name do |g, args|
         `mkdir -p #{target_dir}`
         `mv graphs/* #{target_dir}`
 
-      end # of %w[left right].each
+      end # of %w[both].each
     end # of components.each 
 
   end
 end
+
+desc "Generate cTags"
+task :ctags do |t|
+  `ctags -R Rakefile src/BodyComponents/*.rb`
+end 
 
 desc "Generate an all component graph for a given dance"
 task :graph_gen, :config_name do |g, args|
@@ -170,14 +183,22 @@ task :graph_gen, :config_name do |g, args|
     boxcar      = 20
 
     components  = []
-    components << %w[feet 12]
-    components << %w[hands 12]
-
-    components << %w[shanks 8]
-    components << %w[fore_arms 8]
 
     components << %w[upper_arms 4]
     components << %w[thighs 4]
+
+    components << %w[shanks 8]
+    components << %w[fore_arms 8]
+    components << %w[upper_arms  8]
+    components << %w[thighs 8]
+
+    components << %w[feet 12]
+    components << %w[hands 12]
+    components << %w[shanks 12]
+    components << %w[fore_arms 12]
+    components << %w[upper_arms 12]
+    components << %w[thighs 12]
+
 
     # Copy template files
     `cp -vrap template/* experiment/.`
@@ -203,17 +224,17 @@ task :graph_gen, :config_name do |g, args|
         `mv frame.eps animation_heatmap/#{i.to_s}.eps`
       end
 
-#       `mkdir -p animation_curves`
-# 
-#       frame_begin.to_i.upto( frame_end.to_i ).each do |i|
-#         puts "[Curves] Processing frame #{i.to_s} of #{frame_end.to_s}"
-#         `cat line.gpdata.orig | sed "s/x/#{i.to_s}/g" > line.gpdata`
-#         `gnuplot curves.gp`
-#         `convert frame.eps frame.jpg`
-#         `mv frame.jpg animation_curves/#{i.to_s}.jpg`
-#         `rm frame.eps`
-#       end
-# 
+      `mkdir -p animation_curves`
+
+      frame_begin.to_i.upto( frame_end.to_i ).each do |i|
+        puts "[Curves] Processing frame #{i.to_s} of #{frame_end.to_s}"
+        `cat line.gpdata.orig | sed "s/x/#{i.to_s}/g" > line.gpdata`
+        `gnuplot curves.gp`
+        `convert frame.eps frame.jpg`
+        `mv frame.jpg animation_curves/#{i.to_s}.jpg`
+        `rm frame.eps`
+      end
+
       `mkdir -p video_frames`
       puts ""
       puts "Please put the corresponding video frames images into the video_frames folder (#{Dir.pwd.to_s}/video_frames/) and press ENTER"
@@ -239,33 +260,35 @@ task :graph_gen, :config_name do |g, args|
 
 #      `rm -rf animation_heatmap`
       name = args.config_name.to_s + "_-_" + "heatmap.avi"
-      ffmpeg_command = "ffmpeg -qscale 1 -r 20 -b 9600 -i animation_heatmap_merged/%3d.jpg #{name.to_s}"
+      ffmpeg_command = "ffmpeg -qscale 1 -r 20 -b 9600 -i animation_heatmap_merged/%d.jpg #{name.to_s}"
       `#{ffmpeg_command}`
 #      `rm -rf animation_heatmap_merged`
 
 
-#      # Merge video and heatmap/curve map
-#      `mkdir -p animation_curves_merged`
-#
-#      Dir.chdir( "animation_curves_merged" ) do
-#        frame_begin.to_i.upto( frame_end.to_i ).each do |i|
-#          puts "[Curves] Merging video and curves frame to one image -> frame #{i}"
-#          `convert ../video_frames/#{i.to_s} ../animation_curves/#{i.to_s} +append -quality 100 p#{i.to_s}.jpg`
-#          `convert p#{i.to_s}.jpg -resize 1920x1080 #{i.to_s}.jpg`
-#          `rm -f p#{i.to_s}.jpg`
-#        end 
-#      end # of Dir.chdir( "animation_heatmap_merged" )
-#
+      # Merge video and heatmap/curve map
+      `mkdir -p animation_curves_merged`
+
+      Dir.chdir( "animation_curves_merged" ) do
+        frame_begin.to_i.upto( frame_end.to_i ).each do |i|
+          puts "[Curves] Merging video and curves frame to one image -> frame #{i}"
+          `convert -gravity center ../video_frames/#{i.to_s}.png -gravity center ../animation_curves/#{i.to_s}.eps +append -quality 100 -gravity center  p#{i.to_s}.jpg`
+          `convert p#{i.to_s}.jpg -resize 1920x1080 #{i.to_s}.jpg`
+          `rm -f p#{i.to_s}.jpg`
+        end 
+      end # of Dir.chdir( "animation_heatmap_merged" )
+
 #      `rm -rf animation_curves`
-#      name = args.config_name.to_s + "_-_" + "curves.avi"
-#      ffmpeg_command = "ffmpeg -qscale 1 -r 20 -b 9600 -i animation_curves_merged/%3d.jpg #{name.to_s}"
-#      `#{ffmpeg_command}`
+      name = args.config_name.to_s + "_-_" + "curves.avi"
+      ffmpeg_command = "ffmpeg -qscale 1 -r 20 -b 9600 -i animation_curves_merged/%d.jpg #{name.to_s}"
+      `#{ffmpeg_command}`
 #      `rm -rf animation_curves_merged`
-#
+
     end # of Dir.chdir( "experiment" )
 
   end # of Dir.chdir
 end # of task
+
+
 
 
 

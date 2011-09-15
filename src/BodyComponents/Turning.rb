@@ -26,11 +26,11 @@ require 'narray'
 require 'gsl'
 
 # Local includes
-require 'Logger.rb'
-require 'PCA.rb'
+require_relative 'Logger.rb'
+require_relative 'PCA.rb'
 
-require 'Mathematics.rb'
-require 'Physics.rb'
+require_relative 'Mathematics.rb'
+require_relative 'Physics.rb'
 
 # Change Namespace
 include GSL
@@ -663,11 +663,11 @@ class Turning # {{{
 
     # Get all individual components
     case model
-      when 1:
+      when 1 then
         @log.message :warning, "We will used a fixed components set, if you defined specific components over the CLI they are ignored with the 1 Model."
         @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
         raise NotImplementedError, "This is not yet implemented"
-      when 4:
+      when 4 then
         @log.message :warning, "We will used a fixed components set. So only parts that can be allowed are upper_arms, thighs all others will be automatically removed" 
         body_components.delete_if { |c| %w[hands feet fore_arms shanks].include?( c.to_s ) } # Remove hands and feet from list if exist
         @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
@@ -683,7 +683,7 @@ class Turning # {{{
             raise ArgumentError, "Something is seriously wrong with the @option.side value (#{@option.side.to_s}) it can only be of (left, right, both)"
         end # of case @option.side
 
-      when 8:
+      when 8 then
         @log.message :warning, "We will used a fixed components set. So only parts that can be allowed are upper_arms, lower_arms, thighs, shanks all others will be automatically removed."
         body_components.delete_if { |c| %w[hands feet].include?( c.to_s ) } # Remove hands and feet from list if exist
         @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
@@ -699,7 +699,7 @@ class Turning # {{{
             raise ArgumentError, "Something is seriously wrong with the @option.side value (#{@option.side.to_s}) it can only be of (left, right, both)"
         end # of case @option.side
 
-      when 12:
+      when 12 then
         @log.message :success, "Using the following body components: #{body_components.join( ", " ).to_s}"
         
         case @options.side
@@ -920,16 +920,10 @@ class Turning # {{{
  
     #GSL::graph( [ GSL::Vector.alloc( interesting ), GSL::Vector.alloc( interesting_values ) ]  ) #, "-T png -C -X 'X-Values' -Y 'Y-Values' -L 'Data' -S 1 -m 0 --page-size a4 > #{filename.to_s}")
 
-    
     e_show = (v_prime_frames.zip(  e_prime.dup         ) ) 
     ee_show = (v_prime_frames.zip( e_prime_prime.dup   ) )
     v_show = (v_prime_frames.zip(  v_prime.dup         ) )
     vv_show = (v_prime_frames.zip( v_prime_prime.dup   ) )
-
-
-
-
-
 
     # @plot.easy_gnuplot( interesting, "%e %e\n", ["Frames", "Dance Master Pose"], "Dance Master Pose extraction Graph", "new_weight_plot.gp", "new_weight_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "new_weight_dmp.gpdata" ) 
 
@@ -1153,3 +1147,4 @@ end # of class Turning }}}
 # Direct Invocation
 if __FILE__ == $0 # {{{
 end # of if __FILE__ == $0 }}}
+

@@ -18,7 +18,7 @@
 #######
 
 
-require 'Mathematics.rb'
+require_relative 'Mathematics.rb'
 
 
 # The class Physics provides helpful functions to calculate various things needed throughout this project

@@ -26,10 +26,10 @@ require 'narray'
 require 'gsl'
 
 # Local includes
-require 'Logger.rb'
-require 'PCA.rb'
-require 'Plotter.rb'
-require 'Mathematics.rb'
+require_relative 'Logger.rb'
+require_relative 'PCA.rb'
+require_relative 'Plotter.rb'
+require_relative 'Mathematics.rb'
 
 # Change Namespace
 include GSL
