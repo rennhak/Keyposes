@@ -115,7 +115,7 @@ class Controller # {{{
           @adt                      = ADT.new( @file )
 
 
-          o = Marshal.dump( @adt )
+          # o = Marshal.dump( @adt )
 
           if( @options.filter_motion_capture_data )
             @log.message :info, "Filter Motion Capture data to smooth out outliers"

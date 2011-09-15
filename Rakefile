@@ -1,6 +1,7 @@
 $:.unshift(File.dirname(__FILE__) + '/../../lib')
 
 
+require "date"
 require 'cucumber/rake/task'
 require 'spec/rake/spectask'
 
@@ -42,6 +43,24 @@ namespace :rcov do # {{{
 
 end # of namespace :rcov }}}
 
+
+desc "Toggle date between -1 year and now"
+task :date do |d|
+
+  minus_years                 = 1
+  d                           = DateTime.now
+  day, month, year, hour, min = d.day, d.mon, d.year, d.hour, d.min
+
+  `sudo date -s "#{month.to_s}/#{day.to_s}/#{ (year.to_i - minus_years ).to_s} #{hour.to_s}:#{min.to_s}"`
+  `date`
+end
+
+desc "Update date from NTP server via ntp.org"
+task :ntp do |n|
+  # Reset date
+  ntp_server = %w[0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org 3.pool.ntp.org]
+  `sudo ntpdate #{ntp_server[rand(ntp_server.length - 1)]}`
+end
 
 desc "Clean up temporary data"
 task :clean do |t|

@@ -552,7 +552,8 @@ class PCA # {{{
     result_final            = ( transformation_matrix * GSL::Matrix.alloc( *pca_result ) )
 
     # You could verify that this is correct by =>  T^{-1} * result_final = result
-    result_final            = result_final.to_na.to_a
+    # result_final            = result_final.to_na.to_a
+    result_final            = result_final.to_a
 
     # Post-condition check
     raise ArgumentError, "Result should be of type Array, but is of (#{result_final.class.to_s})" unless( result_final.is_a?(Array) )
