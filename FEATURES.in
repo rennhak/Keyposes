@@ -11,6 +11,7 @@
 * Application
 ** Commandline arguments interface
 ** Supports flexible templates to handle different dance data
+** Runs only on Ruby VM 1.9.x
 
 * Feature Providing Base Libraries
 ** MotionX to handle reading/writing VPM

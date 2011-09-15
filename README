@@ -1,5 +1,5 @@
                                   Poses
-                              Version 0.2.0
+                              Version 0.2.0-6-gde06975
 
 
 
@@ -54,6 +54,7 @@ FEATURES
   o  Application
     o  Commandline arguments interface
     o  Supports flexible templates to handle different dance data
+    o  Runs only on Ruby VM 1.9.x
 
   o  Feature Providing Base Libraries
     o  MotionX to handle reading/writing VPM
