@@ -198,6 +198,7 @@ class Controller # {{{
     options.profiling                       = false
     options.model                           = 12
     options.side                            = "both"
+    options.cycle                           = 1
 
     pristine_options                        = options.dup
 
@@ -234,6 +235,14 @@ class Controller # {{{
 
       opts.on("-m", "--model OPT", "Determine how many components the body model has 1 (one big component), 4 (two arms/legs), 8 (with upper/lower arms/legs), 12 (with hands/feet)" ) do |m|
         options.model = m
+      end
+
+      opts.on("-z", "--cycle NUM", "Determine which dance cycle to use (default: 1)" ) do |z|
+        options.cycle = z
+      end
+
+      opts.on("-s", "--speed NUM", "Determine which speed to use (default: 100)" ) do |z|
+        options.cycle = z
       end
 
       opts.on("-r", "--raw-data", "Use raw data for PCA reduction instead of CPA data") do |r|

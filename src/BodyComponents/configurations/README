@@ -1,0 +1,35 @@
+Naming Scheme Convention for Directory
+--------------------------------------
+
+<Dance or Motion Name>/<Pattern>/<Speed>/<Cycle>/Dance.<extention>
+
+
+<Dance or Motion Name>
+  Name of the dance itself
+  Note: Words are separated by an underscore
+  e.g. Aizubandaisan, Jongara, etc.
+
+<Pattern>
+  Pattern of the motion (e.g. dancer dances in a circle)
+  e.g. random, circle, square, etc.
+
+<Speed>
+  Speed of which the dance has been performed
+  Note: Three digits with leading zeros in percent.
+  e.g. 080, 100, 120
+
+<Cycle>
+  Dances consist of cycles of repeating motions.
+  (e.g. Aizubandaisan has 8 important poses which is one cycle)
+  First cycles are often bad because the dancer is not used to the dance yet, so motion capture data
+  often features the same motion over and over multiple times consecutively.
+  Note: Three digits with leading zeros
+  e.g. 001, 002 etc.
+
+
+Examples
+--------
+
+configuration/Aizubandaisan/circle/100/001/Dance.yaml
+configuration/Macarena/square/100/001/Dance.yaml
+
