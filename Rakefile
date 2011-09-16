@@ -137,7 +137,14 @@ end
 #   distribute over cores or machines
 
 desc "Generate an all component graph for a given dance"
-task :graph, :config_name do |g, args|
+task :graph, :config_name, :pattern, :speed, :cycle do |g, args|
+
+  # Why is this necesarry? args.cycle gives us otherwise weird garbage. (ruby bug)
+  args_hash     = args.to_hash
+  config_name   = args_hash[ :config_name ]
+  pattern       = args_hash[ :pattern ]
+  speed         = args_hash[ :speed ]
+  cycle         = args_hash[ :cycle ]
 
   Dir.chdir( "src/BodyComponents" ) do
 
@@ -148,17 +155,17 @@ task :graph, :config_name do |g, args|
     components << %w[upper_arms 4]
     components << %w[thighs 4]
 
-    components << %w[shanks 8]
-    components << %w[fore_arms 8]
     components << %w[upper_arms  8]
+    components << %w[fore_arms 8]
     components << %w[thighs 8]
+    components << %w[shanks 8]
 
-    components << %w[feet 12]
-    components << %w[hands 12]
-    components << %w[shanks 12]
-    components << %w[fore_arms 12]
     components << %w[upper_arms 12]
+    components << %w[fore_arms 12]
+    components << %w[hands 12]
     components << %w[thighs 12]
+    components << %w[shanks 12]
+    components << %w[feet 12]
 
 
     # Get rid of previous compilations
@@ -172,10 +179,10 @@ task :graph, :config_name do |g, args|
 
       %w[both].each do |side|
 
-        printf( "[%s] Calculating ->  Side: %-6s part: %-10s model: %3s\n", args.config_name.to_s, side.to_s, part.to_s, model.to_s )
+        printf( "[Name: %s, Pattern: %s, Speed: %s, Cycle: %s] Calculating ->  Side: %-6s part: %-10s model: %3s\n", config_name.to_s, pattern.to_s, speed.to_s, cycle.to_s, side.to_s, part.to_s, model.to_s )
 
         `rake clean`
-        `ruby -I../../base/MotionX/src/plugins/vpm/src Controller.rb -tc -p #{args.config_name.to_s} -b #{boxcar.to_s} --parts #{part.to_s} -m #{model.to_s} -v -s #{side.to_s}`
+        `ruby19 -I../../base/MotionX/src/plugins/vpm/src Controller.rb -tc --name #{config_name.to_s} --pattern #{pattern.to_s} --speed #{speed.to_s} --cycle #{cycle.to_s} -b #{boxcar.to_s} --parts #{part.to_s} -m #{model.to_s} -v -o #{side.to_s}`
         `rake gnuplot`
 
         model_dir   = ( model.to_i < 10 ) ? ( "0" + model.to_s ) : ( model.to_s )
@@ -195,7 +202,14 @@ task :ctags do |t|
 end 
 
 desc "Generate an all component graph for a given dance"
-task :graph_gen, :config_name do |g, args|
+task :graph_gen, :config_name, :pattern, :speed, :cycle do |g, args|
+
+  # Why is this necesarry? args.cycle gives us otherwise weird garbage. (ruby bug)
+  args_hash     = args.to_hash
+  config_name   = args_hash[ :config_name ]
+  pattern       = args_hash[ :pattern ]
+  speed         = args_hash[ :speed ]
+  cycle         = args_hash[ :cycle ]
 
   Dir.chdir( "src/BodyComponents" ) do
 
@@ -206,18 +220,17 @@ task :graph_gen, :config_name do |g, args|
     components << %w[upper_arms 4]
     components << %w[thighs 4]
 
-    components << %w[shanks 8]
-    components << %w[fore_arms 8]
     components << %w[upper_arms  8]
+    components << %w[fore_arms 8]
     components << %w[thighs 8]
+    components << %w[shanks 8]
 
-    components << %w[feet 12]
-    components << %w[hands 12]
-    components << %w[shanks 12]
-    components << %w[fore_arms 12]
     components << %w[upper_arms 12]
+    components << %w[fore_arms 12]
+    components << %w[hands 12]
     components << %w[thighs 12]
-
+    components << %w[shanks 12]
+    components << %w[feet 12]
 
     # Copy template files
     `cp -vrap template/* experiment/.`
@@ -241,7 +254,27 @@ task :graph_gen, :config_name do |g, args|
         #`rm frame.eps`
 
         `mv frame.eps animation_heatmap/#{i.to_s}.eps`
+        break
       end
+
+      `mkdir -p animation_heatmap_divided`
+
+      frame_begin.to_i.upto( frame_end.to_i ).each do |i|
+        puts "[Heatmap Divided Upper/lower body] Processing frame #{i.to_s} of #{frame_end.to_s}"
+        `cat line.gpdata.orig | sed "s/x/#{i.to_s}/g" > line.gpdata`
+        `gnuplot heatmap_divided.gp`
+
+        #`convert frame.eps frame.jpg`
+        #`mv frame.jpg animation_heatmap/#{i.to_s}.jpg`
+        #`rm frame.eps`
+
+        `mv frame.eps animation_heatmap_divided/#{i.to_s}.eps`
+        exit
+      end
+
+
+
+      exit
 
       `mkdir -p animation_curves`
 
