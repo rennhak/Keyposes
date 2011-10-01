@@ -45,6 +45,9 @@ class Turning # {{{
     @dance_master_poses           = dance_master_poses
     @dance_master_poses_range     = dance_master_poses_range
     @from, @to                    = from, to
+    
+    # Dirty class variable change this
+    @components                   = nil
 
     @log                          = Logger.new( @options )
     @plot                         = Plotter.new( @from, @to )
@@ -640,8 +643,8 @@ class Turning # {{{
     # components        = eval( "@adt.body.group_#{model.to_s}_model[ components_keyword ]" )
     components = (  eval( "@adt.body.group_#{model.to_s}_model_left[ components_keyword ]" ) ).concat(  eval( "@adt.body.group_#{model.to_s}_model_right[ components_keyword ]" ) )
     p components
-    result            = get_segments_cpa( components, center, from, to )
-
+    @components = components.dup
+    result            = get_segments_cpa( components.dup, center, from, to )
   end # of def get_components_cpa }}}
 
 
@@ -659,7 +662,6 @@ class Turning # {{{
 
     components            = []    # here we store our data refs in one place
     tmp_components        = []
-
 
     # Get all individual components
     case model
@@ -719,6 +721,7 @@ class Turning # {{{
         raise ArgumentError, "Model can only be 1, 4, 8 or 12 not anything else." unless( [1, 4, 8, 12].include?( model.to_i ) )
     end
 
+
     if( @options.side == "left" or @options.side == "right" )
       raise ArgumentError, "In order to make proper use of left/right side components you need to use it with the -r switch !" unless( @options.use_raw_data )
     end
@@ -766,12 +769,32 @@ class Turning # {{{
 
     # Calculate the distance of tdata point to local coordinate center
     tdata_distance                    = []
+
     center                            = ( eval("@adt.pt30") ).getCoordinates!
 
     ( pca.reshape_data( all_final.dup, false, true  ) ).each_with_index do |array, index|
       # eucledian distance between t-data point and coord center (float)
       tdata_distance << @mathematics.eucledian_distance( array, center[ index ] )
     end # of ( pca.reshape_data( all_final.dup,...)
+
+    # Warning: This works only for one component per CLI
+    #
+    # Calculate the area of tdata patch
+    center                                    = eval( "@adt.pt30" )
+    tpoint                                    = @adt.getNewSegment!( "tpoint", "T-Data Point of interected component" )
+    tpoint.xtran, tpoint.ytran, tpoint.ztran  = *( all_final.dup )
+    
+    raise ArgumentError, "Body Components may only be 1 for T-Data area calculation" unless( body_components.length == 1 )
+ 
+    # get_components_cpa always gives us left then right
+    left, right   = *@components
+    left_sym      = left.last
+    right_sym     = right.last
+
+    left          = eval( "@adt.#{left_sym.to_s}" )
+    right         = eval( "@adt.#{right_sym.to_s}" )
+    
+    tdata_area    = tpoint.area_of_triangle( left, right )
 
     #### Messy Mablab interaction
     # Dump to file for matlab
@@ -1135,6 +1158,7 @@ class Turning # {{{
     #@plot.interactive_gnuplot_eucledian_distances( kappa_wavelet, "%e %e\n", ["Frames", "Normalized and Wavelet Smoothed Curvature Value (0 <= e <= 1)"], "Normalized and Wavelet Smoothed Curvature Value Graph", "wavelet_smoothed_frenet_frame_kappa_plot.gp", "wavelet_smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "wavelet_dmps_smoothed_frenet_frame.gpdata", turning_poses, "wavelet_tp_smoothed_frenet_frame.gpdata" ) 
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa ), "%e %e\n", ["Frames", "Normalized Curvature"], "", "graphs/frenet_frame_kappa_plot.gp", "graphs/frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmps_frenet_frame.gpdata", turning_poses, "graphs/tp_frenet_frame.gpdata" )
     @plot.interactive_gnuplot_eucledian_distances( pca.normalize( tdata_distance ), "%e %e\n", ["Frames", "Normalized T-Data Point distance"], "", "graphs/tdata_point_distance_to_coord_center_plot.gp", "graphs/tdata_point_distance_to_coord_center.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmp_tdata_point_distance_to_coord_center.gpdata", turning_poses, "graphs/tp_tdata_point_distance.gpdata" )
+    @plot.interactive_gnuplot_eucledian_distances( pca.normalize( tdata_area ), "%e %e\n", ["Frames", "Normalized T-Data Area"], "", "graphs/tdata_area_plot.gp", "graphs/tdata_area.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "graphs/dmp_tdata_area.gpdata", turning_poses, "graphs/tp_tdata_area.gpdata" )
     # @plot.interactive_gnuplot_eucledian_distances( pca.normalize( kappa_smooth ), "%e %e\n", ["Frames", "Normalized Smoothed Curvature"], "", "smoothed_frenet_frame_kappa_plot.gp", "smoothed_frenet_frame_kappa_plot.gpdata", @from, @dance_master_poses, @dance_master_poses_range, "dmps_smoothed_frenet_frame.gpdata", turning_poses, "tp_smoothed_frenet_frame.gpdata" ) 
     
     #@plot.interactive_gnuplot_eucledian_distances( pca.normalize( p ), "%e %e\n", ["Frames", "Normalized Power Value (0 <= e <= 1)"], "Normalized Power Value Graph", "power_plot.gp", "power_plot.gpdata" )
