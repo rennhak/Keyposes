@@ -20,8 +20,8 @@ class ConfigHelper # {{{
 
       puts "\n>>>>>>>>>>>>>>>>>>> Pose #{i.to_s} <<<<<<<<<<<<<<<<<<<<<<<<<"
 
-      frame           = ask_question( "[Frame] What is the EXACT frame for Dance Master Pose #{i.to_s} ?" )
       approx_begin    = ask_question( "[Frame] What is the EXACT frame for the BEGIN of Dance Master Pose #{i.to_s} ?" )
+      frame           = ask_question( "[Frame] What is the EXACT frame for Dance Master Pose #{i.to_s} ?" )
       approx_end      = ask_question( "[Frame] What is the EXACT frame for the END of Dance Master Pose #{i.to_s} ?" )
 
       result << [ frame.to_i, [ approx_begin.to_i, approx_end.to_i ] ]

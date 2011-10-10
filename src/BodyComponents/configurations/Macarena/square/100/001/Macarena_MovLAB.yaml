@@ -1,0 +1,22 @@
+---
+
+
+type: Dance
+name: Macarena
+filename: /home/br/universities/todai/experiments/Macarena_-_Movlab_data/Macarena_MovLAB.vpm
+from: 2010
+to: 3070
+
+# Dance Master Poses
+# - [ exact, [ approx. from, approx. to ] ]
+# In the drawing the pose 5 is skippen in the motion data
+dmp: [
+    [2020, [2005, 2035]],
+    [2161, [2152, 2170]],
+    [2298, [2285, 2307]],
+    [2471, [2457, 2481]],
+    [2610, [2603, 2615]],
+    [2796, [2789, 2800]],
+    [2878, [2801, 2954]],
+    [3051, [2974, 3060]]
+]
