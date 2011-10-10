@@ -78,27 +78,39 @@ class Controller # {{{
     # Determine which configs are available
     @motions                      = OpenStruct.new  # store all results here for list etc.
 
+    @config_names                 = []
     @names                        = []
     @patterns                     = []
     @speeds                       = []
     @cycles                       = []
+    @fname_table                  = Hash.new
 
     # Store all components here
     @yamls                                                                = Dir.glob( File.join( "**", "*.yaml" ) ).collect { |i| i.split( "/" ) }
     @yamls.each do |configurations_dir, name, pattern, speed, cycle, filename|
 
-      eval( "@motions.#{name}                                             = OpenStruct.new if( @motions.#{name}.nil? )" )
-      eval( "@motions.#{name}.#{pattern}                                  = OpenStruct.new if( @motions.#{name}.#{pattern}.nil? )" )
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}                   = OpenStruct.new if( @motions.#{name}.#{pattern}.speed_#{speed}.nil? )" )
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}    = OpenStruct.new if( @motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.nil? )" )
+      # To resolve ambiguiuity between same name/speed/cycle but different mocap data we use the config name of the yaml
+      yaml_cf = read_motion_config( "#{configurations_dir}/#{name}/#{pattern}/#{speed}/#{cycle}/#{filename.to_s}" )
+      yaml    = yaml_cf.name.gsub( " ", "_" ).gsub( "-", "_" )
 
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.filename     = '#{filename.to_s}'" )
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.path         = '#{configurations_dir}/#{name}/#{pattern}/#{speed}/#{cycle}'" )
+      eval( "@motions.#{name}                                                         = OpenStruct.new if( @motions.#{name}.nil? )" )
+      eval( "@motions.#{name}.#{pattern}                                              = OpenStruct.new if( @motions.#{name}.#{pattern}.nil? )" )
+      eval( "@motions.#{name}.#{pattern}.speed_#{speed}                               = OpenStruct.new if( @motions.#{name}.#{pattern}.speed_#{speed}.nil? )" )
+      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}                = OpenStruct.new if( @motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.nil? )" )
+      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}   = OpenStruct.new if( @motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.nil? )" )
 
-      @names      << name       unless( @names.include?(    name       ) )
-      @patterns   << pattern    unless( @patterns.include?( pattern    ) )
-      @speeds     << speed      unless( @speeds.include?(   speed      ) )
-      @cycles     << cycle      unless( @cycles.include?(   cycle      ) )
+
+      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.filename     = '#{filename.to_s}'" )
+      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.path         = '#{configurations_dir}/#{name}/#{pattern}/#{speed}/#{cycle}'" )
+      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.loaded_yaml  = yaml_cf" )
+
+      @fname_table[ filename ] = yaml    # filename = yaml[name]
+
+      @config_names   << yaml       unless( @config_names.include?( yaml    ) )
+      @names          << name       unless( @names.include?(    name        ) )
+      @patterns       << pattern    unless( @patterns.include?( pattern     ) )
+      @speeds         << speed      unless( @speeds.include?(   speed       ) )
+      @cycles         << cycle      unless( @cycles.include?(   cycle       ) )
     end
 
     @configurations               = Dir[ "#{@config.config_dir}/*.yaml" ].collect { |d| d.gsub( "#{@config.config_dir}/", "" ).gsub( ".yaml", "" ) }
@@ -124,13 +136,13 @@ class Controller # {{{
       unless( @options.process == "" )
 
         %w[name pattern speed cycle].each { |i| raise ArgumentError, "You didn't provide a #{i} via CLI!" if( eval( "@options.#{i} == \"\"" ) ) }
-        @log.message :success, "Using #{@options.process} with pattern #{@options.pattern}, speed #{@options.speed} and cycle #{@options.cycle}"
-        motion_config             = eval( "@motions.#{@options.process}.#{@options.pattern}.speed_#{@options.speed}.cycle_#{@options.cycle}" )
+        @log.message :success, "Using #{@options.process} with pattern #{@options.pattern}, speed #{@options.speed} and cycle #{@options.cycle} (YAML: #{@options.yaml})"
+        motion_config             = eval( "@motions.#{@options.process}.#{@options.pattern}.speed_#{@options.speed}.cycle_#{@options.cycle}.yaml_#{@options.yaml}" )
 
         raise ArgumentError, "The configuration and/or the data you requested doesn't exist!" if( motion_config.nil? )
 
         motion_config_filename    = motion_config.path + "/" + motion_config.filename
-        
+ 
         @log.message :info, "Loading Motion Capture config file (#{motion_config_filename})"
 
         @motion_config            = read_motion_config( motion_config_filename )
@@ -234,6 +246,7 @@ class Controller # {{{
     options.cycle                           = ""
     options.pattern                         = ""
     options.speed                           = ""
+    options.yaml                            = ""
 
     pristine_options                        = options.dup
 
@@ -284,6 +297,10 @@ class Controller # {{{
         options.speed = z
       end
 
+      opts.on("-y", "--yaml OPT", @config_names, "Determine which dance to use based on the YAML config name tag (e.g. #{@config_names.sort.join(", ")})" ) do |y|
+        options.yaml = y
+      end
+
       opts.on("-r", "--raw-data", "Use raw data for PCA reduction instead of CPA data") do |r|
         options.use_raw_data  = r
       end
@@ -300,7 +317,7 @@ class Controller # {{{
         options.list        = l
         puts "\nYou can choose from the following configuration files\n\n"
         @yamls.each do |configurations_dir, name, pattern, speed, cycle, filename|
-          printf( "Name (--name): %-20s  Pattern (--pattern): %-10s  Speed (--speed): %-4s   Cycle (--cycle): %-4s \n", name, pattern, speed, cycle )
+          printf( "Name (--name): %-20s  Pattern (--pattern): %-10s  Speed (--speed): %-4s   Cycle (--cycle): %-4s  YAML Config name (--yaml): %-4s   \n", name, pattern, speed, cycle, @fname_table[ filename ] )
         end
         puts "\n"
         exit

@@ -2,10 +2,12 @@
 
 
 type: Dance
-name: Macarena
+name: Macarena_MovLAB
 filename: /home/br/universities/todai/experiments/Macarena_-_Movlab_data/Macarena_MovLAB.vpm
-from: 2010
-to: 3070
+#from: 2010
+#to: 3070
+from: 0
+to: 4550
 
 # Dance Master Poses
 # - [ exact, [ approx. from, approx. to ] ]
