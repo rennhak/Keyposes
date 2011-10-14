@@ -10,6 +10,7 @@ to: 206
 # Dance Master Poses
 # - [ exact, [ approx. from, approx. to ] ]
 dmp: [
+  - [ 0, [ 0, 0 ] ]
 ]
 
 
