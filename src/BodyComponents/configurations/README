@@ -1,8 +1,12 @@
 Naming Scheme Convention for Directory
 --------------------------------------
 
-<Dance or Motion Name>/<Pattern>/<Speed>/<Cycle>/Dance.<extention>
+<Domain>/<Dance or Motion Name>/<Pattern>/<Speed>/<Cycle>/Dance.<extention>
 
+
+<Domain>
+  Name of the domain of motion data
+  e.g. japanese, western, latin, etc.
 
 <Dance or Motion Name>
   Name of the dance itself

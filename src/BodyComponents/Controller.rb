@@ -20,6 +20,18 @@
 
 # Libraries {{{
 
+# Make sure require relative works for all ruby VM's
+# FIXNE: Why is it not enough to have this in Extensions.rb?
+unless Kernel.respond_to?(:require_relative)
+  module Kernel
+    def require_relative(path)
+      # puts 'IN NEW REQUIRE_RELATIVE ' + path.to_s
+      require File.join(File.dirname(caller[0]), path.to_str)
+    end
+  end
+end
+
+
 # OptionParser related
 require 'optparse'
 require 'optparse/time'
@@ -80,37 +92,40 @@ class Controller # {{{
 
     @config_names                 = []
     @names                        = []
+    @domains                      = []
     @patterns                     = []
     @speeds                       = []
     @cycles                       = []
     @fname_table                  = Hash.new
 
     # Store all components here
-    @yamls                                                                = Dir.glob( File.join( "**", "*.yaml" ) ).collect { |i| i.split( "/" ) }
-    @yamls.each do |configurations_dir, name, pattern, speed, cycle, filename|
+    @yamls                        = Dir.glob( File.join( "**", "*.yaml" ) ).collect { |i| i.split( "/" ) }
+    @yamls.each do |configurations_dir, domain, name, pattern, speed, cycle, filename|
 
       # To resolve ambiguiuity between same name/speed/cycle but different mocap data we use the config name of the yaml
-      yaml_cf = read_motion_config( "#{configurations_dir}/#{name}/#{pattern}/#{speed}/#{cycle}/#{filename.to_s}" )
+      yaml_cf = read_motion_config( "#{configurations_dir}/#{domain}/#{name}/#{pattern}/#{speed}/#{cycle}/#{filename.to_s}" )
       yaml    = yaml_cf.name.gsub( " ", "_" ).gsub( "-", "_" )
 
-      eval( "@motions.#{name}                                                         = OpenStruct.new if( @motions.#{name}.nil? )" )
-      eval( "@motions.#{name}.#{pattern}                                              = OpenStruct.new if( @motions.#{name}.#{pattern}.nil? )" )
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}                               = OpenStruct.new if( @motions.#{name}.#{pattern}.speed_#{speed}.nil? )" )
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}                = OpenStruct.new if( @motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.nil? )" )
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}   = OpenStruct.new if( @motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.nil? )" )
+      eval( "@motions.#{domain}                                                                 = OpenStruct.new if( @motions.#{domain}.nil? )" )
+      eval( "@motions.#{domain}.#{name}                                                         = OpenStruct.new if( @motions.#{domain}.#{name}.nil? )" )
+      eval( "@motions.#{domain}.#{name}.#{pattern}                                              = OpenStruct.new if( @motions.#{domain}.#{name}.#{pattern}.nil? )" )
+      eval( "@motions.#{domain}.#{name}.#{pattern}.speed_#{speed}                               = OpenStruct.new if( @motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.nil? )" )
+      eval( "@motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}                = OpenStruct.new if( @motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.nil? )" )
+      eval( "@motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}   = OpenStruct.new if( @motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.nil? )" )
 
 
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.filename     = '#{filename.to_s}'" )
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.path         = '#{configurations_dir}/#{name}/#{pattern}/#{speed}/#{cycle}'" )
-      eval( "@motions.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.loaded_yaml  = yaml_cf" )
+      eval( "@motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.filename     = '#{filename.to_s}'" )
+      eval( "@motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.path         = '#{configurations_dir}/#{domain}/#{name}/#{pattern}/#{speed}/#{cycle}'" )
+      eval( "@motions.#{domain}.#{name}.#{pattern}.speed_#{speed}.cycle_#{cycle}.yaml_#{yaml}.loaded_yaml  = yaml_cf" )
 
       @fname_table[ filename ] = yaml    # filename = yaml[name]
 
       @config_names   << yaml       unless( @config_names.include?( yaml    ) )
-      @names          << name       unless( @names.include?(    name        ) )
-      @patterns       << pattern    unless( @patterns.include?( pattern     ) )
-      @speeds         << speed      unless( @speeds.include?(   speed       ) )
-      @cycles         << cycle      unless( @cycles.include?(   cycle       ) )
+      @domains        << domain     unless( @domains.include?(      domain  ) )
+      @names          << name       unless( @names.include?(        name    ) )
+      @patterns       << pattern    unless( @patterns.include?(     pattern ) )
+      @speeds         << speed      unless( @speeds.include?(       speed   ) )
+      @cycles         << cycle      unless( @cycles.include?(       cycle   ) )
     end
 
     @configurations               = Dir[ "#{@config.config_dir}/*.yaml" ].collect { |d| d.gsub( "#{@config.config_dir}/", "" ).gsub( ".yaml", "" ) }
@@ -136,8 +151,8 @@ class Controller # {{{
       unless( @options.process == "" )
 
         %w[name pattern speed cycle].each { |i| raise ArgumentError, "You didn't provide a #{i} via CLI!" if( eval( "@options.#{i} == \"\"" ) ) }
-        @log.message :success, "Using #{@options.process} with pattern #{@options.pattern}, speed #{@options.speed} and cycle #{@options.cycle} (YAML: #{@options.yaml})"
-        motion_config             = eval( "@motions.#{@options.process}.#{@options.pattern}.speed_#{@options.speed}.cycle_#{@options.cycle}.yaml_#{@options.yaml}" )
+        @log.message :success, "Using domain #{@options.domain} with process #{@options.process} with pattern #{@options.pattern}, speed #{@options.speed} and cycle #{@options.cycle} (YAML: #{@options.yaml})"
+        motion_config             = eval( "@motions.#{@options.domain}.#{@options.process}.#{@options.pattern}.speed_#{@options.speed}.cycle_#{@options.cycle}.yaml_#{@options.yaml}" )
 
         raise ArgumentError, "The configuration and/or the data you requested doesn't exist!" if( motion_config.nil? )
 
@@ -220,6 +235,8 @@ class Controller # {{{
   end # of def initialize }}}
 
 
+
+
   # The function 'parse_cmd_arguments' takes a number of arbitrary commandline arguments and parses them into a proper data structure via optparse
   #
   # @param    [Array]         args  Ruby's STDIN.ARGS from commandline
@@ -247,6 +264,7 @@ class Controller # {{{
     options.pattern                         = ""
     options.speed                           = ""
     options.yaml                            = ""
+    options.domain                          = ""
 
     pristine_options                        = options.dup
 
@@ -301,6 +319,10 @@ class Controller # {{{
         options.yaml = y
       end
 
+      opts.on("-d", "--domain OPT", @domains, "Determine which domain to use (e.g. #{@domains.sort.join(", ")})" ) do |d|
+        options.domain = d
+      end
+
       opts.on("-r", "--raw-data", "Use raw data for PCA reduction instead of CPA data") do |r|
         options.use_raw_data  = r
       end
@@ -316,8 +338,8 @@ class Controller # {{{
       opts.on("-l", "--list", "List avaialble motion capture data with pattern, cycles, speed, etc." )  do |l| 
         options.list        = l
         puts "\nYou can choose from the following configuration files\n\n"
-        @yamls.each do |configurations_dir, name, pattern, speed, cycle, filename|
-          printf( "Name (--name): %-20s  Pattern (--pattern): %-10s  Speed (--speed): %-4s   Cycle (--cycle): %-4s  YAML Config name (--yaml): %-4s   \n", name, pattern, speed, cycle, @fname_table[ filename ] )
+        @yamls.each do |configurations_dir, domain, name, pattern, speed, cycle, filename|
+          printf( "Domain (--domain): %-20s  Name (--name): %-20s  Pattern (--pattern): %-10s  Speed (--speed): %-4s   Cycle (--cycle): %-4s  YAML Config name (--yaml): %-4s   \n", domain, name, pattern, speed, cycle, @fname_table[ filename ] )
         end
         puts "\n"
         exit
