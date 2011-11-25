@@ -40,13 +40,14 @@ include GSL
 # The class Turning is the idea and implementation of the Turning Motions and Turning Poses method published in e.g. IROS2010, Rennhak et al.
 class Turning # {{{
 
-  def initialize options, adt, dance_master_poses, dance_master_poses_range, from, to # {{{
+  # @fn def initialize options, adt, dance_master_poses, dance_master_poses_range, from, to # {{{
+  def initialize options, adt, dance_master_poses, dance_master_poses_range, from, to
     @adt                          = adt
     @options                      = options
     @dance_master_poses           = dance_master_poses
     @dance_master_poses_range     = dance_master_poses_range
     @from, @to                    = from, to
-    
+
     # Dirty class variable change this
     @components                   = nil
 
@@ -59,8 +60,9 @@ class Turning # {{{
   end # of def initialize }}}
 
 
-  # = getTurningPoints returns a set of values after turning point calculation (B. Rennhak's Method '09)
-  # takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for
+  # @fn def getTurningPoints segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "p30", direction = "xy", from = nil, to = nil  # {{{
+  # @brief getTurningPoints returns a set of values after turning point calculation (B. Rennhak's Method '09) 
+  #        takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for
   # @param segment1a Name of segment which together with segment1b builds a 3D line
   # @param segment1b Name of segment which together with segment1a builds a 3D line
   # @param segment2a Name of segment which together with segment2b builds a 3D line
@@ -71,7 +73,7 @@ class Turning # {{{
   # @param direction Expects a string of either "xy", "xz" or "yz" (direction of extraction)
   # @returns Array, containing the points after the calculation
   # @warning FIXME: This thing is too slow, speed it up
-  def getTurningPoints segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "p30", direction = "xy", from = nil, to = nil # {{{
+  def getTurningPoints segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "p30", direction = "xy", from = nil, to = nil 
 
     #####
     #
@@ -179,9 +181,8 @@ class Turning # {{{
   end # end of getTurningPoints }}}
 
 
-
-  # = do_pca_reduction returns a set of PCA reduced components
-  # takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for
+  # @fn def do_pca_reduction segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = nil, to = nil # {{{
+  # @brief do_pca_reduction returns a set of PCA reduced components takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for
   # @param segment1 Name of segment which together with segment2 builds a body component
   # @param segment2 Name of segment which together with segment1 builds a body component
   # @param segment3 Name of segment which together with segment4 builds a body component
@@ -190,7 +191,7 @@ class Turning # {{{
   # @param from Expects a number indicating to start from which time frame
   # @param to Expects a number indicating to end on which time frame
   # @returns Array, containing the points after the calculation
-  def do_pca_reduction segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = nil, to = nil # {{{
+  def do_pca_reduction segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = nil, to = nil
 
     #####
     #
@@ -289,8 +290,9 @@ class Turning # {{{
   end # end of do_pca_reduction }}}
 
 
-  # = Osculating plane or Frenet Frame Method. Calculates the osculating place which is useful for
-  #   determining the curvature, tangent and torsion of a 3D poly line. (finite difference based method)
+  # @fn def frenet_frame data, threshold = 0.001 # {{{
+  # @brief Osculating plane or Frenet Frame Method. Calculates the osculating place which is useful for
+  #        determining the curvature, tangent and torsion of a 3D poly line. (finite difference based method)
   #
   #   More details see the "Frenet-Serret formula".
   #
@@ -322,7 +324,7 @@ class Turning # {{{
   #   o If the curvature is always zero then the curve will be a straight line. Here the vectors N, B and the torsion are not well defined.
   #   o If the torsion is always zero then the curve will lie in a plane. A circle of radius r has zero torsion and curvature equal to 1/r.
   #   o A helix has constant curvature and constant t
-  def frenet_frame data, threshold = 0.001 # {{{
+  def frenet_frame data, threshold = 0.001 
 
     # If we only have two points
     threshold = 0.001 if data.length <=  2
@@ -347,15 +349,16 @@ class Turning # {{{
   end # of def frenet_frame }}}
 
 
-  # = get_segments_cpa returns a set of values after Closest Point of Approach calculation
-  # takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for center
+  # @fn def get_segments_cpa segments, center = "pt30", from = @from, to = @to # {{{
+  # @brief get_segments_cpa returns a set of values after Closest Point of Approach calculation
+  #        takes four segments ( a,b,c,d - 2 for each line (a+b) (c+d) ) one segment for center
   # @param segments Array in the form of [ [segment1, segment2], [segment3, segment4] ] where seg1 & seg2 form a 3D line and 3,4 respectively
   # @param center Name of segment which is our coordinate center for measurement
   # @param from Expects a number indicating to start from which time frame
   # @param to Expects a number indicating to end on which time frame
   # @returns Array, containing the points after the calculation
-  # def get_segments_cpa segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = @from, to = @to # {{{
-  def get_segments_cpa segments, center = "pt30", from = @from, to = @to # {{{
+  # def get_segments_cpa segment1 = "pt27", segment2 = "relb", segment3 = "pt26", segment4 = "lelb", center = "pt30", from = @from, to = @to
+  def get_segments_cpa segments, center = "pt30", from = @from, to = @to
 
     #####
     # Reference case
@@ -592,12 +595,13 @@ class Turning # {{{
   end # end of get_segments_cpa }}}
 
 
-  # = getPhi takes two segements and performs a simple golden ratio calculation for each coordinate pair
-  #   A good reference would be \varphi = \frac{1 + \sqrt{5}}{2} \approx 1.61803339 \ldots
+  # @fn def getPhi segment1, segment2, frame = nil # {{{
+  # @brief getPhi takes two segements and performs a simple golden ratio calculation for each coordinate pair
+  #        A good reference would be \varphi = \frac{1 + \sqrt{5}}{2} \approx 1.61803339 \ldots
   # @param segment1 Expects a valid segment name, e.g. rwft
   # @param segment1 Expects a valid segment name, e.g. lwft
   # @returns Hash, containing reference Phi, calculated Phi from the segments and the difference, e.g. "[ 1.61803339.., 1.59112447, 0.2... ]"
-  def getPhi segment1, segment2, frame = nil # {{{
+  def getPhi segment1, segment2, frame = nil
     results                      = {}
     xtranPhi, ytranPhi, ztranPhi = [], [], []
 
@@ -624,13 +628,14 @@ class Turning # {{{
   end # end of getPhi }}}
 
 
-  # = The function get_components_cpa takes as input arguments the body component in question and returns the result from get_segments_cpa
+  # @fn def get_components_cpa components_keyword, model = nil, from = @from, to = @to # {{{
+  # @brief The function get_components_cpa takes as input arguments the body component in question and returns the result from get_segments_cpa
   # @param components_keyword Symbol, describing the name of the components desired. e.g. :forearms, :hands, :upper_arms, :thighs, :shanks, :feet
   #                           These symbols can be found in the MotionX package src/plugins/vpm/src/Body.rb
   # @param from Integer, representing the start of the desired frames
   # @param to Integer, representing the end of the desired frames
   # @returns Coordinates of new CPA from the get_segment_cpa method
-  def get_components_cpa components_keyword, model = nil, from = @from, to = @to # {{{
+  def get_components_cpa components_keyword, model = nil, from = @from, to = @to 
 
     raise ArgumentError, "Model cannot be nil" if( model.nil? )
     raise ArgumentError, "The component keyword symbol you supplied (,,#{components_keyword.to_s}'') doesn't exist in group [ #{@adt.body.group.keys.join( ", ")} ]" unless( @adt.body.group.keys.include?( components_keyword ) ) 
@@ -649,13 +654,14 @@ class Turning # {{{
   end # of def get_components_cpa }}}
 
 
-  # = The function get_octants determines which sign the given point has according to the three
-  # dimensional subspaces (octants)
+  # @fn def get_octants array = nil, original = nil # {{{
+  # @brief The function get_octants determines which sign the given point has according to the three
+  #        dimensional subspaces (octants)
   #
   # @param    array Array, containing the point data (array of length n) for the T-Data calculation
   # @param    original Array, containing the point data (array of length n) for the original motion data
   # @returns        Array, containing the octant results for each data point (array of length n)
-  def get_octants array = nil, original = nil # {{{
+  def get_octants array = nil, original = nil
     raise ArgumentError, "Data should be of shape [ [x,y,z],...]" if( (array.length == 3) and not (array.first.length == 3 ) )
 
     # FIXME: The original data is wrong..! 
@@ -730,7 +736,8 @@ EOS
   end # of def get_octants }}}
 
 
-  def get_dot_graph hash = nil, filename = "graphs/cluster.dot"  # {{{
+  # @fn def get_dot_graph hash = nil, filename = "graphs/cluster.dot"  # {{{
+  def get_dot_graph hash = nil, filename = "graphs/cluster.dot" 
 
     # Hash data is
     # (key ) frame = (value) cluster id
@@ -768,9 +775,9 @@ EOS
   end # of def get_octants }}}
 
 
-
-  # = Perform calculations and extract data
-  def get_data # {{{
+  # @fn def get_data # {{{
+  # @brief Perform calculations and extract data
+  def get_data
     pca     = PCA.new
 
     @log.message :info, "CPA Extraction of all body components"
@@ -1323,5 +1330,5 @@ end # of class Turning }}}
 
 # Direct Invocation
 if __FILE__ == $0 # {{{
-end # of if __FILE__ == $0 }}}
+end # of if __FILE__ == $0 # }}}
 
