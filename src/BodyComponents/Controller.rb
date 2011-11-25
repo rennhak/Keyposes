@@ -150,14 +150,14 @@ class Controller # {{{
 
       unless( @options.process == "" )
 
-        %w[name pattern speed cycle].each { |i| raise ArgumentError, "You didn't provide a #{i} via CLI!" if( eval( "@options.#{i} == \"\"" ) ) }
+        %w[domain name pattern speed cycle].each { |i| raise ArgumentError, "You didn't provide a #{i} via CLI!" if( eval( "@options.#{i} == \"\"" ) ) }
         @log.message :success, "Using domain #{@options.domain} with process #{@options.process} with pattern #{@options.pattern}, speed #{@options.speed} and cycle #{@options.cycle} (YAML: #{@options.yaml})"
         motion_config             = eval( "@motions.#{@options.domain}.#{@options.process}.#{@options.pattern}.speed_#{@options.speed}.cycle_#{@options.cycle}.yaml_#{@options.yaml}" )
 
         raise ArgumentError, "The configuration and/or the data you requested doesn't exist!" if( motion_config.nil? )
 
         motion_config_filename    = motion_config.path + "/" + motion_config.filename
- 
+
         @log.message :info, "Loading Motion Capture config file (#{motion_config_filename})"
 
         @motion_config            = read_motion_config( motion_config_filename )
