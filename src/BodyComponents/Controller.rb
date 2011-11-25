@@ -175,9 +175,6 @@ class Controller # {{{
         @log.message :info, "Loading the Motion Capture data (#{@file}) via the MotionX VPM Plugin"
         @adt                      = ADT.new( @file )
 
-
-        # o = Marshal.dump( @adt )
-
         if( @options.filter_motion_capture_data )
           @log.message :info, "Filter Motion Capture data to smooth out outliers"
           @filter                 = Filter.new( @options, @from, @to )
@@ -189,24 +186,6 @@ class Controller # {{{
           @turning                = Turning.new( @options, @adt, @dance_master_poses, @dance_master_poses_range, @from, @to )
           @turning.get_data
         end
-
-        ## b0rked! Singleton methods - but where??! (?? http://doc.okkez.net/191/view/method/Object/i/initialize_copy )
-        ## Speedup by loading a Marshalled object from /tmp/ if previously run
-        #if File.exist?( "/tmp/Controller_Marshall_VPM_Data.tmp" )
-        #  puts "Loading Marshal dump I found in /tmp/Controller_Marshall_VPM_Data.tmp for speedup"
-        #  vpm = Marshal.load( File.read("/tmp/Controller_Marshall_VPM_Data.tmp").readlines.to_s )
-        #else
-        #  vpm   = ADT.new( file )
-        #  x = vpm.deep_clone.to_s
-
-        #  puts "Creating Marshal dump for later speedups (/tmp/Controller_Marshall_VPM_Data.tmp)"
-        #  o = Marshal.dump( x )
-        #  File.open( "/tmp/Controller_Marshall_VPM_Data.tmp", File::CREAT|File::TRUNC|File::RDWR, 0644) { |f| f.write( o.to_s ) }
-        #end
-
-        # p vpm.segments
-        # See shiratori thesis page 132
-        #
 
         @log.message :success, "Finished processing of #{motion_config_filename.to_s}"
       end # of unless( @options.process.empty? )
