@@ -152,9 +152,26 @@ class Controller # {{{
           # We mix only the same domain with the same speed
           %w[domain speed].each { |i| raise ArgumentError, "You didn't provide a #{i} via CLI!" if( eval( "@options.#{i} == \"\"" ) ) }
 
+          # If we want to match more specific inside the domain
+          extended = false
+          if( ( @options.pattern != "" ) && ( @options.name != "" ) )
+            extended = true
+          end
+
           process = []
           @yamls.each do |configurations_dir, domain, name, pattern, speed, cycle, filename|
-            process << [ configurations_dir, domain, name, pattern, speed, cycle, filename ] if( ( domain =~ %r{#{@options.domain}}i ) and ( speed =~ %r{#{@options.speed}}i ) )
+
+            if( extended )
+              if( ( domain =~ %r{#{@options.domain}}i ) and ( speed =~ %r{#{@options.speed}}i ) and ( pattern =~ %r{#{@options.pattern}}i ) and ( name =~ %r{#{@options.name}}i ) )
+                @log.message :info, "USING Domain( '#{domain.to_s}' ), name( '#{name}' ), pattern( '#{pattern}' ), speed( '#{speed.to_s}' ), cycle( '#{cycle.to_s}' ), filename( '#{filename.to_s}' )"
+                process << [ configurations_dir, domain, name, pattern, speed, cycle, filename ] 
+              end
+            else
+              if( ( domain =~ %r{#{@options.domain}}i ) and ( speed =~ %r{#{@options.speed}}i ) )
+                @log.message :info, "USING Domain( '#{domain.to_s}' ), name( '#{name}' ), pattern( '#{pattern}' ), speed( '#{speed.to_s}' ), cycle( '#{cycle.to_s}' ), filename( '#{filename.to_s}' )"
+                process << [ configurations_dir, domain, name, pattern, speed, cycle, filename ] 
+              end
+            end # of extended 
           end
 
           turning_data = []
@@ -210,8 +227,11 @@ class Controller # {{{
         dists           = []
         tcss            = []
 
+        @log.message :success, "Merged all data - doing Clustering on all combined data"
+        @log.message :info, "We have #{final.length.to_s} data points, rule of thumb says we should use #{Clustering.new.rule_of_thumb_k_estimation(final.length.to_i)} (large overestimation)"
+
         if( @options.clustering_k_search )
-          ( @options.clustering_k_from ).upto( @options.clustering_k_to ) do |k|
+          ( @options.clustering_k_from ).upto( @options.clustering_k_to ) do |k|  # iterate over k's
 
             @log.message :info, "Performing K-Means for k = #{k.to_s}"
 
@@ -249,10 +269,12 @@ class Controller # {{{
         end # of if( @options.clustering_k_search )
 
         tcss.collect! { |array| array.inject(:+) / array.length } 
-        ks = ks.zip( tcss )
+        ks_within     = ks.zip( tcss )
+        ks_dists      = ks.zip( dists )
 
         @plot       = Plotter.new( 0, 0 )
-        @plot.easy_gnuplot( ks, "%e %e\n", [ "Clusters", "Total within cluster sum of squares" ], "Total within cluster sum of squares Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
+        @plot.easy_gnuplot( ks_dists, "%e %e\n", [ "Clusters", "Total distortions" ], "Total distortions Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
+        @plot.easy_gnuplot( ks_within, "%e %e\n", [ "Clusters", "Total within cluster sum of squares" ], "Total within cluster sum of squares Plot", "graphs/total_within_sum_of_squares.gp", "graphs/total_within_sum_of_squares.gpdata" )
 
         @turning.get_dot_graph( kms.last )
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kms.last )

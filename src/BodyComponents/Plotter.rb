@@ -160,6 +160,12 @@ class Plotter # {{{
     end # of File.open
   end # of def interactive_gnuplot }}}
 
+
+  # Imagemagick / opengl?
+  def pose_data_to_image
+  end
+
+
   # The function covariance_matrix_gnuplot plots the cov. matrix of given data to a gnuplot script file.
   # @param data Array of arrays. Each sub-array contains integers or floats.
   # @param filename Accepts string which represents the full path (absolute) with filename and extension (e.g. /tmp/file.ext) of where to store the gnuplot script.
