@@ -366,6 +366,7 @@ class Controller # {{{
     options.domain                          = ""
     options.use_all_of_domain               = false
     options.clustering_algorithm            = ""
+    options.clustering_k_parameter          = 0
 
 
     pristine_options                        = options.dup
@@ -429,9 +430,12 @@ class Controller # {{{
         options.domain = d
       end
 
-
       opts.on("-g", "--clustering-algorithm OPT", @clustering_algorithms, "Choose which clustering algorithm to apply (e.g. #{@clustering_algorithms.sort.join(", ")})") do |g|
         options.clustering_algorithm  = g
+      end
+
+      opts.on("-k", "--clustering-k-parameter OPT", "Choose which clustering model you want to apply (parameter k, e.g. 1, 2, 3, ... etc.)") do |k|
+        options.clustering_k_parameter = k
       end
 
       opts.on("-r", "--raw-data", "Use raw data for PCA reduction instead of CPA data") do |r|
