@@ -28,12 +28,16 @@ require_relative 'Mathematics.rb'
 class Clustering # {{{
 
   # Constructor
-  def initialize options # {{{
+  def initialize options = nil # {{{
     @options      = options
     @mathematics  = Mathematics.new
+
+    @algorithms   = %w[kmeans]
+
   end # of def initialize }}}
 
 
+  # @fn def kmeans data, centroids = 8, centroids_information = nil # {{{
   def kmeans data, centroids = 8, centroids_information = nil
     raise ArgumentError, "Data should be of shape [ [x,y,z],...]" if( (data.length == 3) and not (data.first.length == 3 ) )
 
@@ -57,7 +61,7 @@ class Clustering # {{{
     end
 
     return [ clusters, centroids ]
-  end
+  end # }}}
 
 
   # @fn def distances data, centroids # {{{
@@ -82,7 +86,7 @@ class Clustering # {{{
   end # of def distances data, centroids # }}}
 
 
-  # @fn {{{
+  # @fn def closest_centroids dists, centroids, data {{{
   # find closest centroid to each point, and the corresponding distance
   def closest_centroids dists, centroids, data
 
@@ -115,8 +119,8 @@ class Clustering # {{{
     return closest
   end # of def closest_centroids }}}
 
-  
-  # @fn {{{
+
+  # @fn def distortions closest_centroids # {{{
   # @param closest_centroids is input from the same named function
   # The distortion, as far as Kmeans is concerned, is used as a stopping
   # criterion (if the change between two iterations is less than some threshold, we
@@ -129,13 +133,14 @@ class Clustering # {{{
   end # of def distortions }}}
 
 
+  # @fn def squared_error_distortion closest_centroids {{{
   # Given a data point v and a set of points X, define the distance rom v to X as d(v,X)
   # as the (Eucledian) distance from v to the closest point from X
   # Given a set of n data points V={v_1, ..., v_n} and a set of k points X, define the Squared Error
   # Distortion d(V,X) = sum( d(v_i, X)^2 ) / n    \forall 1<=i<=n
   def squared_error_distortion closest_centroids
     return ( closest_centroids.collect { |cid, d| d**2 }.to_a.inject( :+ ) ) / closest_centroids.length
-  end
+  end # }}}
 
 
   # @fn       def rule_of_thumb_k_estimation data_size {{{
@@ -162,7 +167,7 @@ class Clustering # {{{
   end # def rule_of_thumb_k_estimation data_size }}}
 
 
-  # @fn {{{
+  # @fn {def total_within_cluster_sum_of_squares closest_centroids # {{{
   # @param closest_centroids is input from the same named function
   # @returns [Array] Index being cluster id index and total within cluster sum of squares
   # Should become smaller for good clustering results
@@ -202,6 +207,8 @@ class Clustering # {{{
   end # of def total_within_cluster_sum_of_squares }}}
 
 
+  # @fn def tss data {{{
+  # total squared error sum
   # input: is from distances function ( hash)
   def tss data
     tss = 0
@@ -214,12 +221,12 @@ class Clustering # {{{
         cnt += 1
       end
     end
-  
+
     return tss / cnt
-  end
+  end # }}}
 
 
-  # @fn {{{
+  # @fn def total_sum_of_squares closest_centroids # {{{
   # @param input from the distances method
   # http://en.wikipedia.org/wiki/Total_sum_of_squares
   def total_sum_of_squares closest_centroids
@@ -252,8 +259,9 @@ class Clustering # {{{
  
     return tss / cnt
   end # of def total_sum_of_squares }}}
- 
 
+
+  attr_reader :algorithms
 
 end # of class Clustering }}}
 

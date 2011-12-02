@@ -133,6 +133,10 @@ class Controller # {{{
     @sides                        = %w[left right both]
     @body_parts                   = %w[hands fore_arms upper_arms thighs shanks feet]
 
+    @clustering                   = Clustering.new( @options )
+    @clustering_algorithms        = @clustering.algorithms
+
+
     unless( options.nil? )
       @log.message :success, "Starting #{__FILE__} run"
       @log.message :debug,   "Colorizing output as requested" if( @options.colorize )
@@ -206,10 +210,6 @@ class Controller # {{{
         tcss = []
         kmeans = nil
 
-        # use rule of thumb to define end value for iteration of kmeans cluster model minimazation (*0.5 to speed up)
-        kmeans_end = ( Math.sqrt( final.length / 2 )  ) * 0.5
-
-        @log.message :info, "Iterating over 1 to #{kmeans_end.to_s}"
         #k = 4
         1.upto( 25 ).each do |k|
           @log.message :info, "Calculating K-Means for k=#{k.to_s}"
