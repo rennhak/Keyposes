@@ -264,7 +264,8 @@ class Controller # {{{
         @turning.get_dot_graph( kmeans )
 
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kmeans )
-        
+
+
 
       else # if this is given we want to analyse only one dance
         @log.message :error, "No processing name given via --name '#{@options.process}'" if( @options.process == "" )
@@ -367,6 +368,9 @@ class Controller # {{{
     options.use_all_of_domain               = false
     options.clustering_algorithm            = ""
     options.clustering_k_parameter          = 0
+    options.clustering_k_search             = false # if this is true options.clustering_k_{from, to} are used
+    options.clustering_k_from               = 1
+    options.clustering_k_to                 = 1
 
 
     pristine_options                        = options.dup
@@ -436,6 +440,14 @@ class Controller # {{{
 
       opts.on("-k", "--clustering-k-parameter OPT", "Choose which clustering model you want to apply (parameter k, e.g. 1, 2, 3, ... etc.)") do |k|
         options.clustering_k_parameter = k
+      end
+
+      opts.on("--clustering-k-search-from-to OPT1 OPT2", "Run clustering for OPT1 to OPT2 and make appropriate distortion graphs (e.g. \"1 25\")") do |f|
+        data = f.split( " " )
+        raise ArgumentError, "Needs at least two arguments provided enclosed by \"\"'s, eg. \"1 25\" for from k=1 to k=25 iteration" unless( data.length == 2 )
+        options.clustering_k_search   = true
+        data.collect! { |i| i.to_i }
+        options.clustering_k_from, options.clustering_k_to       = *data
       end
 
       opts.on("-r", "--raw-data", "Use raw data for PCA reduction instead of CPA data") do |r|
