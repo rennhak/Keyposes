@@ -138,6 +138,30 @@ class Clustering # {{{
   end
 
 
+  # @fn       def rule_of_thumb_k_estimation data_size {{{
+  # @brief    Estimates the size of k (the model selection for k-means) based on the data size. This
+  #           method is very unexact and is prone to (significant) over estimation.
+  # @param    data_size   [Integer]   Length or size of data which we apply K-Means to. E.g. data.length if it an array.
+  def rule_of_thumb_k_estimation data_size = nil
+
+    result = 0
+
+    # Input verification {{{
+    raise ArgumentError, "Data size cannot be nil" if( data_size.nil? )
+    raise ArgumentError, "Data size must be of type integer" unless( data_size.is_a?(Integer) )
+    # }}}
+
+    result = ( Math.sqrt( data_size / 2 ) ).to_i
+
+    # Output verification {{{
+    raise ArgumentError, "Data size must be of type integer" unless( data_size.is_a?(Integer) )
+    raise ArgumentError, "Data size must be larger, cannot estimate k for such a small data size" if( data_size == 0 )
+    # }}}
+
+    return result
+  end # def rule_of_thumb_k_estimation data_size }}}
+
+
   # @fn {{{
   # @param closest_centroids is input from the same named function
   # @returns [Array] Index being cluster id index and total within cluster sum of squares

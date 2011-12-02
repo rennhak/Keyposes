@@ -336,8 +336,6 @@ class Controller # {{{
   end # of def initialize }}}
 
 
-
-
   # The function 'parse_cmd_arguments' takes a number of arbitrary commandline arguments and parses them into a proper data structure via optparse
   #
   # @param    [Array]         args  Ruby's STDIN.ARGS from commandline
