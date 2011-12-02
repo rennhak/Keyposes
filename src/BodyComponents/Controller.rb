@@ -210,50 +210,21 @@ class Controller # {{{
         tcss = []
         kmeans = nil
 
-        #k = 4
-        1.upto( 25 ).each do |k|
-          @log.message :info, "Calculating K-Means for k=#{k.to_s}"
+        if( @options.clustering_k_search )
+          ( @options.clustering_k_from ).upto( @options.clustering_k_to ) do |k|
 
-          ## Hands centroid for entire jp dance domain
-          #centroids = []
-          #centroids << [ -10.142864867478487, -883.1101800742041, 122.43234693122311]
-          #centroids << [ 0.4458929454081469, 3.802035339502351, -0.5390339014069105]
-          #centroids << [ -1317.5185755321188, -347.0076126871563, 87.06296930124779]
-          #centroids << [ -1144.4570020687893, -1216.4800826988233, 261.0467408410053]
+            clustering                  = Clustering.new( @options )
+            kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
+            distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
+            closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
+            distortions                 = clustering.distortions( closest_centroids )
+            squared_error_distortions   = clustering.squared_error_distortion( closest_centroids )
+            dists << squared_error_distortions
+            ks << k
+            tcss                        << clustering.total_within_cluster_sum_of_squares( closest_centroids )
 
-          clustering                  = Clustering.new( @options )
-          kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
-          # puts "Centroids are:"
-          # p centroids
-          distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
-          closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
-          distortions                 = clustering.distortions( closest_centroids )
-          squared_error_distortions   = clustering.squared_error_distortion( closest_centroids )
-          dists << squared_error_distortions
-          ks << k
-          tcss                        << clustering.total_within_cluster_sum_of_squares( closest_centroids )
-          # tss                       = clustering.total_sum_of_squares( closest_centroids )
-          tss                         = clustering.tss( distances ) 
-
-          #puts "Error inside clusters"
-          #p tcss
-          #puts "Errors total"
-          #p tss
-
-          # puts "[ smaller ] DISTORTIONS: #{distortions.to_s}"
-          # print "[ smaller ] Total within Cluster sum of squared: #{tcss.to_s}\n"
-          # print "[ const ] Total sum of squares: #{tss.to_s} or tss2: #{tss2.to_s}\n"
-
-          # This caluclation is b0redk
-          # between = tss2 - tcss
-          # puts "In between cluster sum of squares for all clusters: #{between.to_s}"
-          # variance = ( between /  ( tss2 * 100 ) ).abs  
-          # total_squared << variance
-          # ks << k
-          # dists  << distortions
-          # puts "Variance explained: #{(variance).to_s}"
-        end
-
+          end # of ( @options.clustering_k_from ).upto( @options.clustering_k_to ) do |k|
+        end # of if( @options.clustering_k_search )
 
         tcss.collect! { |array| array.inject(:+) / array.length } 
         ks = ks.zip( tcss )
@@ -264,8 +235,6 @@ class Controller # {{{
         @turning.get_dot_graph( kmeans )
 
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kmeans )
-
-
 
       else # if this is given we want to analyse only one dance
         @log.message :error, "No processing name given via --name '#{@options.process}'" if( @options.process == "" )
@@ -366,7 +335,7 @@ class Controller # {{{
     options.yaml                            = ""
     options.domain                          = ""
     options.use_all_of_domain               = false
-    options.clustering_algorithm            = ""
+    options.clustering_algorithm            = "kmeans"
     options.clustering_k_parameter          = 0
     options.clustering_k_search             = false # if this is true options.clustering_k_{from, to} are used
     options.clustering_k_from               = 1
@@ -430,11 +399,11 @@ class Controller # {{{
         options.domain = d
       end
 
-      opts.on("-d", "--domain OPT", @domains, "Determine which domain to use (e.g. #{@domains.sort.join(", ")})" ) do |d|
-        options.domain = d
+      opts.on("-a", "--all", "Use all dances of the given domain") do |a|
+        options.use_all_of_domain  = a
       end
 
-      opts.on("-g", "--clustering-algorithm OPT", @clustering_algorithms, "Choose which clustering algorithm to apply (e.g. #{@clustering_algorithms.sort.join(", ")})") do |g|
+      opts.on("-g", "--clustering-algorithm OPT", @clustering_algorithms, "Choose which clustering algorithm to apply (e.g. #{@clustering_algorithms.sort.join(", ")} - default: #{options.clustering_algorithm})") do |g|
         options.clustering_algorithm  = g
       end
 
