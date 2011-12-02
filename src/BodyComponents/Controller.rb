@@ -365,6 +365,7 @@ class Controller # {{{
     options.yaml                            = ""
     options.domain                          = ""
     options.use_all_of_domain               = false
+    options.clustering_algorithm            = ""
 
 
     pristine_options                        = options.dup
@@ -424,8 +425,13 @@ class Controller # {{{
         options.domain = d
       end
 
-      opts.on("-a", "--all", "Use all dances of the given domain") do |a|
-        options.use_all_of_domain  = a
+      opts.on("-d", "--domain OPT", @domains, "Determine which domain to use (e.g. #{@domains.sort.join(", ")})" ) do |d|
+        options.domain = d
+      end
+
+
+      opts.on("-g", "--clustering-algorithm OPT", @clustering_algorithms, "Choose which clustering algorithm to apply (e.g. #{@clustering_algorithms.sort.join(", ")})") do |g|
+        options.clustering_algorithm  = g
       end
 
       opts.on("-r", "--raw-data", "Use raw data for PCA reduction instead of CPA data") do |r|
