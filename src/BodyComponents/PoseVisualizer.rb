@@ -52,6 +52,7 @@ Magick::RVG.dpi = 72
 #
 #######
 class PoseVisualizer # {{{
+
   def initialize options = nil, kmeans = nil, adts = nil  # {{{
     @options = options
     @log     = Logger.new( options )
@@ -90,74 +91,72 @@ class PoseVisualizer # {{{
   end # of initialize }}}
 
 
-  # @fn         def init # {{{
+  # @fn         def init font = "fonts/arial.ttf", font_size = 24 {{{
   # @brief      Initialise OpenGL state for 3D rendering.
-  def init
-    #GL.Enable(GL::DEPTH_TEST)
-    #GL.DepthFunc(GL::LEQUAL)
-    #GL.ClearColor(0.0, 0.0, 0.0, 0.0)
-    #GL.Hint(GL::PERSPECTIVE_CORRECTION_HINT, GL::NICEST)
-    #true
+  #
+  # @param      [String]        font          Truetype font file
+  # @param      [Integer]       font_size     Font size in ints
+  def init font = "fonts/arial.ttf", font_size = 24
 
-    # initialize SDL and OpenGL
-    # SDL.init(SDL::INIT_VIDEO | SDL::INIT_AUDIO | SDL::INIT_TIMER)
-    SDL.init(SDL::INIT_VIDEO)
+    # Initialize SDL and OpenGL
+    SDL.init( SDL::INIT_VIDEO )
 
-    SDL::GL.set_attr(SDL::GL::RED_SIZE, 8)
-    SDL::GL.set_attr(SDL::GL::GREEN_SIZE, 8)
-    SDL::GL.set_attr(SDL::GL::BLUE_SIZE, 8)
-    SDL::GL.set_attr(SDL::GL::ALPHA_SIZE, 8)
-    SDL::GL.set_attr(SDL::GL::DOUBLEBUFFER, 1)
-    SDL::GL.set_attr(SDL::GL::DEPTH_SIZE,16)
+    SDL::GL.set_attr( SDL::GL::RED_SIZE,      8   )
+    SDL::GL.set_attr( SDL::GL::GREEN_SIZE,    8   )
+    SDL::GL.set_attr( SDL::GL::BLUE_SIZE,     8   )
+    SDL::GL.set_attr( SDL::GL::ALPHA_SIZE,    8   )
+    SDL::GL.set_attr( SDL::GL::DOUBLEBUFFER,  1   )
+    SDL::GL.set_attr( SDL::GL::DEPTH_SIZE,    16  )
 
-    @screen = SDL::Screen.open @width, @height, 8, SDL::OPENGL | SDL::SWSURFACE
-    SDL::WM::set_caption($0,$0)
+    @screen       = SDL::Screen.open @width, @height, 8, SDL::OPENGL | SDL::SWSURFACE
+    SDL::WM::set_caption( $0, $0 )
+
 
     SDL::TTF.init
+    @font         = SDL::TTF.open( font, font_size )
+    @font.style   = SDL::TTF::STYLE_NORMAL
 
-    @font = SDL::TTF.open('fonts/arial.ttf', 24)
-    @font.style = SDL::TTF::STYLE_NORMAL
-
-
-
-    # screen = SDL.set_video_mode(800, 600, 8, SDL::HWSURFACE | SDL::OPENGL)
-    # glPixelStorei(GL_UNPACK_ALIGNMENT, 4)
     GL.ClearColor( 1.0, 1.0, 1.0, 1.0)
-    GL.ClearDepth(1.0)
+    GL.ClearDepth( 1.0 )
 
+    # Anti-Aliasing for lines and points
     GL.Enable( GL_LINE_SMOOTH )
-
     GL.Enable( GL_POINT_SMOOTH )
     GL.Enable( GL_BLEND )
     GL.BlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA )
     GL.PointSize( 4.0 )
+
     GL.Clear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT )
 
     GL.Viewport( 0, 0, @width, @height );
+
     GL.MatrixMode( GL_PROJECTION );
     GL.LoadIdentity();
+
     GL.MatrixMode( GL_MODELVIEW );
     GL.LoadIdentity( );
-    GL.Enable(GL_DEPTH_TEST);
-    GL.DepthFunc(GL_LESS);
-    GL.ShadeModel(GL_SMOOTH);
 
-    GL.Hint(GL::PERSPECTIVE_CORRECTION_HINT, GL::NICEST)
+    GL.Enable( GL_DEPTH_TEST );
+    GL.DepthFunc( GL_LESS );
+    GL.ShadeModel( GL_SMOOTH );
 
-    GL.MatrixMode(GL_PROJECTION)
+    GL.Hint( GL::PERSPECTIVE_CORRECTION_HINT, GL::NICEST )
+
+    GL.MatrixMode( GL_PROJECTION )
     GL.LoadIdentity()
-    #zoom_factor = 5.0
-    #zNear, zFar = 0.1,50
-    #GLU.Perspective(50.0*zoom_factor, @width.to_f/@height.to_f, zNear, zFar)
 
+    # Zoom view
+    # zoom_factor = 5.0
+    # zNear, zFar = 0.1,50
+    # GLU.Perspective(50.0*zoom_factor, @width.to_f/@height.to_f, zNear, zFar)
     # GLU.LookAt( 0, 0, 0, 0, 0, 0, 0, 1, 0 );
-
     # GLU.Perspective(@fov, @width.to_f() / @height.to_f(), 0.1, 1024.0)
-    # Segfault?
+
+    # Segfaults currently
     # screen.save_bmp( "test.bmp" )
 
     return true
-  end
+  end # def init font = "fonts/arial.ttf", font_size = 24 }}}
 
 
   # @fn         def resize width = 800, height = 600 # {{{
