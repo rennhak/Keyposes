@@ -65,9 +65,16 @@ class PoseVisualizer # {{{
     @adts             = adts
     @first_time       = true
 
-
     adt_cnt           = 0
     @adts.each do |adt, turning_data, meta|
+
+      raise ArgumentError, "adt_cnt > 0 means trouble - implementation is messy" if( adt_cnt > 0 ) 
+
+      config          = turning_data[0][0]
+      tp_calc_result  = turning_data[0][1]
+
+      configurations_dir, domain, name, pattern, speed, cycle, filename = config
+
       raise ArgumentError, "From -> to range needs to include all frames for PoseVisualizer" if( (meta[ "from" ] != 0) or (meta[ "to" ] != meta[ "total_frames" ]) )
       meta[ "from" ].upto( meta[ "to" ] - 1 ).each { @lookup_table << adt_cnt }
       adt_cnt        += 1
@@ -108,7 +115,7 @@ class PoseVisualizer # {{{
     SDL::GL.set_attr( SDL::GL::DOUBLEBUFFER,  1   )
     SDL::GL.set_attr( SDL::GL::DEPTH_SIZE,    16  )
 
-    @screen       = SDL::Screen.open @width, @height, 8, SDL::OPENGL | SDL::SWSURFACE
+    @screen       = SDL::Screen.open @width, @height, 8, SDL::OPENGL # | SDL::SURFACE
     SDL::WM::set_caption( $0, $0 )
 
 
@@ -153,7 +160,7 @@ class PoseVisualizer # {{{
     # GLU.Perspective(@fov, @width.to_f() / @height.to_f(), 0.1, 1024.0)
 
     # Segfaults currently
-    # screen.save_bmp( "test.bmp" )
+    # @screen.save_bmp( "test.bmp" )
 
     return true
   end # def init font = "fonts/arial.ttf", font_size = 24 }}}
@@ -217,6 +224,12 @@ class PoseVisualizer # {{{
     @tmp_cnt          = 0
 
     @adts.each do |adt, turning, meta|
+
+      config          = turning[0][0]
+      tp_calc_result  = turning[0][1]
+
+      configurations_dir, domain, name, pattern, speed, cycle, filename = config
+
 
       center    = adt.pt30
 
@@ -293,7 +306,7 @@ class PoseVisualizer # {{{
 
         @log.message :warning, "Showing *NOW* only CLUSTER #{k.to_s}"
         sleep( 3 )
-      
+
         0.upto( rfin.length - 1 ) do |i|
 
           current_cluster = @kmeans[ @tmp_cnt ].to_i
@@ -310,8 +323,6 @@ class PoseVisualizer # {{{
             @first_time = false
           end
 
-
-
           @log.message :success, "This pose of frame (#{@tmp_cnt.to_s}) is part of CLUSTER >>>  #{current_cluster.to_s} <<<"
 
           glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -321,6 +332,12 @@ class PoseVisualizer # {{{
             x, y, z = *component[ i ]
             draw_point( x, y, z )
           end
+
+          deg2rad = Math::PI / 180.0
+
+          # Turning point
+          tp_x, tp_y, tp_z = tp_calc_result[ i ]
+          draw_point( tp_x, tp_y, tp_z, [1,0,0] )
 
           # Draw connecting lines
           components_right.each do |type, combo|
@@ -334,7 +351,6 @@ class PoseVisualizer # {{{
               x1, y1, z1 = *( eval(array.first.to_s)[ i ] )
               x2, y2, z2 = *( eval(array.last.to_s)[ i ] )
 
-
               color = @color.black
               @highlight.each do |a, b|
                 if( ((first.to_s == a.to_s) and (last.to_s == b.to_s) ) or ( (last.to_s == a.to_s) and (first.to_s == b.to_s) )  )
@@ -342,6 +358,37 @@ class PoseVisualizer # {{{
                   break
                 end
               end
+
+#              Draw Ellipsoid
+#              lengthX = (x2 - x1)
+#              lengthY = (y2 - y1)
+#              lengthZ = (z2 - z1)
+#
+#              radiusX = lengthX / 2
+#              radiusY = lengthY / 2
+#              radiusZ = lengthZ / 2
+#
+#              centerX = radiusX + x1 
+#              centerY = radiusY + y1
+#              centerZ = radiusZ + z1
+#
+#              # draw_point( centerX, centerY, centerZ, [0,1,0], 10, true )
+#
+#              0.upto( 360 ).each do |i|
+#                #degInRad = i * deg2rad
+#
+#                glPushMatrix()
+#                  ellipsoid = GLU.NewQuadric()
+#                  GL.Translate( normalize( centerX ), normalize( centerY ), normalize( centerZ ) )
+#                  #angle = 0
+#                  GL.Rotate( i, normalize( lengthX ), normalize( lengthY ), normalize( lengthZ ) )
+#
+#                  glScale( normalize( radiusX.to_f ) , normalize( radiusY.to_f ), normalize( radiusZ.to_f ) )
+#                  glColor( 0.8, 0.8, 0.8 )
+#                  GLU.Sphere( ellipsoid, 1.0, 100, 100 )
+#                  GLU.DeleteQuadric( ellipsoid )
+#                glPopMatrix()
+#              end 
 
               draw_line( x1, y1, z1, x2, y2, z2, color )
             end
@@ -432,9 +479,7 @@ class PoseVisualizer # {{{
           #@screen.flip
           #glEnable(GL_DEPTH_TEST)
 
-          
-          # SEGFAULT
-          # @screen.save_bmp( "/tmp/test.bmp" )
+          screenshot( current_cluster, i )
 
           # draw_text( 0, 0, 0.0, 0.0, 0.0, GLUT_BITMAP_TIMES_ROMAN_24, "HELLO WORLD" )
           sleep( 0.1 )
@@ -446,7 +491,6 @@ class PoseVisualizer # {{{
 
         end
 
-
       end
 
     end
@@ -454,6 +498,32 @@ class PoseVisualizer # {{{
     @font.close
     SDL.quit
   end #  def drawgl width = nil, height = nil }}}
+
+
+  # @fn     def screenshot cluster = nil, frame = nil, save_dir = "graphs/clusters" # {{{
+  # @brief  Create a screenshot over Ruby ImageMagick. Takes a snapshot of OpenGL via glreadpixels
+  #         and passes the data to imagemagick for file storage.
+  #
+  #         The reason why we don't use SDL.save_bmp use is that it segfaults on my machine.
+  #         It saves only bmp - anyway (@screen.save_bmp)
+  #
+  # @param  [Integer]   cluster   Cluster ID.
+  # @param  [Integer]   frame     Frame number.
+  # @param  [String]    save_dir  Save images in this base directory.
+  def screenshot cluster = nil, frame = nil, save_dir = "graphs/clusters"
+
+    cluster_dir = save_dir + "/" + cluster.to_s
+    filename    = cluster_dir + "/" + frame.to_s + ".png"
+
+    Dir.mkdir( save_dir ) unless( File.exists?( save_dir ) )
+    Dir.mkdir( cluster_dir ) unless( File.exists?( cluster_dir ) ) 
+
+    data = glReadPixels( 0, 0, @width, @height, GL_RGB, GL_UNSIGNED_SHORT )
+    screenbuffer = Magick::Image.new( @width, @height )
+    screenbuffer.import_pixels( 0, 0, @width, @height, "RGB", data, Magick::ShortPixel ).flip!
+    screenbuffer.write( filename )
+
+  end # of def screenshot cluster = nil, frame = nil, save_dir = "graphs/clusters" }}}
 
 
   # @fn         def draw_point x = nil, y = nil, z = nil, color = @color.black, point_size = 10, normalize_values = true {{{

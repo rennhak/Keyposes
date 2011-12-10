@@ -185,8 +185,9 @@ class Controller # {{{
             end # of extended 
           end
 
-          turning_data = []
-          adts         = []
+          turning_data  = []
+          @adts         = []
+
           process.each do |configurations_dir, domain, name, pattern, speed, cycle, filename|
 
             yaml_var = @fname_table[ filename ]
@@ -223,7 +224,9 @@ class Controller # {{{
             if( @options.turning_pose_extraction )
               @log.message :info, "Performing CPA-PCA Turning pose extraction"
               @turning                = Turning.new( @options, @adt, @dance_master_poses, @dance_master_poses_range, @from, @to )
-              turning_data << [ [ configurations_dir, domain, name, pattern, speed, cycle, filename ], @turning.get_data ]
+              data                    = @turning.get_data
+
+              turning_data << [ [ configurations_dir, domain, name, pattern, speed, cycle, filename ], data ]
 
               meta = Hash.new
               meta[ "total_frames" ]  = @adt.relb.getCoordinates!.length
@@ -231,7 +234,7 @@ class Controller # {{{
               meta[ "to" ]            = @to
               meta[ "motion_config" ] = @motion_config
 
-              adts << [ @adt, turning_data, meta ]
+              @adts << [ @adt, turning_data.dup, meta.dup ]
             end
 
             @log.message :success, "Finished processing of #{motion_config_filename.to_s}"
@@ -299,7 +302,7 @@ class Controller # {{{
         @turning.get_dot_graph( kms.last )
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kms.last )
 
-        @pv         = PoseVisualizer.new( @options, kms.last, adts )
+        @pv         = PoseVisualizer.new( @options, kms.last, @adts )
 
       else # if this is given we want to analyse only one dance
         @log.message :error, "No processing name given via --name '#{@options.process}'" if( @options.process == "" )
