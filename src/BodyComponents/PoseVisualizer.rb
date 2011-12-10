@@ -49,7 +49,6 @@ Magick::RVG.dpi = 72
 # @class   PoseVisualizer
 # @author  Bjoern Rennhak
 # @brief   This class helps with generating images of 3D data (poses)
-# @details {}
 #
 #######
 class PoseVisualizer # {{{
@@ -73,26 +72,26 @@ class PoseVisualizer # {{{
       adt_cnt        += 1
     end
 
-    raise ArgumentError, "Kmeans length and lookup table length need to be the same" unless( ( @kmeans.keys.length ) == ( @lookup_table.length ) )
+    raise ArgumentError, "K-Means length and lookup table length need to be the same" unless( ( @kmeans.keys.length ) == ( @lookup_table.length ) )
 
     @fov              = 90
 
-    @width            = 800
+    @width            = 800 # in pixel
     @height           = 600
 
     @color            = OpenStruct.new
-    @color.black      = [ 0.0, 0.0, 0.0 ]
+    @color.black      = [ 0.0, 0.0, 0.0 ] # each color (r,g,b) from 0.0 - 1.0
     @color.red        = [ 1.0, 0.0, 0.0 ]
 
 
     init
-    #resize( @width, @height )
     drawgl( @width, @height )
 
   end # of initialize }}}
 
 
-  # Initialise OpenGL state for 3D rendering.
+  # @fn         def init # {{{
+  # @brief      Initialise OpenGL state for 3D rendering.
   def init
     #GL.Enable(GL::DEPTH_TEST)
     #GL.DepthFunc(GL::LEQUAL)
@@ -116,7 +115,7 @@ class PoseVisualizer # {{{
 
     SDL::TTF.init
 
-    @font = SDL::TTF.open('arial.ttf', 24)
+    @font = SDL::TTF.open('fonts/arial.ttf', 24)
     @font.style = SDL::TTF::STYLE_NORMAL
 
 
@@ -160,26 +159,62 @@ class PoseVisualizer # {{{
     return true
   end
 
-  # Resize OpenGL viewport.
-  def resize( width, height )
-    GL.Viewport(0, 0, width, height)
 
-    GL.MatrixMode(GL::PROJECTION)
+  # @fn         def resize width = 800, height = 600 # {{{
+  # @brief      Resize OpenGL viewport
+  #
+  # @param      [Integer]       width     Width of the screen size to resize to
+  # @param      [Integer]       height    Height of the screen size to resize to
+  def resize width = 800, height = 600, fov = @fov
+
+    # Input verification {{{
+    raise ArgumentError, "Width needs to be of type integer" unless( width.is_a?(Integer) )
+    raise ArgumentError, "Height needs to be of type integer" unless( height.is_a?(Integer) )
+    # }}}
+
+    GL.Viewport( 0, 0, width, height )                                  # Adjust viewport
+
+    GL.MatrixMode(GL::PROJECTION)                                       # Reproject current scene
+    GL.LoadIdentity()                                                   # Clear current
+    GLU.Perspective( @fov, width.to_f() / height.to_f(), 0.1, 1024.0 )  # Adjust perspective
+
+    GL.MatrixMode(GL::MODELVIEW)                                        # Switch to normal
     GL.LoadIdentity()
-    GLU.Perspective(@fov, width.to_f() / height.to_f(), 0.1, 1024.0)
+  end # of def resize width = 800, height = 600 }}}
 
-    GL.MatrixMode(GL::MODELVIEW)
-    GL.LoadIdentity()
-  end
 
-  # http://people.revoledu.com/kardi/tutorial/Similarity/Normalization.html
-  # Lets use sigmoid!
-  def normalize value, smoothing_parameter = 30
-     (value)/(Math.sqrt((value)**2)+smoothing_parameter)
-  end
+  # @fn       def normalize value = nil, smoothing_parameter = 30 # {{{
+  # @brief    We use a sigmoid like function to reshape all input values to a limit set to the
+  #           smoothing parameter (e.g. between -1 and 1)
+  #           http://people.revoledu.com/kardi/tutorial/Similarity/Normalization.html
+  #
+  # @param    [Numeric]   value                 Numerical value we want to normalize
+  # @param    [Numeric]   smoothing_parameter   Numerical value, greater than 0 which is used to
+  #                                             determine the smoothness of the sigmoid function
+  #
+  # @returns  Result reshaped using a sigmoid like function to a bounded value between -1 and 1.
+  def normalize value = nil, smoothing_parameter = 30
 
-  # Render OpenGL scene.
-  def drawgl( width, height )
+      # Input verification # {{{
+      raise ArgumentError, "Value may not be nil" if( value.nil? )
+      raise ArgumentError, "Value must be of type numeric" unless( value.is_a?(Numeric) )
+      raise ArgumentError, "smoothing_parameter must be of type numeric" unless( smoothing_parameter.is_a?(Numeric) )
+      raise ArgumentError, "smoothing_parameter must be greater 0" unless( smoothing_parameter > 0 )
+      # }}}
+
+      # Sigmoid function
+      result = value / ( Math.sqrt( value ** 2 ) + smoothing_parameter )
+
+      return result
+  end # end of def normalize value = nil, smoothing_parameter = 30 # }}}
+
+
+  # @fn       def drawgl width = nil, height = nil # {{{
+  # @brief    Render OpenGL scene
+  #
+  # @param      [Integer]       width     Width of the screen size to resize to
+  # @param      [Integer]       height    Height of the screen size to resize to
+  def drawgl width = nil, height = nil
     @tmp_cnt          = 0
 
     @adts.each do |adt, turning, meta|
@@ -419,69 +454,109 @@ class PoseVisualizer # {{{
 
     @font.close
     SDL.quit
+  end #  def drawgl width = nil, height = nil }}}
 
 
-  end
-#
-#      GL::MatrixMode(GL::MODELVIEW);
-#      #GL::Rotate(5.0, 1.0, 1.0, 1.0);
+  # @fn         def draw_point x = nil, y = nil, z = nil, color = @color.black, point_size = 10, normalize_values = true {{{
+  # @brief      The function takes point information as arguments and draws a OpenGL point via GL_POINTS
+  #
+  # @param      [Numeric]       x                   Float, represeting a point coordinate.
+  # @param      [Numeric]       y                   Float, represeting a point coordinate.
+  # @param      [Numeric]       z                   Float, represeting a point coordinate.
+  # @param      [Array]         color               Array, filled with three elements [r, g, b] (pass just a @color struct entry)
+  # @param      [Numeric]       line_width          Float, representing a line width (stroke width)
+  # @param      [Boolean]       normalize_values    Boolean, true if input should be normalized, false if not (leave unchanged)
+  def draw_point x = nil, y = nil, z = nil, color = @color.black, point_size = 10, normalize_values = true
 
+    # Input verfication {{{
+    raise ArgumentError, "All x,y,z input must be non-nil" if( x.nil? or y.nil? or z.nil? )
+    raise ArgumentError, "Color needs to be of type array" unless( color.is_a?(Array) )
+    raise ArgumentError, "Line width needs to be of type numeric" unless( line_width.is_a?(Numeric) )
+    raise ArgumentError, "Normalized values needs to be of type bool" unless( normalize_values.is_a?(Boolean) )
+    # }}}
 
-  def draw_point x, y, z, color = @color.black, point_size = 10, normalize_values = true
-    glPointSize( point_size )
+    glPointSize( point_size )                                                             # set point size
 
-    if( normalize_values )
-      x = normalize( x )
-      y = normalize( y )
-      z = normalize( z )
-    end
+    x, y, z = normalize( x ), normalize( y ), normalize( z )  if( normalize_values )      # normalize if requested
 
-    glBegin( GL_POINTS )
-      glColor( color )
+    glBegin( GL_POINTS )                                                                  # draw point
+      glColor( color )                                                                    # set color
       glVertex( [ x, y, z ] )
     glEnd()
 
-  end
+  end # of def draw_point x = nil, y = nil, z = nil, color = @color.black, point_size = 10, normalize_values = true }}}
 
 
-  def draw_line x1, y1, z1, x2, y2, z2, color = @color.black, line_width = 5, normalize_values = true
-    glLineWidth( line_width )
+  # @fn         def draw_line x1 = nil, y1 = nil, z1 = nil, x2 = nil, y2 = nil, z2 = nil, color = @color.black, line_width = 5, normalize_values = true {{{
+  # @brief      The function takes point information as arguments and draws a OpenGL line via GL_LINES.
+  #
+  # @param      [Numeric]       x1                  Float, represeting a point coordinate.
+  # @param      [Numeric]       y1                  Float, represeting a point coordinate.
+  # @param      [Numeric]       z1                  Float, represeting a point coordinate.
+  # @param      [Numeric]       x2                  Float, represeting a point coordinate.
+  # @param      [Numeric]       y2                  Float, represeting a point coordinate.
+  # @param      [Numeric]       z2                  Float, represeting a point coordinate.
+  # @param      [Array]         color               Array, filled with three elements [r, g, b] (pass just a @color struct entry)
+  # @param      [Numeric]       line_width          Float, representing a line width (stroke width)
+  # @param      [Boolean]       normalize_values    Boolean, true if input should be normalized, false if not (leave unchanged)
+  def draw_line x1 = nil, y1 = nil, z1 = nil, x2 = nil, y2 = nil, z2 = nil, color = @color.black, line_width = 5, normalize_values = true
 
+    # Input verfication {{{
+    raise ArgumentError, "All x,y,z input must be non-nil" if( x1.nil? or y1.nil? or z1.nil? or x2.nil? or y2.nil? or z2.nil? )
+    raise ArgumentError, "Color needs to be of type array" unless( color.is_a?(Array) )
+    raise ArgumentError, "Line width needs to be of type numeric" unless( line_width.is_a?(Numeric) )
+    raise ArgumentError, "Normalized values needs to be of type bool" unless( normalize_values.is_a?(Boolean) )
+    # }}}
+
+    glLineWidth( line_width )       # set line width
+
+    # Normalize values if requested
     if( normalize_values )
-      x1 = normalize( x1 )
-      y1 = normalize( y1 )
-      z1 = normalize( z1 )
-      x2 = normalize( x2 )
-      y2 = normalize( y2 )
-      z2 = normalize( z2 )
+      x1, y1, z1 = normalize( x1 ), normalize( y1 ), normalize( z1 )
+      x2, y2, z2 = normalize( x2 ), normalize( y2 ), normalize( z2 )
     end
 
+    # Draw lines
     glBegin( GL_LINES )
-      glColor( color )
+      glColor( color )              # set line color
       glVertex( [ x1, y1, z1 ] )
       glVertex( [ x2, y2, z2 ] )
     glEnd()
-  end
+
+  end # of def draw_line x1 = nil, y1 = nil, z1 = nil, x2 = nil, y2 = nil, z2 = nil, color = @color.black, line_width = 5, normalize_values = true }}}
 
 
-  # x pos, y pos, red, green, blue, font, text data
-  # http://stackoverflow.com/questions/2183270/what-is-the-easiest-way-to-print-text-to-screen-in-opengl
-  def draw_text( x, y, r, g, b, font, text )
-   
+  # @fn         def draw_text x = nil, y = nil, r = nil, g = nil, b = nil, font = nil, text = nil # {{{
+  # @brief      This function draws some text onto the bitmap via GLUT (glutBitmapCharacter function)
+  #
+  # @param      [Numeric]           x         Numeric, representing the X coordinate.
+  # @param      [Numeric]           y         Numeric, representing the Y coordinate.
+  # @param      [Numeric]           r         Numeric, representign the red color (0-1)
+  # @param      [Numeric]           g         Numeric, representing the green color (0-1)
+  # @param      [Numeric]           b         Numeric, representing the blue color (0-1)
+  # @param      [SDL::TTF]          font      Object of type SDL::TTF initiated with a proper front file.
+  # @param      [String]            text      String, containing the text we want to display on the screen.
+  # 
+  # Inspireation: http://stackoverflow.com/questions/2183271/what-is-the-easiest-way-to-print-text-to-screen-in-opengl
+  def draw_text x = nil, y = nil, r = nil, g = nil, b = nil, font = nil, text = nil
 
-    glColor( r, g, b )
-    glRasterPos( x, y )
-    0.upto( text.length - 1 ).each do |i|
+    # Input verification {{{
+    raise ArgumentError, "Inputs must all be non-nil" if( x.nil? or y.nil? or r.nil? or g.nil? or b.nil? or font.nil? or text.nil? )
+    # }}}
+
+    glColor( r, g, b )                              # set color
+    glRasterPos( x, y )                             # set current position
+
+    0.upto( text.length - 1 ).each do |i|           # draw each character onto the bitmap
       glutBitmapCharacter( font, text[i].to_i )
     end
-  end
 
+  end # of def draw_text( x = nil, y = nil, r = nil, g = nil, b = nil, font = nil, text = nil ) }}}
 
 end # of class Plotter # }}}
 
 # = Direct invocation
 if __FILE__ == $0 # {{{
-  pv = PoseVisualizer.new
-
 end # if __FILE__ == $0 # }}}
+
 
