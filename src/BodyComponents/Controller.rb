@@ -61,6 +61,7 @@ require_relative 'Turning.rb'
 require_relative 'Filter.rb'
 
 require_relative 'Plotter.rb'
+require_relative 'PoseVisualizer.rb'
 require_relative 'Logger.rb'
 
 
@@ -158,13 +159,23 @@ class Controller # {{{
             extended = true
           end
 
+          one = false
+          one = true if( @options.yaml != "" )
+
           process = []
           @yamls.each do |configurations_dir, domain, name, pattern, speed, cycle, filename|
 
             if( extended )
-              if( ( domain =~ %r{#{@options.domain}}i ) and ( speed =~ %r{#{@options.speed}}i ) and ( pattern =~ %r{#{@options.pattern}}i ) and ( name =~ %r{#{@options.name}}i ) )
-                @log.message :info, "USING Domain( '#{domain.to_s}' ), name( '#{name}' ), pattern( '#{pattern}' ), speed( '#{speed.to_s}' ), cycle( '#{cycle.to_s}' ), filename( '#{filename.to_s}' )"
-                process << [ configurations_dir, domain, name, pattern, speed, cycle, filename ] 
+              if( one )
+                if( ( domain =~ %r{#{@options.domain}}i ) and ( speed =~ %r{#{@options.speed}}i ) and ( pattern =~ %r{#{@options.pattern}}i ) and ( name =~ %r{#{@options.name}}i ) and ( filename.gsub( ".yaml","").gsub( "_-_","___") =~ %r{#{@options.yaml}}i) )
+                  @log.message :info, "USING Domain( '#{domain.to_s}' ), name( '#{name}' ), pattern( '#{pattern}' ), speed( '#{speed.to_s}' ), cycle( '#{cycle.to_s}' ), filename( '#{filename.to_s}' )"
+                  process << [ configurations_dir, domain, name, pattern, speed, cycle, filename ] 
+                end
+              else
+                if( ( domain =~ %r{#{@options.domain}}i ) and ( speed =~ %r{#{@options.speed}}i ) and ( pattern =~ %r{#{@options.pattern}}i ) and ( name =~ %r{#{@options.name}}i ) )
+                  @log.message :info, "USING Domain( '#{domain.to_s}' ), name( '#{name}' ), pattern( '#{pattern}' ), speed( '#{speed.to_s}' ), cycle( '#{cycle.to_s}' ), filename( '#{filename.to_s}' )"
+                  process << [ configurations_dir, domain, name, pattern, speed, cycle, filename ] 
+                end
               end
             else
               if( ( domain =~ %r{#{@options.domain}}i ) and ( speed =~ %r{#{@options.speed}}i ) )
@@ -175,6 +186,7 @@ class Controller # {{{
           end
 
           turning_data = []
+          adts         = []
           process.each do |configurations_dir, domain, name, pattern, speed, cycle, filename|
 
             yaml_var = @fname_table[ filename ]
@@ -212,6 +224,14 @@ class Controller # {{{
               @log.message :info, "Performing CPA-PCA Turning pose extraction"
               @turning                = Turning.new( @options, @adt, @dance_master_poses, @dance_master_poses_range, @from, @to )
               turning_data << [ [ configurations_dir, domain, name, pattern, speed, cycle, filename ], @turning.get_data ]
+
+              meta = Hash.new
+              meta[ "total_frames" ]  = @adt.relb.getCoordinates!.length
+              meta[ "from" ]          = @from
+              meta[ "to" ]            = @to
+              meta[ "motion_config" ] = @motion_config
+
+              adts << [ @adt, turning_data, meta ]
             end
 
             @log.message :success, "Finished processing of #{motion_config_filename.to_s}"
@@ -278,6 +298,8 @@ class Controller # {{{
 
         @turning.get_dot_graph( kms.last )
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kms.last )
+
+        @pv         = PoseVisualizer.new( @options, kms.last, adts )
 
       else # if this is given we want to analyse only one dance
         @log.message :error, "No processing name given via --name '#{@options.process}'" if( @options.process == "" )
