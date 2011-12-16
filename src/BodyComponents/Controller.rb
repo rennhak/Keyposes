@@ -72,8 +72,11 @@ include GSL
 
 class Controller # {{{
 
-  # Constructor of the controller class
-  def initialize options = nil # {{{
+  # @fn       def initialize options = nil # {{{
+  # @brief    Constructor of the controller class
+  #
+  # @param    [OpenStruct]      options     Options OpenStruct processed by the parse_cmd_arguments function
+  def initialize options = nil
 
     @options = options
 
@@ -396,11 +399,13 @@ class Controller # {{{
   end # of def initialize }}}
 
 
-  # The function 'parse_cmd_arguments' takes a number of arbitrary commandline arguments and parses them into a proper data structure via optparse
+  # @fn       def parse_cmd_arguments( args ) # {{{
+  # @brief    The function 'parse_cmd_arguments' takes a number of arbitrary commandline arguments and parses
+  #           them into a proper data structure via optparse
   #
   # @param    [Array]         args  Ruby's STDIN.ARGS from commandline
   # @returns  [OptionParser]        Ruby optparse package options hash object
-  def parse_cmd_arguments( args ) # {{{
+  def parse_cmd_arguments( args )
 
     options                                 = OpenStruct.new
 
@@ -568,11 +573,12 @@ class Controller # {{{
   end # of parse_cmd_arguments }}}
 
 
-  # Reads a yaml config describing the motion file
+  # @fn       def read_motion_config filename # {{{
+  # @brief    Reads a yaml config describing the motion file
   #
   # @param    [String]      filename    String, representing the filename and path to the config file
   # @returns  [OpenStruct]              Returns an openstruct containing the contents of the YAML read config file (uses the feature of Extension.rb)
-  def read_motion_config filename # {{{
+  def read_motion_config filename
 
     # Pre-condition check
     raise ArgumentError, "Filename argument should be of type string, but it is (#{filename.class.to_s})" unless( filename.is_a?(String) )
@@ -587,17 +593,19 @@ class Controller # {{{
   end # }}}
 
 
-  # Dynamical method creation at run-time
+  # @fn       def learn method, code # {{{
+  # @brief    Dynamical method creation at run-time
   #
-  # @param [String]   method    Takes the method header definition
-  # @param [String]   code      Takes the body of the method
-  def learn method, code # {{{
+  # @param    [String]   method    Takes the method header definition
+  # @param    [String]   code      Takes the body of the method
+  def learn method, code
       eval <<-EOS
           class << self
               def #{method}; #{code}; end
           end
       EOS
   end # end of learn( method, code ) }}}
+
 
   attr_accessor :adt
 end # of class Controller }}}
