@@ -301,9 +301,6 @@ class Controller # {{{
               end
             end
 
-            p @closest_frame.sort
-
-
             closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
             distortions                 = clustering.distortions( closest_centroids )
             squared_error_distortions   = clustering.squared_error_distortion( closest_centroids )
