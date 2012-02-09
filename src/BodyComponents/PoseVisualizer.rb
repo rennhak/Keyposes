@@ -35,7 +35,7 @@ require 'rvg/rvg'
 
 # Custom includes
 require_relative 'Logger.rb'
-
+require_relative 'Frames.rb'
 
 # Change Namespace
 include Magick
@@ -538,23 +538,36 @@ class PoseVisualizer # {{{
                 end
               end
 
-              @plot.histogram( sf, "/tmp/" + start_frame.to_s + "_start.gp",  "/tmp/" + start_frame.to_s + "_start.gpdata",   "Start Frame (#{start_frame.to_s})" )
-              @plot.histogram( mf, "/tmp/" + middle_frame.to_s + "_middle.gp", "/tmp/" + middle_frame.to_s + "_middle.gpdata",  "Middle Frame (#{middle_frame.to_s})" )
-              @plot.histogram( ef, "/tmp/" + end_frame.to_s + "_end.gp",    "/tmp/" + end_frame.to_s + "_end.gpdata",     "End Frame (#{end_frame.to_s})" )
-
-              Dir.chdir( "/tmp/" ) do
-                `gnuplot #{start_frame.to_s}_start.gp`
-                `convert -background white #{start_frame.to_s}_start.eps #{start_frame.to_s}_start.jpg`
-                `rm -f #{start_frame.to_s}_start.eps`
-
-                `gnuplot #{middle_frame.to_s}_middle.gp`
-                `convert -background white #{middle_frame.to_s}_middle.eps #{middle_frame.to_s}_middle.jpg`
-                `rm -f #{middle_frame.to_s}_middle.eps`
-
-                `gnuplot #{end_frame.to_s}_end.gp`
-                `convert -background white #{end_frame.to_s}_end.eps #{end_frame.to_s}_end.jpg`
-                `rm -f #{end_frame.to_s}_end.eps`
+              puts "Storing cluster object for later usage"
+              frames = Frames.new( current_cluster, start_frame.to_s, sf, middle_frame.to_s, mf, end_frame.to_s, ef )
+              dump   = Marshal.dump( frames )
+              begin
+                Dir.mkdir( "frames_objects/" + current_cluster.to_s )
+              rescue
               end
+
+              file   = File.new( "frames_objects/" + current_cluster.to_s + "/" + start_frame.to_s + "_" + middle_frame.to_s + "_" + end_frame.to_s, "w" )
+              file.write( dump )
+              file.close
+
+
+              # @plot.histogram( sf, "/tmp/" + start_frame.to_s + "_start.gp",  "/tmp/" + start_frame.to_s + "_start.gpdata",   "Start Frame (#{start_frame.to_s})" )
+              # @plot.histogram( mf, "/tmp/" + middle_frame.to_s + "_middle.gp", "/tmp/" + middle_frame.to_s + "_middle.gpdata",  "Middle Frame (#{middle_frame.to_s})" )
+              # @plot.histogram( ef, "/tmp/" + end_frame.to_s + "_end.gp",    "/tmp/" + end_frame.to_s + "_end.gpdata",     "End Frame (#{end_frame.to_s})" )
+
+              # Dir.chdir( "/tmp/" ) do
+              #   `gnuplot #{start_frame.to_s}_start.gp`
+              #   `convert -background white #{start_frame.to_s}_start.eps #{start_frame.to_s}_start.jpg`
+              #   `rm -f #{start_frame.to_s}_start.eps`
+
+              #   `gnuplot #{middle_frame.to_s}_middle.gp`
+              #   `convert -background white #{middle_frame.to_s}_middle.eps #{middle_frame.to_s}_middle.jpg`
+              #   `rm -f #{middle_frame.to_s}_middle.eps`
+
+              #   `gnuplot #{end_frame.to_s}_end.gp`
+              #   `convert -background white #{end_frame.to_s}_end.eps #{end_frame.to_s}_end.jpg`
+              #   `rm -f #{end_frame.to_s}_end.eps`
+              # end
 
               screenshot( current_cluster, i )
             end
@@ -640,45 +653,45 @@ class PoseVisualizer # {{{
         final_im.write( final_fn )
       end # of @cluster_images.each_pair
 
-      Dir.chdir( "/tmp" ) do
-        `rm -f magick*`
-      end
-
-      # Merge the histograms
-      @vertical = []
-      cnt = 0
-      @cluster_images_histograms.each_pair do |cluster, images|
-        cnt = 0
-        @vertical.clear
-        images.each do |start, middle, last|
-
-          begin
-            imagelist = Magick::ImageList.new( start, middle, last )
-
-            imagelist.each do |image|
-              image.border!( 5, 5, "black" )
-              # image.background_color( "white" )
-            end
-
-            im = imagelist.append( false )
-            fn = "/tmp/histograms_concat_#{cluster.to_s}_#{cnt.to_s}.jpg"
-            im.write( fn.to_s )
-            @vertical << fn
-            cnt += 1
-          rescue
-            puts "There was a problem in poseviewer with frames (#{start.to_s}, #{middle.to_s}, #{last.to_s})"
-          end
-        end # of images.each
-
-        final_fn = "/tmp/histograms_final_#{cluster.to_s}.jpg"
-
-        @log.message :info, "Generating #{final_fn.to_s}"
-
-        final_im = Magick::ImageList.new( *@vertical )
-        final_im = final_im.append( true )
-        final_im.write( final_fn )
-
-      end # of @cluster_images.each_pair
+#:      Dir.chdir( "/tmp" ) do
+#:        `rm -f magick*`
+#:      end
+#:
+#:      # Merge the histograms
+#:      @vertical = []
+#:      cnt = 0
+#:      @cluster_images_histograms.each_pair do |cluster, images|
+#:        cnt = 0
+#:        @vertical.clear
+#:        images.each do |start, middle, last|
+#:
+#:          begin
+#:            imagelist = Magick::ImageList.new( start, middle, last )
+#:
+#:            imagelist.each do |image|
+#:              image.border!( 5, 5, "black" )
+#:              # image.background_color( "white" )
+#:            end
+#:
+#:            im = imagelist.append( false )
+#:            fn = "/tmp/histograms_concat_#{cluster.to_s}_#{cnt.to_s}.jpg"
+#:            im.write( fn.to_s )
+#:            @vertical << fn
+#:            cnt += 1
+#:          rescue
+#:            puts "There was a problem in poseviewer with frames (#{start.to_s}, #{middle.to_s}, #{last.to_s})"
+#:          end
+#:        end # of images.each
+#:
+#:        final_fn = "/tmp/histograms_final_#{cluster.to_s}.jpg"
+#:
+#:        @log.message :info, "Generating #{final_fn.to_s}"
+#:
+#:        final_im = Magick::ImageList.new( *@vertical )
+#:        final_im = final_im.append( true )
+#:        final_im.write( final_fn )
+#:
+#:      end # of @cluster_images.each_pair
     end
 
     @font.close

@@ -322,7 +322,7 @@ class Mathematics # {{{
   # @returns  [Array]               Array, containing m and t for the slope form equasion
   #
   # @warning FIXME: Z coordinate is only neglegted and this needs to be normally compensated - use PCA/ICA instead.
-  def getSlopeForm array1 = nil, array2 = nil, direction = "xy" # {{{
+  def getSlopeForm array1 = nil, array2 = nil, direction = "xy"
 
     # Pre-condition check {{{
     raise ArgumentError, "The argument array1 should be of type array, but it is of (#{array1.class.to_s})" unless( array1.is_a?( Array ) )
@@ -361,6 +361,7 @@ class Mathematics # {{{
   end # end of getSlopeForm }}}
 
 
+  # @fn       def getIntersectionPoint array1, array2 # {{{
   # The function returns a solution for the following:
   # Two lines in slope intersection form f1 y = m*x + t  and f2 ...
   # intersection in a point (or not -> the intersection with the origin is returned) and this point is returned.
@@ -368,7 +369,7 @@ class Mathematics # {{{
   # @param    [Array]   array1  Array, with m and t of a line in slope form
   # @param    [Array]   array2  Array, with m and t of a line in slope form
   # @returns  [Array]           Array containing 2D point of intersection
-  def getIntersectionPoint array1, array2 # {{{
+  def getIntersectionPoint array1, array2 
 
     # Pre-condition check {{{
     raise ArgumentError, "The argument array1 should be of type array, but it is of (#{array1.class.to_s})" unless( array1.is_a?( Array ) )
@@ -397,6 +398,7 @@ class Mathematics # {{{
   end # end of getIntersectionPoint }}}
 
 
+  # @fn       def derivative input, h = 10**(-7) # {{{
   # The function takes an Array of input and calculates the derivative with the given step size h
   #
   # @param  [Array] input   Array, containing the input of the data which we want the derivative
@@ -418,7 +420,7 @@ class Mathematics # {{{
   # http://www.johndcook.com/NumericalODEStepSize.pdf
   #
   # @note http://en.wikipedia.org/wiki/Numerical_differentiation
-  def derivative input, h = 10**(-7) # {{{
+  def derivative input, h = 10**(-7) 
 
     # Pre-condition check # {{{
     raise ArgumentError, "The argument input should be of type Array, but is (#{input.class.to_s})" unless( input.is_a?(Array) )
@@ -475,9 +477,72 @@ class Mathematics # {{{
   end # end of determinat }}}
 
 
+  # @fn       # {{{
+  # @brief    Returns the angle of two intersecting lines in three 3D given by four points (a1, a2) and (b1, b2)
+  #           You can easily derive this function via Pythagoras formula. P1,P2 \elem R^3
+  #
+  # @param    [Array]   line1_point1  Accepts array containing floats or integers (x,y,z)
+  # @param    [Array]   line1_point2  Accepts array containing floats or integers (x,y,z)
+  # @param    [Array]   line2_point2  Accepts array containing floats or integers (x,y,z)
+  # @param    [Array]   line2_point2  Accepts array containing floats or integers (x,y,z)
+  # 
+  #
+  # @returns  [Float]   Float, the angle between (l1p1, l1p2) and (l2p1, l2p2)
+  def angle_between_two_lines line1_point1 = nil, line1_point2 = nil, line2_point1 = nil, line2_point2 = nil
+
+    # Pre-condition check {{{
+    raise Error, "Points can't be nil." if( line1_point1.nil? or line1_point2.nil?  )
+    raise Error, "Points can't be nil." if( line2_point1.nil? or line2_point2.nil?  )
+
+    raise ArgumentError, "Eucledian distance for nD points for n > 3 is currently not implemented." if( (line1_point1.length > 3) or (line1_point2.length > 3 ) )
+    raise ArgumentError, "Eucledian distance for nD points for n > 3 is currently not implemented." if( (line2_point1.length > 3) or (line2_point2.length > 3 ) )
+    # }}}
+
+    result = nil
+
+    ax1, ay1, az1 = *line1_point1
+    ax2, ay2, az2 = *line1_point2
+
+    bx1, by1, bz1 = *line2_point1
+    bx2, by2, bz2 = *line2_point2
+
+    # make vector components
+    # u = Pt A - Pt B
+    u1, u2, u3    = ax1-ax2, ay1-ay2, az1-az2 
+    v1, v2, v3    = bx1-bx2, by1-by2, bz1-bz2
+
+    # create vector
+    u             = [u1, u2, u3]
+    v             = [v1, v2, v3]
+
+    # make dot product
+    dot           = dot_product( u, v )
+
+    norm_u        = getNorm( *u )
+    norm_v        = getNorm( *v )
+
+    deg2rad       = Math::PI / 180.0
+    result        = Math.acos( dot / ( norm_u * norm_v ) ) / deg2rad
+
+    # Post-condition check
+    raise ArgumentError, "The result of this function should be of type numeric, but it is of (#{result.class.to_s})" unless( result.is_a?(Numeric) )
+
+    result
+  end # of def eucledian_distance point1, point2 }}}
+
+
+  # = dot_product returns as the name suggest the dot product for two vectors (3D)
+  # d(u,v) =  (u).x * (v).x + (u).y * (v).y + (u).z * (v).z
+  def dot_product( vector1, vector2 ) # {{{
+    u1, u2, u3 = *vector1
+    v1, v2, v3 = *vector2
+
+    return ( (u1*v1) + (u2*v2) + (u3*v3) )
+  end # of def dot_product }}} 
+
+
 
 end # of class Mathematics }}}
-
 
 # Direct Invocation
 if __FILE__ == $0 # {{{

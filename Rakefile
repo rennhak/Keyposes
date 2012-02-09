@@ -86,6 +86,7 @@ task :clean do |t|
     `rm -rf *.jpg`
     `rm -rf *.gp`
     `rm -rf *.gpdata`
+    `rm -rf magick-*`
   end
 
 end

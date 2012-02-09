@@ -47,7 +47,7 @@ require 'gsl'
 require 'ruby-prof'
 
 # Custom includes (changes object behaviors)
-require 'Extensions.rb'
+require_relative 'Extensions'
 
 # From MotionX - FIXME: Use MotionX's XYAML interface
 require 'ADT.rb'
@@ -64,6 +64,7 @@ require_relative 'Plotter.rb'
 require_relative 'PoseVisualizer.rb'
 require_relative 'Logger.rb'
 
+require_relative 'Compare.rb' 
 
 # Change Namespace
 include GSL
@@ -151,6 +152,11 @@ class Controller # {{{
       ####
       # Main Control Flow
       ##########
+
+      unless( @options.compare_clusters.empty? )
+        compare = Compare.new( @options, @options.compare_clusters )
+        compare.run
+      end
 
       if( @options.use_all_of_domain ) # if this is given we want to summarize all the dances of this domain
           # We mix only the same domain with the same speed
@@ -348,6 +354,15 @@ class Controller # {{{
             kmeans, centroids           = clustering.kmeans( final, k, init_centroids )
             kms                        << kmeans
             distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
+            
+            cluster_distances           = clustering.cluster_distances( final, kmeans, centroids )
+
+            puts ""
+            cluster_distances.each_pair do |cluster, distances|
+              printf( "%-2s    %30s\n", cluster.to_s, distances.to_s )
+            end
+            puts ""
+
 
             # Determines the closest frame for each cluster center
             # Array index == cluster id
@@ -378,7 +393,7 @@ class Controller # {{{
             end
 
 
-            @frame_distance_cluster      = @closest_frame.zip( @closest_distance )
+            @frame_distance_cluster     = @closest_frame.zip( @closest_distance )
 
             closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
 
@@ -566,6 +581,7 @@ class Controller # {{{
     options.pose_visualizer                 = false
     options.each_limb_individually          = false
     options.clustering_iterations           = 1000
+    options.compare_clusters                = []
 
     pristine_options                        = options.dup
 
@@ -626,6 +642,10 @@ class Controller # {{{
 
       opts.on("-a", "--all", "Use all dances of the given domain") do |a|
         options.use_all_of_domain  = a
+      end
+
+      opts.on("--compare-clusters OPT", "Compare two given clustering results for similarity") do |c|
+        options.compare_clusters  << c
       end
 
       opts.on("-e", "--each-limb-individually", "Calculate each limb individually when extracting T-Data. If this option is not set all given components get unified by PCA together.") do |a|

@@ -14,3 +14,8 @@ base/MotionX/*
 graphs
 experiment
 src/BodyComponents/*.avi
+src/BodyComponents/exp
+src/BodyComponents/exp/*
+src/BodyComponents/frames_objects
+src/BodyComponents/frames_objects/*
+src/BodyComponents/papers
