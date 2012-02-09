@@ -18,28 +18,29 @@
 #######
 
 
-
-
 # Standard includes
 require 'rubygems'
 require 'narray'
 require 'gsl'
 
 # Local includes
-require_relative 'Logger.rb'
-require_relative 'PCA.rb'
-require_relative 'Plotter.rb'
-require_relative 'Mathematics.rb'
+$:.push('.')
+require 'Logger.rb'
+require 'PCA.rb'
+require 'Plotter.rb'
+require 'Mathematics.rb'
 
 # Change Namespace
 include GSL
 
 
-# The class Filter can take input data and provide means to filter out noise and outliers from it.
-class Filter # {{{
+# @class      Class Filter # {{{
+# @brief      The class Filter can take input data and provide means to filter out noise and outliers from it.
+class Filter
 
 
   # @fn       def initialize options, from, to # {{{
+  # @brief    Custom constructor for the Filter class
   #
   # @param    [OpenStruct]      options     OpenStruct containing options parsed
   # @param    [Integer]         from        From frame int
@@ -310,7 +311,8 @@ class Filter # {{{
 end # of class Filter }}}
 
 
-# Direct Invocation
-if __FILE__ == $0 # {{{
+# Direct Invocation (local testing) # {{{
+if __FILE__ == $0
 end # of if __FILE__ == $0 }}}
 
+# vim:ts=2:tw=100:wm=100

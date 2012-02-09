@@ -24,17 +24,18 @@
 require 'rubygems'
 
 # Local includes
-require_relative 'Logger.rb'
-require_relative 'Plotter.rb'
-require_relative 'Mathematics.rb'
+$:.push('.')
+require 'Logger.rb'
+require 'Plotter.rb'
+require 'Mathematics.rb'
 
 
-
-# The class Compare takes two different cluster results and compares them for similarity
-class Compare # {{{
+# @class      Compare # {{{
+# @brief      The class Compare takes two different cluster results and compares them for similarity
+class Compare
 
   # @fn       def initialize options, from, to # {{{
-  #
+  # @brief    Custom constructor for Compare class
   def initialize options = nil, compare_directories = nil
 
     # Input verification {{{
@@ -55,6 +56,8 @@ class Compare # {{{
   end # of def initialize }}}
 
 
+  # @fn       def load_marshal_objects load_dir = @compare_directories # {{{
+  # @brief    Loads instantiated marshalled objects from given directory
   def load_marshal_objects load_dir = @compare_directories
     @log.message :info, "Loading marshaled objects"
 
@@ -93,11 +96,14 @@ class Compare # {{{
     end # of load_dir.each
 
     objects
-  end
+  end # of def load_marshal_objects load_dir = @compare_directories # }}}
 
+
+  # @fn       def run objects = @objects # {{{
+  # @brief    The run function takes objects from different cycles and compares them.
   def run objects = @objects
     @log.message :info, "Calculating similarity"
-    
+
     # Objects: @objects
     # Type: Hash each key is e.g. c2, c3,..
     # Value for keys are array with subarrays 
@@ -162,9 +168,11 @@ class Compare # {{{
       break
 
     end # of @objects.each_pair
-  end # of def run
+  end # of def run }}}
 
 
+  # @fn         def angle first_frame # {{{
+  # @brief      The angle function measures pose similarity
   def angle first_frame
 
     res = []
@@ -172,14 +180,12 @@ class Compare # {{{
     f_current_cluster, f_start_frame_number, f_start_frame_data, f_middle_frame_number, f_middle_frame_data = first_frame.current_cluster, first_frame.start_frame_number, first_frame.start_frame_data, first_frame.middle_frame_number, first_frame.middle_frame_data
     f_end_frame_number, f_end_frame_data = first_frame.end_frame_number, first_frame.end_frame_data
 
-
 #      components_r = [rfin, relb, rsho, rtoe, rank, rkne, rhee, rfwt, rbwt]
 #      components_l = [lfin, lelb, lsho, ltoe, lank, lkne, lhee, lfwt, lbwt]
 #      components_e = [pt26, pt27, pt28, pt29, pt30, pt31]
 #      components_h = [lfhd, lbhd, rfhd, rbhd]
 #
 #      components = ( ( components_r.concat( components_l ) ).concat( components_e ) ).concat( components_h )
-
 
 
     right = @mathematics.angle_between_two_lines( f_start_frame_data[19], f_start_frame_data[1], f_start_frame_data[1], f_start_frame_data[2] )
@@ -195,10 +201,11 @@ class Compare # {{{
     res << [ left, right ]
 
     res
-  end
+  end # of def angle first_frame # }}}
 
 
-
+  # @fn       def diff first_frame, second_frame # {{{
+  # @brief    The diff function measures differences between two given frames
   def diff first_frame, second_frame
 
     res = []
@@ -216,8 +223,6 @@ class Compare # {{{
 #      components_h = [lfhd, lbhd, rfhd, rbhd]
 #
 #      components = ( ( components_r.concat( components_l ) ).concat( components_e ) ).concat( components_h )
-
-
 
 
     start_frame_distances = []
@@ -271,12 +276,15 @@ class Compare # {{{
     res << [ sum, left, right ]
 
     res
-  end
+  end # of def diff }}}
+
 
 end # of class Compare }}}
 
 
-# Direct Invocation
-if __FILE__ == $0 # {{{
+# Direct Invocation (local testing) # {{{
+if __FILE__ == $0
 end # of if __FILE__ == $0 }}}
 
+
+# vim:ts=2:tw=100:wm=100

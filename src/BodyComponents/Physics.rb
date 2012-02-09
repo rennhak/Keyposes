@@ -18,25 +18,30 @@
 #######
 
 
-require_relative 'Mathematics.rb'
+$:.push('.')
+require 'Mathematics.rb'
 
 
-# The class Physics provides helpful functions to calculate various things needed throughout this project
-class Physics # {{{
+# @class      class Physics # {{{
+# @brief      The class Physics provides helpful functions to calculate various things needed throughout this project
+class Physics
 
-  def initialize # {{{
+  # @fn       def initialize # {{{
+  # @brief    Default constructor of the Physics class
+  def initialize
     @mathematics = Mathematics.new
 
   end # of def initialize }}}
 
 
-  # The function velocity calculates the phyiscal velocity at each point for the data
+  # @fn       def velocity data, points, capturingIntervall = 0.08333 # {{{
+  # @brief    The function velocity calculates the phyiscal velocity at each point for the data
   #
   # @param    [Array]   data                Accepts array of arrays in the shape of [ [x2,y1,z1], [...], ...]
   # @param    [Integer] points              Determines how many points should be used for the overall velocity calculation
   # @param    [Float]   capturingIntervall  Accepts float, representing the capture intervall of the motion capture equipment
   # @returns  [Array]                       Array containing corresponding velocity values for the frames n and n+1
-  def velocity data, points, capturingIntervall = 0.08333 # {{{
+  def velocity data, points, capturingIntervall = 0.08333
 
     # Pre-condition check {{{
     raise ArgumentError, "The argument data should be of type Array, but it is of (#{data.class.to_s})" unless( data.is_a?( Array ) )
@@ -64,13 +69,14 @@ class Physics # {{{
   end # of def velocity data }}}
 
 
-  # The function acceleration calculates the phyiscal acceleration at each point for the data
+  # @fn       def acceleration data, points, capturingIntervall = 0.08333 # {{{
+  # @brief    The function acceleration calculates the phyiscal acceleration at each point for the data
   #
   # @param    [Array]   data                Accepts array of arrays in the shape of [ [x1,y1,z1], ...]
   # @param    [Integer] points              Determines how many points should be used for the overall acceleration calculation
   # @param    [Float]   capturingIntervall  Accepts float, representing the capture intervall of the motion capture equipment
   # @returns  [Array]                       Array containing corresponding acceleration values for the frames n and n+1
-  def acceleration data, points, capturingIntervall = 0.08333 # {{{
+  def acceleration data, points, capturingIntervall = 0.08333
 
     # Pre-condition check {{{
     raise ArgumentError, "The argument data should be of type Array, but it is of (#{data.class.to_s})" unless( data.is_a?( Array ) )
@@ -96,14 +102,15 @@ class Physics # {{{
   end # of def acceleration data }}}
 
 
-  # The function power calculates the phyiscal power at each point for the data
+  # @fn       def power data, mass, points, capturingIntervall = 0.08333 # {{{
+  # @brief    The function power calculates the phyiscal power at each point for the data
   #
   # @param    [Array]   data                Accepts array of arrays in the shape of [ [x1,y1,z1], ...]
   # @param    [Float]   mass                Accepts float, representing the mass of the components involved (relative to 100% = full body)
   # @param    [Integer] points              Determines how many points should be used for the overall acceleration calculation
   # @param    [Float]   capturingIntervall  Accepts float, representing the capture intervall of the motion capture equipment
   # @returns  [Array]                       Array containing corresponding power values for the frames n and n+1 
-  def power data, mass, points, capturingIntervall = 0.08333 # {{{
+  def power data, mass, points, capturingIntervall = 0.08333
 
     # Pre-condition check {{{
     raise ArgumentError, "The argument data should be of type Array, but it is of (#{data.class.to_s})" unless( data.is_a?( Array ) )
@@ -132,13 +139,14 @@ class Physics # {{{
   end # of def power data }}}
 
 
-  # The function energy calculates the phyiscal energy at each point for the data
+  # @fn       def energy data, mass, points # {{{
+  # @brief    The function energy calculates the phyiscal energy at each point for the data
   #
   # @param    [Array]   data                Accepts array of arrays in the shape of [ [x1,y1,z1], ...]
   # @param    [Float]   mass                Accepts float, representing the mass of the components involved (relative to 100% = full body)
   # @param    [Integer] points              Determines how many points should be used for the overall acceleration calculation
   # @returns  [Array]                       Array containing corresponding energy values for the frames n and n+1 
-  def energy data, mass, points # {{{
+  def energy data, mass, points
 
     # Pre-condition check {{{
     raise ArgumentError, "The argument data should be of type Array, but it is of (#{data.class.to_s})" unless( data.is_a?( Array ) )
@@ -165,12 +173,11 @@ class Physics # {{{
     result
   end # of def energy data }}}
 
-
-
 end # of class Physics }}}
 
 
-# Direct Invocation
-if __FILE__ == $0 # {{{
-
+# Direct Invocation (local testing) # {{{
+if __FILE__ == $0
 end # of if __FILE__ == $0 }}}
+
+# vim:ts=2:tw=100:wm=100

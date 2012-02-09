@@ -26,19 +26,20 @@ require 'narray'
 require 'gsl'
 
 # Local includes
-require_relative 'Logger.rb'
-require_relative 'PCA.rb'
-require_relative 'Clustering.rb'
-
-require_relative 'Mathematics.rb'
-require_relative 'Physics.rb'
+$:.push('.')
+require 'Logger.rb'
+require 'PCA.rb'
+require 'Clustering.rb'
+require 'Mathematics.rb'
+require 'Physics.rb'
 
 # Change Namespace
 include GSL
 
 
-# The class Turning is the idea and implementation of the Turning Motions and Turning Poses method published in e.g. IROS2010, Rennhak et al.
-class Turning # {{{
+# @class      class Turning # {{{
+# @brief      The class Turning is the idea and implementation of the Turning Motions and Turning Poses method published in e.g. IROS2010, Rennhak et al.
+class Turning
 
   # @fn def initialize options, adt, dance_master_poses, dance_master_poses_range, from, to # {{{
   def initialize options, adt, dance_master_poses, dance_master_poses_range, from, to
@@ -1329,7 +1330,8 @@ EOS
 end # of class Turning }}}
 
 
-# Direct Invocation
-if __FILE__ == $0 # {{{
+# Direct Invocation (local testing) # {{{
+if __FILE__ == $0
 end # of if __FILE__ == $0 # }}}
 
+# vim:ts=2:tw=100:wm=100

@@ -57,7 +57,10 @@ include GSL
 
 # }}}
 
-class Controller # {{{
+
+# @class      class Controller # {{{
+# @brief      Central controller class taking care of input argument handling and providing a basic CLI user interface
+class Controller
 
   # @fn       def initialize options = nil # {{{
   # @brief    Constructor of the controller class
@@ -65,9 +68,9 @@ class Controller # {{{
   # @param    [OpenStruct]      options     Options OpenStruct processed by the parse_cmd_arguments function
   def initialize options = nil
 
-    @options = options
+    @options                      = options
 
-    @log     = Logger.new( @options )
+    @log                          = Logger.new( @options )
 
     # Minimal configuration
     @config                       = OpenStruct.new
@@ -760,7 +763,7 @@ class Controller # {{{
 end # of class Controller }}}
 
 
-# Direct Invocation
+# Direct Invocation (local testing)
 if __FILE__ == $0 # {{{
 
   options = Controller.new.parse_cmd_arguments( ARGV )
@@ -768,4 +771,4 @@ if __FILE__ == $0 # {{{
 
 end # of if __FILE__ == $0 }}}
 
-# vim=ts:2
+# vim:ts=2:tw=100:wm=100

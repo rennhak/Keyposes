@@ -26,12 +26,16 @@ require 'gsl'
 # Warning: Including this line will cause everything to break.
 # include GSL
 
-#require 'c/c_mathematics'
+# FIXME: Reimplement this with bindings to C libs instead
+# require 'c/c_mathematics'
 
-# The class Mathematics provides helpful functions to calculate various things needed throughout this project
-class Mathematics # {{{
+# @class    class Mathematics # {{{
+# @brief    The class Mathematics provides helpful functions to calculate various things needed throughout this project
+class Mathematics
 
-  def initialize # {{{
+  # @fn       def initialize # {{{
+  # @brief    The default constructor of the Mathematics class
+  def initialize
   end # of def initialize }}}
 
 
@@ -456,28 +460,7 @@ class Mathematics # {{{
   end # of def derivative }}}
 
 
-  # The function takes 
-  def first_derivative_test # {{{
-  end # of def first_derivative_test }}}
-
-
-  # The function takes 
-  def second_derivative_test # {{{
-  end # of def second_derivative_test }}}
-
-
-  # The function returns a solution for the following:
-  # Given two lines in slope intersection form f1 y = m*x +t and f2...
-  # the determinant is ad - bc ; three cases:
-  #   -1  := No solution
-  #    0  := One
-  #    1  := Unlimited (you can invert it)
-  def determinat array1, array2 # {{{
-    raise NotImplementedError
-  end # end of determinat }}}
-
-
-  # @fn       # {{{
+  # @fn       def angle_between_two_lines line1_point1 = nil, line1_point2 = nil, line2_point1 = nil, line2_point2 = nil # {{{
   # @brief    Returns the angle of two intersecting lines in three 3D given by four points (a1, a2) and (b1, b2)
   #           You can easily derive this function via Pythagoras formula. P1,P2 \elem R^3
   #
@@ -485,7 +468,6 @@ class Mathematics # {{{
   # @param    [Array]   line1_point2  Accepts array containing floats or integers (x,y,z)
   # @param    [Array]   line2_point2  Accepts array containing floats or integers (x,y,z)
   # @param    [Array]   line2_point2  Accepts array containing floats or integers (x,y,z)
-  # 
   #
   # @returns  [Float]   Float, the angle between (l1p1, l1p2) and (l2p1, l2p2)
   def angle_between_two_lines line1_point1 = nil, line1_point2 = nil, line2_point1 = nil, line2_point2 = nil
@@ -531,20 +513,21 @@ class Mathematics # {{{
   end # of def eucledian_distance point1, point2 }}}
 
 
-  # = dot_product returns as the name suggest the dot product for two vectors (3D)
-  # d(u,v) =  (u).x * (v).x + (u).y * (v).y + (u).z * (v).z
-  def dot_product( vector1, vector2 ) # {{{
+  # @fn         def dot_product( vector1, vector2 ) # {{{
+  # @brief      dot_product returns as the name suggest the dot product for two vectors (3D)
+  #             d(u,v) =  (u).x * (v).x + (u).y * (v).y + (u).z * (v).z
+  def dot_product( vector1, vector2 )
     u1, u2, u3 = *vector1
     v1, v2, v3 = *vector2
 
     return ( (u1*v1) + (u2*v2) + (u3*v3) )
   end # of def dot_product }}} 
 
-
-
 end # of class Mathematics }}}
 
-# Direct Invocation
-if __FILE__ == $0 # {{{
+# Direct Invocation (local testing) # {{{
+if __FILE__ == $0
 end # of if __FILE__ == $0 }}}
 
+
+# vim:ts=2:tw=100:wm=100
