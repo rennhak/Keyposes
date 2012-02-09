@@ -22,7 +22,8 @@
 require 'k_means'
 
 # = Local
-require_relative 'Mathematics.rb'
+$:.push('.')
+require 'Mathematics.rb'
 
 
 class Clustering # {{{
@@ -81,7 +82,13 @@ class Clustering # {{{
   end # }}}
 
 
-
+  # @fn       def cluster_distances data = nil, kmeans = nil, centroids = nil # {{{
+  # @brief    Calculates the cluster distances from all clusters to each other.
+  #
+  # @param    []    data          
+  # @param    []    kmeans        
+  # @param    []    centroids     
+  #
   def cluster_distances data = nil, kmeans = nil, centroids = nil 
 
     # turn the kmeans result from frames => cluster to cluster => frames
@@ -120,7 +127,7 @@ class Clustering # {{{
     end # of table.each_pair 
 
     distances
-  end # of def cluster_distances
+  end # of def cluster_distances # }}}
 
 
   # @fn       def distances data, centroids # {{{
@@ -406,7 +413,7 @@ class Clustering # {{{
 end # of class Clustering }}}
 
 
-# Direct Invocation
-if __FILE__ == $0 # {{{
+# Direct Invocation (local testing) # {{{
+if __FILE__ == $0
 end # of if __FILE__ == $0 }}}
 

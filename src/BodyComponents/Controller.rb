@@ -763,8 +763,8 @@ class Controller
 end # of class Controller }}}
 
 
-# Direct Invocation (local testing)
-if __FILE__ == $0 # {{{
+# Direct Invocation (local testing) # {{{
+if __FILE__ == $0
 
   options = Controller.new.parse_cmd_arguments( ARGV )
   bc      = Controller.new( options )
