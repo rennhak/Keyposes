@@ -18,9 +18,9 @@
 #######
 
 
-
-class Logger # {{{
-
+# @class      class Logger # {{{
+# @brief      Logging class which handles any logging events of the application.
+class Logger
 
   # @fn       def initialize options # {{{
   # @brief    Constructor of the Logger class
@@ -139,11 +139,11 @@ class Logger # {{{
     result
   end # of def colorize }}}
 
-
 end # of class Logger }}}
 
 
-# Direct Invocation
-if __FILE__ == $0 # {{{
+# Direct Invocation (local testing) # {{{
+if __FILE__ == $0
 end # of if __FILE__ == $0 }}}
 
+# vim:ts=2:tw=100:wm=100
