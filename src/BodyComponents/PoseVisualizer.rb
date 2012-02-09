@@ -34,8 +34,9 @@ require 'RMagick'
 require 'rvg/rvg'
 
 # Custom includes
-require_relative 'Logger.rb'
-require_relative 'Frames.rb'
+$:.push('.')
+require 'Logger.rb'
+require 'Frames.rb'
 
 # Change Namespace
 include Magick
@@ -47,15 +48,29 @@ Magick::RVG.dpi = 72
 ###
 #
 # @class   PoseVisualizer
-# @author  Bjoern Rennhak
-# @brief   This class helps with generating images of 3D data (poses)
+# @brief   This class helps with generating images of 3D data (poses).
 #
 #######
 class PoseVisualizer # {{{
 
-  def initialize options = nil, kmeans = nil, adts = nil, closest_frame = nil  # {{{
-    @options = options
-    @log     = Logger.new( options )
+  # @fn         def initialize options = nil, kmeans = nil, adts = nil, closest_frame = nil  # {{{
+  # @brief      The Custom Constructor of the PoseVisualizer class, used for instantiating and object.
+  #
+  # @param      [OpenStruct]    options         Options Struct which we generated in the Controller class (parse function)
+  # @param      [Hash]          kmeans          Kmeans, output gathered from the Clustering::kmeans function (first part of the return value)
+  # @param      [Array]         adts            Array containing other complex datastructures as items (adts.each do |adt, turning_data, meta|)
+  # @param      [Array]         closest_frame   Array, each index is a cluster id and each item is a subarray with corresponding frames for that cluster.
+  def initialize options = nil, kmeans = nil, adts = nil, closest_frame = nil
+
+    # Input verification {{{
+    raise ArgumentError, "Options cannot be nil"        if( options.nil? )
+    raise ArgumentError, "Kmeans cannot be nil"         if( kmeans.nil? )
+    raise ArgumentError, "Adts cannot be nil"           if( adts.nil? )
+    raise ArgumentError, "Closest frame cannot be nil"  if( closest_frame.nil? )
+    # }}}
+
+    @options          = options
+    @log              = Logger.new( options )
 
     # contains hash with hash[frame] => cluster id
     @kmeans           = kmeans
@@ -92,11 +107,10 @@ class PoseVisualizer # {{{
     @color.black      = [ 0.0, 0.0, 0.0 ] # each color (r,g,b) from 0.0 - 1.0
     @color.red        = [ 1.0, 0.0, 0.0 ]
 
-
     init
     drawgl( @width, @height )
 
-  end # of initialize }}}
+  end # of def initialize }}}
 
 
   # @fn         def init font = "fonts/arial.ttf", font_size = 24 {{{
@@ -190,16 +204,16 @@ class PoseVisualizer # {{{
   end # of def resize width = 800, height = 600 }}}
 
 
-  # @fn       def normalize value = nil, smoothing_parameter = 30 # {{{
-  # @brief    We use a sigmoid like function to reshape all input values to a limit set to the
-  #           smoothing parameter (e.g. between -1 and 1)
-  #           http://people.revoledu.com/kardi/tutorial/Similarity/Normalization.html
+  # @fn         def normalize value = nil, smoothing_parameter = 30 # {{{
+  # @brief      We use a sigmoid like function to reshape all input values to a limit set to the
+  #             smoothing parameter (e.g. between -1 and 1)
+  #             http://people.revoledu.com/kardi/tutorial/Similarity/Normalization.html
   #
-  # @param    [Numeric]   value                 Numerical value we want to normalize
-  # @param    [Numeric]   smoothing_parameter   Numerical value, greater than 0 which is used to
+  # @param      [Numeric]   value                 Numerical value we want to normalize
+  # @param      [Numeric]   smoothing_parameter   Numerical value, greater than 0 which is used to
   #                                             determine the smoothness of the sigmoid function
   #
-  # @returns  Result reshaped using a sigmoid like function to a bounded value between -1 and 1.
+  # @returns    Result reshaped using a sigmoid like function to a bounded value between -1 and 1.
   def normalize value = nil, smoothing_parameter = 30
 
       # Input verification # {{{
@@ -216,8 +230,8 @@ class PoseVisualizer # {{{
   end # end of def normalize value = nil, smoothing_parameter = 30 # }}}
 
 
-  # @fn       def drawgl width = nil, height = nil # {{{
-  # @brief    Render OpenGL scene
+  # @fn         def drawgl width = nil, height = nil # {{{
+  # @brief      Render OpenGL scene
   #
   # @param      [Integer]       width     Width of the screen size to resize to
   # @param      [Integer]       height    Height of the screen size to resize to
@@ -699,16 +713,16 @@ class PoseVisualizer # {{{
   end #  def drawgl width = nil, height = nil }}}
 
 
-  # @fn     def screenshot cluster = nil, frame = nil, save_dir = "graphs/clusters" # {{{
-  # @brief  Create a screenshot over Ruby ImageMagick. Takes a snapshot of OpenGL via glreadpixels
-  #         and passes the data to imagemagick for file storage.
+  # @fn         def screenshot cluster = nil, frame = nil, save_dir = "graphs/clusters" # {{{
+  # @brief      Create a screenshot over Ruby ImageMagick. Takes a snapshot of OpenGL via glreadpixels
+  #             and passes the data to imagemagick for file storage.
   #
-  #         The reason why we don't use SDL.save_bmp use is that it segfaults on my machine.
-  #         It saves only bmp - anyway (@screen.save_bmp)
+  #             The reason why we don't use SDL.save_bmp use is that it segfaults on my machine.
+  #             It saves only bmp - anyway (@screen.save_bmp)
   #
-  # @param  [Integer]   cluster   Cluster ID.
-  # @param  [Integer]   frame     Frame number.
-  # @param  [String]    save_dir  Save images in this base directory.
+  # @param      [Integer]   cluster   Cluster ID.
+  # @param      [Integer]   frame     Frame number.
+  # @param      [String]    save_dir  Save images in this base directory.
   def screenshot cluster = nil, frame = nil, save_dir = "graphs/clusters"
 
     cluster_dir = save_dir + "/" + cluster.to_s
@@ -832,10 +846,10 @@ class PoseVisualizer # {{{
 
   end # of def draw_text( x = nil, y = nil, r = nil, g = nil, b = nil, font = nil, text = nil ) }}}
 
-end # of class Plotter # }}}
+end # of class PoseVisualizer # }}}
 
-# = Direct invocation
-if __FILE__ == $0 # {{{
+# Direct invocation (local testing) # {{{
+if __FILE__ == $0
 end # if __FILE__ == $0 # }}}
 
-
+# vim:ts=2:tw=100:wm=100

@@ -1,6 +1,19 @@
 #!/usr/bin/ruby
 #
 
+
+# # Make sure require relative works for all ruby VM's
+# # FIXNE: Why is it not enough to have this in Extensions.rb?
+# unless Kernel.respond_to?(:require_relative)
+#   module Kernel
+#     def require_relative(path)
+#       # puts 'IN NEW REQUIRE_RELATIVE ' + path.to_s
+#       require File.join(File.dirname(caller[0]), path.to_str)
+#     end
+#   end
+# end
+
+
 # Get keys of openstruct
 class OpenStruct
   def fields

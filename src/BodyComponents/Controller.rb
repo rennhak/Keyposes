@@ -20,18 +20,6 @@
 
 # Libraries {{{
 
-# Make sure require relative works for all ruby VM's
-# FIXNE: Why is it not enough to have this in Extensions.rb?
-unless Kernel.respond_to?(:require_relative)
-  module Kernel
-    def require_relative(path)
-      # puts 'IN NEW REQUIRE_RELATIVE ' + path.to_s
-      require File.join(File.dirname(caller[0]), path.to_str)
-    end
-  end
-end
-
-
 # OptionParser related
 require 'optparse'
 require 'optparse/time'
@@ -47,24 +35,22 @@ require 'gsl'
 require 'ruby-prof'
 
 # Custom includes (changes object behaviors)
-require_relative 'Extensions'
+$:.push('.')
+require 'Extensions'
 
 # From MotionX - FIXME: Use MotionX's XYAML interface
 require 'ADT.rb'
 
 # Local includes
-require_relative 'Mathematics.rb'
-require_relative 'Physics.rb'
-
-require_relative 'PCA.rb'
-require_relative 'Turning.rb'
-require_relative 'Filter.rb'
-
-require_relative 'Plotter.rb'
-require_relative 'PoseVisualizer.rb'
-require_relative 'Logger.rb'
-
-require_relative 'Compare.rb' 
+require 'Mathematics.rb'
+require 'Physics.rb'
+require 'PCA.rb'
+require 'Turning.rb'
+require 'Filter.rb'
+require 'Plotter.rb'
+require 'PoseVisualizer.rb'
+require 'Logger.rb'
+require 'Compare.rb' 
 
 # Change Namespace
 include GSL
@@ -407,13 +393,13 @@ class Controller # {{{
         end # of if( @options.clustering_k_search )
 
         # FIXME: This is needed for --seach-k-parameters-from-to
-        #tcss.collect! { |array| array.inject(:+) / array.length } 
-        #ks_within     = ks.zip( tcss )
-        #ks_dists      = ks.zip( dists )
+        # css.collect! { |array| array.inject(:+) / array.length } 
+        # ks_within     = ks.zip( tcss )
+        # ks_dists      = ks.zip( dists )
 
         @plot         = Plotter.new( 0, 0 )
-        #@plot.easy_gnuplot( ks_dists,  "%e %e\n", [ "Clusters", "Total distortions" ], "Total distortions Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
-        #@plot.easy_gnuplot( ks_within, "%e %e\n", [ "Clusters", "Total within cluster sum of squares" ], "Total within cluster sum of squares Plot", "graphs/total_within_sum_of_squares.gp", "graphs/total_within_sum_of_squares.gpdata" )
+        # @plot.easy_gnuplot( ks_dists,  "%e %e\n", [ "Clusters", "Total distortions" ], "Total distortions Plot", "graphs/total_distortion.gp", "graphs/total_distortion.gpdata" )
+        # @plot.easy_gnuplot( ks_within, "%e %e\n", [ "Clusters", "Total within cluster sum of squares" ], "Total within cluster sum of squares Plot", "graphs/total_within_sum_of_squares.gp", "graphs/total_within_sum_of_squares.gpdata" )
 
         @turning.get_dot_graph( kms.last )
         @plot.interactive_gnuplot( final, "%e %e %e\n", %w[X Y Z],  "graphs/all_domain_plot.gp", nil, nil, kms.last )
