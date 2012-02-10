@@ -20,6 +20,10 @@
 
 # Libraries {{{
 
+# System
+require 'yaml'
+require 'psych'
+
 # OptionParser related
 require 'optparse'
 require 'optparse/time'
@@ -30,6 +34,7 @@ require 'pp'
 require 'rubygems'
 require 'narray'
 require 'gsl'
+
 
 # Profiler
 require 'ruby-prof'

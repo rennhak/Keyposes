@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/ruby19
 #
 
 
@@ -38,7 +38,7 @@ end
 #class Object
 #end
 #
-class Object
+class Object # {{{
   def deep_clone_simple
     Marshal::load(Marshal.dump(self))
   end
@@ -84,11 +84,14 @@ class Object
         klone.instance_variable_get(v).dclone)
     }
     klone
-  end
+  end 
 
-require 'yaml'
+end # of Object }}}
 
-YAML::ENGINE.yamler = 'syck'
+#require 'psych'
+#require 'yaml'
+
+# YAML::ENGINE.yamler = 'syck'
 #
 ## Override some default YAML Behavior and create OpenStructs instead of Hashes when called
 ## http://rubyquiz.com/quiz81.html
@@ -115,7 +118,7 @@ YAML::ENGINE.yamler = 'syck'
 # extending the existing OpenStruct class due to my personal preference of not
 # changing the behavior for standard library classes. However, one could just as
 # easily extend the OpenStruct class with these behaviors as well.
-class OpenStruct
+class OpenStruct # {{{
   def _to_hash
     h = @table
     #handles nested structures
@@ -139,24 +142,25 @@ class OpenStruct
       end
     end
   end
-end
+
+end # }}}
 
 # == Ninjapatching for Ruby
-class Array
-    def delete_unless &block
+class Array # {{{
+    def delete_unless &block # {{{
         delete_if{ |element| not block.call( element ) }
-    end
+    end # }}}
 
     # super nifty way of chunking an Array to n parts
     # found http://drnicwilliams.com/2007/03/22/meta-magic-in-ruby-presentation/
     # direct original source at http://redhanded.hobix.com/bits/matchingIntoMultipleAssignment.html
-    def %(len)
+    def %(len)  # {{{
         inject([]) do |array, x|
             array << [] if [*array.last].nitems % len == 0
             array.last << x
             array
         end
-    end
+    end # }}}
 
     # now e.g. this is possible
     #test = false
@@ -172,14 +176,14 @@ class Array
     #[ ["foo0", "foo1", "foo2"], ["foo3", "foo4", "foo5"], ["foo6", "foo7", "foo8"], ["foo9", "foo10"]]
 
 
-    def sum
+    def sum # {{{
       inject( nil ) { |sum,x| sum ? sum+x : x }
-    end
+    end # }}}
 
-    def mean
+    def mean # {{{
       sum / size
-    end
-end
+    end # }}}
+end # of class Array # }}}
 
 
 #  # http://doc.okkez.net/191/view/method/Object/i/initialize_copy
@@ -194,7 +198,7 @@ end
 #    end
 #  end
 #
-end
+#end
 
 
 
