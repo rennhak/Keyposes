@@ -1,0 +1,21 @@
+---
+
+type: Dance
+name: Aizubandaisan_-_Cycle_01_-_Speed_100_-_Igarashi
+filename: ../../../../data/DanceData/Aizu_Wakamatsu_Experiments/igarashi/Igarashi_-_S100_-_Cycle_01.vpm
+from: 0
+to: 848
+
+
+# Dance Master Poses
+# - [ exact, [ approx. from, approx. to ] ]
+dmp: [
+    [0, [0, 0]],
+    [0, [0, 0]],
+    [0, [0, 0]],
+    [0, [0, 0]],
+    [0, [0, 0]],
+    [0, [0, 0]],
+    [0, [0, 0]],
+    [0, [0, 0]]
+]
