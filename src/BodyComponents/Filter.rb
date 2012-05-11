@@ -167,6 +167,11 @@ class Filter
                 end
               end
 
+              if( t.include?( nil ) or axis.include?( nil ) )
+                puts "--- Something bad happend just now in the filter class"
+                next
+              end
+
               gsl_t, gsl_axis           = GSL::Vector.alloc( t ), GSL::Vector.alloc( axis )
               coef, err, chisq, status  = GSL::MultiFit::polyfit( gsl_t, gsl_axis, polynom_order )
 
@@ -176,7 +181,9 @@ class Filter
               # Standard error estimate
               #err_sum = err.to_na.to_a.inject(0) { |r,e| r + e }
               #err_final = Math.sqrt( err_sum / ( ( err.to_na.to_a.length - 1 ) - 2 ) )
-              errors += err.to_na.to_a
+              
+              # FIXME: This was not uncommented before (23/02/2012)
+              #errors += err.to_na.to_a
               # printf( "Error: %-20s\n", err_final.to_s )
             end
 
@@ -184,6 +191,12 @@ class Filter
             s1_coef, s2_coef, s3_coef = *result_splines
 
             t_s.each_index do |i|
+        
+              if( t_s[i].nil? )
+                puts "--- Somthing bad happend just now in the filter class (lower)"
+                next
+              end
+
               s1_t, s2_t, s3_t = s1_coef.eval( t_s[i] ), s2_coef.eval( t_s[i] ), s3_coef.eval( t_s[i] )
 
               cluster_smooth << [ s1_t, s2_t, s3_t ]

@@ -47,7 +47,7 @@ require "date"
 desc "Toggle date between -1 year and now"
 task :date do |d|
 
-  minus_years                 = 1
+  minus_years                 = 2
   d                           = DateTime.now
   day, month, year, hour, min = d.day, d.mon, d.year, d.hour, d.min
 
@@ -87,6 +87,10 @@ task :clean do |t|
     `rm -rf *.gp`
     `rm -rf *.gpdata`
     `rm -rf magick-*`
+  end
+
+  Dir.chdir( "src/BodyComponents/frames_objects" ) do 
+    `rm -rf *`
   end
 
 end

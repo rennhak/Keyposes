@@ -34,7 +34,7 @@ class Frames
   # @param    middle_frame_data
   # @param    end_frame_number
   # @param    end_frame_data
-  def initialize current_cluster, start_frame_number, start_frame_data, middle_frame_number, middle_frame_data, end_frame_number, end_frame_data
+  def initialize current_cluster, centroid, start_frame_number, start_frame_data, middle_frame_number, middle_frame_data, end_frame_number, end_frame_data
 
     @current_cluster          = current_cluster
 
@@ -47,10 +47,12 @@ class Frames
     @end_frame_number         = end_frame_number
     @end_frame_data           = end_frame_data
 
+    @centroid                 = centroid.position
+
   end # of def initialize current_cluster, start_frame_number, start_frame_data, middle_frame_number, middle_frame_data, end_frame_number, end_frame_data # }}}
 
 
-  attr :current_cluster, :start_frame_number, :start_frame_data, :middle_frame_number, :middle_frame_data, :end_frame_number, :end_frame_data
+  attr :current_cluster, :start_frame_number, :start_frame_data, :middle_frame_number, :middle_frame_data, :end_frame_number, :end_frame_data, :centroid
 end # of class Frames # }}}
 
 # vim:ts=2:tw=100:wm=100

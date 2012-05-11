@@ -70,12 +70,8 @@ class Compare
       directories = Dir.glob( "#{dir.to_s}/*/**" )
       directories.collect! { |d| d.gsub( "#{dir}/", "" ) }
 
-      # Extract cycle from dir string
-      cycle = ""
-      dir.split( "_" ).each do |i|
-        match   = /c[0-9]+/.match( i )
-        cycle = match[0] unless( match.nil? )
-      end
+      # Extract cycle from dir string (only with ruby 1.9
+      /(?<cycle>cycle_[0-9]+)_/ =~ dir
 
       # Create empty array for cycle key
       objects[ cycle.to_s ] = [] if( objects[ cycle.to_s ].nil? )
@@ -97,6 +93,121 @@ class Compare
 
     objects
   end # of def load_marshal_objects load_dir = @compare_directories # }}}
+
+
+  # @fn       def centroid_comparsion objects = @objects # {{{
+  # @brief    Compares the relative position of cluster centroids from one to another cycle to extact cluster labels
+  # 
+  # @param    []        objects
+  # @returns  [Hash]    Mapping of clusters to each other
+  def centroid_comparsion objects = @objects
+    @log.message :info, "Comparing relative cluster similarity by centroid similarity in T-Data space"
+
+    # Idea: { "cycle_02" => [ [ cluster0 centroid ], [...], ... ] }
+    centroids = Hash.new
+
+    objects.each_pair do |cycle, cluster_array|
+
+      # if centroids doesn't have a empty array create one
+      centroids[ cycle.to_s ] = [] if( centroids[ cycle.to_s ].nil? )
+
+      cluster_array.each_with_index do |frames, cluster_index|
+        c = []
+        frames.each { |f| c << f.centroid } # obviously all centroids should be the same for all frames.
+
+        # If this is not of length 3 then there is something wrong.
+        c = c.uniq.flatten 
+        raise ArgumentError, "There are more then one unique centroid for this cluster. This cannot be, there is some very bad error." if( c.length != 3 )
+
+        # centroid information stored in frames class
+        centroids[ cycle.to_s ][ cluster_index.to_i ] = c
+      end
+    end # of objects.each_pair do |cycle, cluster_array| 
+
+    # We store the cluster mapping from one cycle to another here
+    mapping = Hash.new
+
+    centroids.each_pair do |cycle, first_centroids|
+
+      # Iterate over the entire rest to find similar cluster, each i is the second operand
+      # e.g. [ "c2", "c3" ] - [ "c2" ] 
+      remaining_keys = centroids.keys - [ cycle ]
+
+      remaining_keys.each do |remaining_cycle|
+        second_centroids = centroids[ remaining_cycle ]
+
+        # compare the first_centroids to the remaining centroids
+        first_centroids.each_with_index do |f_centroid, f_index|
+          # iterate for each of first centroids over all of second centroids
+           tmp_distances = []
+          second_centroids.each_with_index do |s_centroid, s_index|
+            value = @mathematics.eucledian_distance( f_centroid, s_centroid )
+            puts "First Centroid (index: #{f_index.to_s}) (coord: #{f_centroid.join(", ").to_s}) - Second Centroid (index: #{s_index.to_s}) (coord: #{s_centroid.join(", ").to_s}) - Eucledian distance: #{value.to_s}"
+            tmp_distances[ s_index.to_i ] = value
+          end # of second_centroids.each_with_index
+
+          f_cluster_index = f_index
+          s_cluster_index = tmp_distances.index( tmp_distances.min )
+
+          hash_key_name   = "#{cycle.to_s + "_->_" + remaining_cycle.to_s}"
+          mapping[ hash_key_name ] = [] if( mapping[ hash_key_name ].nil? )
+          mapping[ hash_key_name ] << [ f_cluster_index, s_cluster_index ]
+          puts ""
+        end # of first_centroids.each_with_index
+      end # of remaining_keys
+
+      # we just want to exit the centroids hash now (just compare first element of hash to rest of hash)
+      break
+    end # of centroids.each_pair
+
+    # Distance of centroids to each other
+    distances = []
+    centroids.each_pair do |cycle, first_centroids|
+      first_centroids.each_with_index do |f_centroid, index|
+
+        distances[ index ] = [] if( distances[ index ].nil? )
+
+        first_centroids.each_with_index do |s_centroid, s_index| 
+          value = @mathematics.eucledian_distance( f_centroid, s_centroid )
+          distances[ index ][ s_index ] = value
+        end
+
+      end
+    end
+
+    scores      = []
+
+    distances.each_with_index do |dists, index|
+      # sort lowest to largest
+
+      indexes   = []
+      sorted    = dists.dup.sort
+      sorted.each_with_index do |v, i|
+        old_index = dists.index( v )
+        indexes[ i ] = old_index
+      end
+
+      indexes.each_with_index do |cluster_id, iter_idx|
+        scores[ cluster_id.to_i ] = 0 if( scores[ cluster_id.to_i ].nil? )
+        scores[ cluster_id.to_i ] += iter_idx
+      end
+
+      puts "Cluster (#{index.to_s}) closest clusters (similar color) are at (smallest->largest) (#{indexes.join(", ")})"
+    end
+
+    # smallerest to largest
+    ordered_scores = scores.dup.sort
+    ordered_indexes = []
+    ordered_scores.each do |os|
+      ordered_indexes << scores.index( os )
+    end
+
+    p scores
+    p ordered_indexes
+    puts ""
+
+    mapping
+  end # of def centroid_comparsion objects = @objects # }}}
 
 
   # @fn       def run objects = @objects # {{{
@@ -171,8 +282,8 @@ class Compare
   end # of def run }}}
 
 
-  # @fn         def angle first_frame # {{{
-  # @brief      The angle function measures pose similarity
+  # @fn       def angle first_frame # {{{
+  # @brief    The angle function measures pose similarity
   def angle first_frame
 
     res = []
@@ -277,7 +388,6 @@ class Compare
 
     res
   end # of def diff }}}
-
 
 end # of class Compare }}}
 

@@ -134,6 +134,7 @@ class Plotter # {{{
       f.write( "set output\n" )
       f.write( "set terminal x11 persist\n" )
       f.write( "set title 'Graph'\n" )
+      f.write( "set palette rgbformulae 22,12,-32" )
 
       unless( eigen_values.nil? and eigen_vectors.nil? )
         # Add information about PC axis

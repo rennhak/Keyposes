@@ -156,7 +156,8 @@ class Array # {{{
     # direct original source at http://redhanded.hobix.com/bits/matchingIntoMultipleAssignment.html
     def %(len)  # {{{
         inject([]) do |array, x|
-            array << [] if [*array.last].nitems % len == 0
+            # array << [] if [*array.last].nitems % len == 0
+            array << [] if [*array.last].count{|x| !x.nil?} % len == 0
             array.last << x
             array
         end

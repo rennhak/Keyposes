@@ -2,3 +2,14 @@ Q: What MatLAB version are you using for this software?
 A: There will be a rewrite in the future to remove matlab from the tool chain used. The version I
    use currently is 2007
 
+Q: Use imagemagick to write a text string to dumped screenshots?
+A: autoload zmv; 
+zmv '0##(?*).png' '$1$2.png';
+e.g. % for i in `ls -1`; do convert -size 1130x1021 -font Arial
+-pointsize 24 -gravity south -fill white -draw "text 0,0 'Dance: Aizubandaisan - Speed: 1.0x -
+Cycle: 005 - Frame: `echo $i | sed 's/.png//g'` - Dancer: H. Yamada" $i $i; done
+
+for i in `ls -1 *.png`; do convert -resize 1300 $i $i; done
+
+ffmpeg -r 24 -b 16777216 -i %d.png merge.avi
+mencoder -ovc copy -nosound -speed 0.5  normal.mp4 -o slow_no_sound.mp4

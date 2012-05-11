@@ -513,9 +513,9 @@ class Mathematics
   end # of def eucledian_distance point1, point2 }}}
 
 
-  # @fn         def dot_product( vector1, vector2 ) # {{{
-  # @brief      dot_product returns as the name suggest the dot product for two vectors (3D)
-  #             d(u,v) =  (u).x * (v).x + (u).y * (v).y + (u).z * (v).z
+  # @fn       def dot_product( vector1, vector2 ) # {{{
+  # @brief    dot_product returns as the name suggest the dot product for two vectors (3D)
+  #           d(u,v) =  (u).x * (v).x + (u).y * (v).y + (u).z * (v).z
   def dot_product( vector1, vector2 )
     u1, u2, u3 = *vector1
     v1, v2, v3 = *vector2

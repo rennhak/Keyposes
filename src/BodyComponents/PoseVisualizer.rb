@@ -60,13 +60,15 @@ class PoseVisualizer # {{{
   # @param      [Hash]          kmeans          Kmeans, output gathered from the Clustering::kmeans function (first part of the return value)
   # @param      [Array]         adts            Array containing other complex datastructures as items (adts.each do |adt, turning_data, meta|)
   # @param      [Array]         closest_frame   Array, each index is a cluster id and each item is a subarray with corresponding frames for that cluster.
-  def initialize options = nil, kmeans = nil, adts = nil, closest_frame = nil
+  # @param      [Array]         centroids       Centroids used for this clustering. Array consists of centroid classes as defined in the k_means gem. (array index is cluster id)
+  def initialize options = nil, kmeans = nil, adts = nil, closest_frame = nil, centroids = nil
 
     # Input verification {{{
     raise ArgumentError, "Options cannot be nil"        if( options.nil? )
     raise ArgumentError, "Kmeans cannot be nil"         if( kmeans.nil? )
     raise ArgumentError, "Adts cannot be nil"           if( adts.nil? )
     raise ArgumentError, "Closest frame cannot be nil"  if( closest_frame.nil? )
+    raise ArgumentError, "Centroids cannot be nil"      if( centroids.nil? )
     # }}}
 
     @options          = options
@@ -74,6 +76,7 @@ class PoseVisualizer # {{{
 
     # contains hash with hash[frame] => cluster id
     @kmeans           = kmeans
+    @centroids        = centroids
     @closest_frame    = closest_frame
 
     @lookup_table     = []
@@ -553,7 +556,8 @@ class PoseVisualizer # {{{
               end
 
               puts "Storing cluster object for later usage"
-              frames = Frames.new( current_cluster, start_frame.to_s, sf, middle_frame.to_s, mf, end_frame.to_s, ef )
+
+              frames = Frames.new( current_cluster, @centroids[ current_cluster.to_i], start_frame.to_s, sf, middle_frame.to_s, mf, end_frame.to_s, ef )
               dump   = Marshal.dump( frames )
               begin
                 Dir.mkdir( "frames_objects/" + current_cluster.to_s )

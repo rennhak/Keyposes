@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/ruby19
 #
 
 ###
@@ -44,6 +44,7 @@ $:.push('.')
 require 'Extensions'
 
 # From MotionX - FIXME: Use MotionX's XYAML interface
+$:.push('../../base/MotionX/src/plugins/vpm/src')
 require 'ADT.rb'
 
 # Local includes
@@ -149,7 +150,8 @@ class Controller
 
       unless( @options.compare_clusters.empty? )
         compare = Compare.new( @options, @options.compare_clusters )
-        compare.run
+        # compare.run # compare by pose similarity 
+        p compare.centroid_comparsion # compare by t-data similarity
       end
 
       if( @options.use_all_of_domain ) # if this is given we want to summarize all the dances of this domain
@@ -346,6 +348,8 @@ class Controller
 
             clustering                  = Clustering.new( @options )
             kmeans, centroids           = clustering.kmeans( final, k, init_centroids )
+            @centroids                  = centroids
+
             kms                        << kmeans
             distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
             
@@ -463,7 +467,7 @@ class Controller
         end
 
         if( @options.pose_visualizer )
-          @pv         = PoseVisualizer.new( @options, kms.last, @adts, @closest_frame )
+          @pv         = PoseVisualizer.new( @options, kms.last, @adts, @closest_frame, @centroids )
         end
 
       else # if this is given we want to analyse only one dance
