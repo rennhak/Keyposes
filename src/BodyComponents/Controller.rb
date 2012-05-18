@@ -203,7 +203,7 @@ class Controller
 
             motion_config_filename    = motion_config.path + "/" + motion_config.filename
 
-            @log.message :info, "Loading Motion Capture config file (#{motion_config_filename})"
+            @log.message :debug, "Loading Motion Capture config file (#{motion_config_filename})"
 
             @motion_config            = read_motion_config( motion_config_filename )
 
@@ -217,7 +217,7 @@ class Controller
             @dance_master_poses_range = []
             @dmps.each { |dmp_array| @dance_master_poses << dmp_array.first; @dance_master_poses_range << dmp_array.last }
 
-            @log.message :info, "Loading the Motion Capture data (#{@file}) via the MotionX VPM Plugin"
+            @log.message :success, "Loading the Motion Capture data (#{@file}) via the MotionX VPM Plugin"
             @adt                      = ADT.new( @file )
 
             if( @options.filter_motion_capture_data )
