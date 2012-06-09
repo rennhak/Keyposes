@@ -141,6 +141,7 @@ class Controller
       @log.message :success, "Starting #{__FILE__} run"
       @log.message :debug,   "Colorizing output as requested" if( @options.colorize )
       @log.message :info,    "Processing the following sides: ''#{@options.side.to_s}''"
+      @log.message :debug,   "Using Model #{@options.model.to_s}"
 
       RubyProf.start if( @options.profiling )
 
