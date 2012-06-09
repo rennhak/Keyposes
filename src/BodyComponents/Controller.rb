@@ -1,4 +1,4 @@
-#!/usr/bin/ruby19
+#!/usr/bin/ruby
 #
 
 ###
@@ -21,8 +21,9 @@
 # Libraries {{{
 
 # System
-require 'yaml'
+require 'rubygems'
 require 'psych'
+require 'yaml'
 
 # OptionParser related
 require 'optparse'
@@ -40,23 +41,22 @@ require 'gsl'
 require 'ruby-prof'
 
 # Custom includes (changes object behaviors)
-$:.push('.')
-require 'Extensions'
+require_relative 'Extensions'
 
 # From MotionX - FIXME: Use MotionX's XYAML interface
-$:.push('../../base/MotionX/src/plugins/vpm/src')
-require 'ADT.rb'
+$:.push( '../../base/MotionX/src/plugins/vpm/src' )
+require_relative '../../base/MotionX/src/plugins/vpm/src/ADT.rb'
 
 # Local includes
-require 'Mathematics.rb'
-require 'Physics.rb'
-require 'PCA.rb'
-require 'Turning.rb'
-require 'Filter.rb'
-require 'Plotter.rb'
-require 'PoseVisualizer.rb'
-require 'Logger.rb'
-require 'Compare.rb' 
+require_relative 'Mathematics.rb'
+require_relative 'Physics.rb'
+require_relative 'PCA.rb'
+require_relative 'Turning.rb'
+require_relative 'Filter.rb'
+require_relative 'Plotter.rb'
+require_relative 'PoseVisualizer.rb'
+require_relative 'Logger.rb'
+require_relative 'Compare.rb' 
 
 # Change Namespace
 include GSL

@@ -15,6 +15,14 @@ group :development do
   gem 'ruby-filemagic'
   gem 'rmagick'
 
+  # Computations
+  gem 'narray'
+  gem 'gsl'
+  gem 'ruby-prof'
+  gem 'k_means'
+  gem 'opengl'
+  gem 'rubysdl'
+  gem 'psych'
 
 end
 
