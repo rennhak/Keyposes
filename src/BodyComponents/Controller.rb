@@ -321,24 +321,29 @@ class Controller
             tmp_distortions   = []
             tmp_centroids     = []
 
-            # Iterate over kmeans clustering with random initialization to find a better result for
-            # our clustering to avoid local optima
-            (@options.clustering_iterations.to_i).times do |i|
+            if( @options.zmq )
 
-              clustering                  = Clustering.new( @options )
-              kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
-              kms                        << kmeans
-              distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
+            else
+              # Iterate over kmeans clustering with random initialization to find a better result for
+              # our clustering to avoid local optima
+              (@options.clustering_iterations.to_i).times do |i|
 
-              closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
-              distortions                 = clustering.distortions( closest_centroids )
-              tcss                        = clustering.total_within_cluster_sum_of_squares( closest_centroids )
+                clustering                  = Clustering.new( @options )
+                kmeans, centroids           = clustering.kmeans( final, k ) # , centroids )
+                kms                        << kmeans
+                distances                   = clustering.distances( final, centroids ) # Hash with   hash[ data index ] =  [ [ centroid_id, eucleadian distance ], ... ] 
 
-              tmp_distortions << distortions
-              tmp_centroids << centroids
+                closest_centroids           = clustering.closest_centroids( distances, centroids, final ) # array with subarrays of each [ centroid_id, distance ]
+                distortions                 = clustering.distortions( closest_centroids )
+                tcss                        = clustering.total_within_cluster_sum_of_squares( closest_centroids )
 
-              puts "K-Means iteration #{i.to_s} of #{@options.clustering_iterations.to_s} - Distortion: #{distortions.to_s}"
+                tmp_distortions << distortions
+                tmp_centroids << centroids
+
+                puts "K-Means iteration #{i.to_s} of #{@options.clustering_iterations.to_s} - Distortion: #{distortions.to_s}"
+              end
             end
+
 
             tmp_cent_min = tmp_distortions.min 
             tmp_cent_min_index  = tmp_distortions.index( tmp_cent_min )
@@ -556,6 +561,7 @@ class Controller
     options.colorize                        = false
     options.process                         = ""
     options.turning_pose_extraction         = false
+    options.zmq                             = false
     options.filter_motion_capture_data      = false
     options.boxcar_filter                   = nil
     options.boxcar_filter_default           = 15
@@ -641,6 +647,10 @@ class Controller
 
       opts.on("-a", "--all", "Use all dances of the given domain") do |a|
         options.use_all_of_domain  = a
+      end
+
+      opts.on("-0", "--zmq", "Use ZMQ to speed up and scale on all CPU's") do |z|
+        options.zmq  = z
       end
 
       opts.on("--compare-clusters OPT", "Compare two given clustering results for similarity") do |c|
