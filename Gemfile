@@ -24,5 +24,7 @@ group :development do
   gem 'rubysdl'
   gem 'psych'
 
+  gem 'zmq'
+
 end
 

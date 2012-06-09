@@ -27,6 +27,7 @@ GEM
     ruby-filemagic (0.4.2)
     ruby-prof (0.11.2)
     rubysdl (2.1.2)
+    zmq (2.1.4)
 
 PLATFORMS
   ruby
@@ -44,3 +45,4 @@ DEPENDENCIES
   ruby-filemagic
   ruby-prof
   rubysdl
+  zmq
